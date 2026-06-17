@@ -125,7 +125,7 @@ export default function StaffPage() {
             const isTasksExpanded = expandMyTasks === user.id
 
             // Pending tasks grouped by opp for the assignment panel
-            const oppIds = [...new Set(ALL_PENDING_TASKS.map(t => t.opportunity_id))]
+            const oppIds = Array.from(new Set(ALL_PENDING_TASKS.map(t => t.opportunity_id)))
 
             return (
               <div key={user.id} className={`bg-white rounded-2xl border shadow-sm transition-all overflow-hidden ${
