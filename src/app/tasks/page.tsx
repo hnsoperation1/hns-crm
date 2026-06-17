@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
-  ChevronDown, ChevronRight, Clock, CalendarDays,
+  ChevronRight, Clock, CalendarDays,
   CheckCircle2, AlertCircle, Square,
   Plus, MessageSquare, AlertTriangle, Sparkles,
 } from 'lucide-react'
@@ -13,7 +13,7 @@ import {
   STAGE_LABELS, STAGE_COLORS, SOURCE_COLORS, SOURCE_LABELS,
   formatVND, formatDate, getInitials, daysSince, daysUntil,
 } from '@/lib/utils'
-import type { User, Opportunity, Task, ActivityLog, OppStage } from '@/types'
+import type { Opportunity, Task, ActivityLog, OppStage } from '@/types'
 
 const ACTIVE_STAGES: OppStage[] = ['stage_1', 'stage_2', 'stage_3', 'stage_4', 'stage_5']
 
@@ -21,8 +21,6 @@ export default function TasksPage() {
   const { user: currentUser } = useAuth()
   const supabase = createClient()
 
-  const [saleUsers, setSaleUsers] = useState<User[]>([])
-  const [selectedId, setSelectedId] = useState<string>('')
   const [opps, setOpps] = useState<Opportunity[]>([])
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
@@ -30,55 +28,23 @@ export default function TasksPage() {
 
   const today = new Date().toISOString().split('T')[0]
 
-  // Load sale TV users
   useEffect(() => {
-    supabase
-      .from('users')
-      .select('*')
-      .eq('is_sale_tv', true)
-      .eq('is_active', true)
-      .order('full_name')
-      .then(({ data }) => {
-        const list = (data ?? []) as User[]
-        setSaleUsers(list)
-        // default: current user if they're sale TV, else first in list
-        const def = list.find(u => u.id === currentUser?.id) ?? list[0]
-        if (def) setSelectedId(def.id)
-      })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Load opps + logs + tasks when selected user changes
-  useEffect(() => {
-    if (!selectedId) { setLoading(false); return }
-    setLoading(true)
+    if (!currentUser?.id) { setLoading(false); return }
 
     Promise.all([
-      supabase
-        .from('opportunities')
-        .select('*')
-        .eq('assigned_to', selectedId)
-        .in('stage', ACTIVE_STAGES),
-      supabase
-        .from('activity_logs')
-        .select('*')
-        .order('log_date', { ascending: false }),
-      supabase
-        .from('tasks')
-        .select('*'),
+      supabase.from('opportunities').select('*').eq('assigned_to', currentUser.id).in('stage', ACTIVE_STAGES),
+      supabase.from('activity_logs').select('*').order('log_date', { ascending: false }),
+      supabase.from('tasks').select('*'),
     ]).then(([oppsRes, logsRes, tasksRes]) => {
       const oppList = (oppsRes.data ?? []) as Opportunity[]
       setOpps(oppList)
-
       const oppIds = oppList.map(o => o.id)
       setLogs(((logsRes.data ?? []) as ActivityLog[]).filter(l => oppIds.includes(l.opportunity_id)))
       setTasks(((tasksRes.data ?? []) as Task[]).filter(t => oppIds.includes(t.opportunity_id)))
       setLoading(false)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId])
-
-  const selectedUser = saleUsers.find(u => u.id === selectedId)
+  }, [currentUser?.id])
 
   // Derived: opp status
   const oppStatus = opps.map(opp => {
@@ -126,31 +92,17 @@ export default function TasksPage() {
           <p className="text-sm text-gray-400 mt-0.5">{new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
         </div>
 
-        {/* Staff selector */}
-        {saleUsers.length > 0 && selectedUser ? (
-          <div className="relative">
-            <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-2.5 shadow-sm cursor-pointer hover:border-blue-300 transition-colors">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                {getInitials(selectedUser.full_name)}
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-gray-900">{selectedUser.full_name}</div>
-                <div className="text-xs text-gray-400">Sale TV</div>
-              </div>
-              <ChevronDown size={16} className="text-gray-400 ml-2" />
+        {currentUser && (
+          <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-2.5 shadow-sm">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg, #0e6a95, #052f43)' }}>
+              {getInitials(currentUser.full_name)}
             </div>
-            <select
-              value={selectedId}
-              onChange={e => setSelectedId(e.target.value)}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            >
-              {saleUsers.map(u => (
-                <option key={u.id} value={u.id}>{u.full_name}</option>
-              ))}
-            </select>
+            <div>
+              <div className="text-sm font-semibold text-gray-900">{currentUser.full_name}</div>
+              <div className="text-xs text-gray-400">Nhiệm vụ của tôi</div>
+            </div>
           </div>
-        ) : !loading && (
-          <div className="text-sm text-gray-400">Chưa có nhân viên Sale TV</div>
         )}
       </div>
 
