@@ -92,7 +92,7 @@ export default function NewOpportunityPage() {
 
           <div className="flex flex-col gap-2.5">
             <Link
-              href="/pipeline"
+              href="/don-hang"
               className="w-full bg-accent-500 hover:bg-accent-600 text-white py-3 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2"
             >
               Xem Pipeline <ChevronRight size={15} />
@@ -114,12 +114,12 @@ export default function NewOpportunityPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-10">
         <div className="max-w-[1100px] mx-auto flex items-center gap-3">
-          <Link href="/pipeline" className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 transition-colors">
+          <Link href="/don-hang" className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 transition-colors">
             <ArrowLeft size={18} />
           </Link>
           <div className="flex-1">
             <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-0.5">
-              <Link href="/pipeline" className="hover:text-gray-600">Đơn hàng</Link>
+              <Link href="/don-hang" className="hover:text-gray-600">Đơn hàng</Link>
               <ChevronRight size={12} />
               <span className="text-gray-700 font-medium">Tạo đơn mới</span>
             </div>
@@ -324,7 +324,7 @@ export default function NewOpportunityPage() {
               Tạo đơn hàng
             </button>
             <Link
-              href="/pipeline"
+              href="/don-hang"
               className="px-6 py-3.5 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
             >
               Huỷ

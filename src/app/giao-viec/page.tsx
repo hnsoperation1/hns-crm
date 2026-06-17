@@ -88,7 +88,7 @@ export default function AssignPage() {
           <h1 className="text-2xl font-bold text-gray-900">Giao việc</h1>
           <p className="text-sm text-gray-400 mt-0.5">Phân bổ đơn hàng cho nhân viên Sale TV</p>
         </div>
-        <Link href="/pipeline"
+        <Link href="/don-hang"
           className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-accent-500 transition-colors">
           Xem toàn bộ Pipeline <ChevronRight size={14} />
         </Link>
@@ -435,7 +435,7 @@ export default function AssignPage() {
                           {formatDate(opp.created_at)}
                         </td>
                         <td className="px-4 py-3">
-                          <Link href={`/opportunities/${opp.id}`}
+                          <Link href={`/co-hoi/${opp.id}`}
                             className="text-gray-300 hover:text-accent-500 transition-colors p-1 rounded-lg hover:bg-brand-50 inline-flex">
                             <ChevronRight size={14} />
                           </Link>

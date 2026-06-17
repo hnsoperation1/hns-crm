@@ -281,7 +281,7 @@ export default function StaffPage() {
                       <button onClick={() => handleDealAssign(user.id)} className="flex-1 bg-accent-500 hover:bg-accent-600 text-white py-2 rounded-xl text-sm font-bold transition-colors">
                         Xác nhận
                       </button>
-                      <Link href="/assign" className="px-3 py-2 rounded-xl border border-gray-200 text-xs text-gray-500 hover:bg-gray-100 flex items-center">
+                      <Link href="/giao-viec" className="px-3 py-2 rounded-xl border border-gray-200 text-xs text-gray-500 hover:bg-gray-100 flex items-center">
                         Chi tiết →
                       </Link>
                     </div>

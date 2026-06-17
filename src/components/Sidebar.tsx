@@ -9,11 +9,11 @@ import { getInitials } from '@/lib/utils'
 
 const navItems = [
   { href: '/', label: 'Tổng quan', icon: LayoutDashboard },
-  { href: '/pipeline', label: 'Đơn hàng', icon: Kanban },
-  { href: '/tasks', label: 'Công việc', icon: ClipboardList },
-  { href: '/assign', label: 'Giao việc', icon: UserPlus },
-  { href: '/customers', label: 'Khách hàng', icon: Users },
-  { href: '/staff', label: 'Nhân viên', icon: UserCheck },
+  { href: '/don-hang', label: 'Đơn hàng', icon: Kanban },
+  { href: '/cong-viec', label: 'Công việc', icon: ClipboardList },
+  { href: '/giao-viec', label: 'Giao việc', icon: UserPlus },
+  { href: '/khach-hang', label: 'Khách hàng', icon: Users },
+  { href: '/nhan-vien', label: 'Nhân viên', icon: UserCheck },
 ]
 
 const adminItems = [
@@ -54,9 +54,9 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-64 flex-shrink-0 flex flex-col h-full" style={{ background: '#031c29' }}>
+    <aside className="w-52 flex-shrink-0 flex flex-col h-full" style={{ background: '#031c29' }}>
       {/* Logo */}
-      <div className="px-5 h-14 flex items-center flex-shrink-0" style={{ borderBottom: '1px solid rgba(239,94,47,0.4)' }}>
+      <div className="px-4 h-10 flex items-center flex-shrink-0" style={{ borderBottom: '1px solid rgba(239,94,47,0.4)' }}>
         <div className="font-black text-2xl tracking-wide">
           <span style={{ color: '#ef5e2f' }}>HNS</span>
           <span style={{ color: '#2a9ac4' }}> CRM</span>
@@ -66,7 +66,7 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
         {navItems
-          .filter(item => !(item.href === '/assign' && user?.is_sale_tv))
+          .filter(item => !(item.href === '/giao-viec' && user?.is_sale_tv))
           .map(item => <NavLink key={item.href} {...item} />)}
 
         {/* Admin section — chỉ hiện với super admin */}

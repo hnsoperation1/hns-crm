@@ -72,7 +72,7 @@ export default function DashboardPage() {
               const days = daysUntil(o.deadline!)
               return (
                 <div key={o.id} className="flex items-center justify-between bg-white rounded-lg px-4 py-2.5 border border-amber-100">
-                  <Link href={`/opportunities/${o.id}`} className="font-semibold text-gray-800 hover:text-accent-500 hover:underline text-sm">
+                  <Link href={`/co-hoi/${o.id}`} className="font-semibold text-gray-800 hover:text-accent-500 hover:underline text-sm">
                     {o.title}
                   </Link>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${days <= 7 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
@@ -184,7 +184,7 @@ function AllOppsTab() {
                   ) : <span className="text-gray-300">—</span>}
                 </td>
                 <td className="px-4 py-3.5">
-                  <Link href={`/opportunities/${opp.id}`}
+                  <Link href={`/co-hoi/${opp.id}`}
                     className="p-1.5 rounded-lg hover:bg-brand-50 text-gray-300 hover:text-accent-500 transition-colors inline-flex">
                     <ChevronRight size={16} />
                   </Link>

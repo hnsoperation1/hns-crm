@@ -25,7 +25,7 @@ export default function PipelinePage() {
   const activeCount = OPPORTUNITIES.filter(o => !['lost', 'cancelled'].includes(o.stage)).length
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 56px)' }}>
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 40px)' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white flex-shrink-0">
         <div>
@@ -56,7 +56,7 @@ export default function PipelinePage() {
           </div>
 
           {user?.role !== 'sale' && (
-            <Link href="/opportunities/new" className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">
+            <Link href="/co-hoi/new" className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">
               <Plus size={16} strokeWidth={2.5} />
               Thêm đơn
             </Link>
@@ -97,7 +97,7 @@ export default function PipelinePage() {
                       const isUrgent = deadline !== null && deadline >= 0 && deadline <= 5
                       const isOverdue = deadline !== null && deadline < 0
                       return (
-                        <Link key={opp.id} href={`/opportunities/${opp.id}`}>
+                        <Link key={opp.id} href={`/co-hoi/${opp.id}`}>
                           <div className={`bg-white rounded-xl border border-l-4 ${sc.side} p-3.5 hover:shadow-md transition-all cursor-pointer group ${!opp.assigned_to ? 'border-amber-200' : 'border-gray-200'}`}>
                             <div className="font-semibold text-sm text-gray-900 group-hover:text-brand-700 transition-colors mb-0.5 line-clamp-2 leading-snug">
                               {opp.title}
@@ -226,7 +226,7 @@ export default function PipelinePage() {
                         ) : <span className="text-gray-300">—</span>}
                       </td>
                       <td className="px-4 py-3.5">
-                        <Link href={`/opportunities/${opp.id}`}
+                        <Link href={`/co-hoi/${opp.id}`}
                           className="p-1.5 rounded-lg hover:bg-brand-50 text-gray-300 hover:text-accent-500 transition-colors inline-flex">
                           <ChevronRight size={16} />
                         </Link>

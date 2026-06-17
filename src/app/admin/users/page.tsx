@@ -84,7 +84,7 @@ export default function AdminUsersPage() {
 
   if (!isSuperAdmin) {
     return (
-      <div className="flex items-center justify-center" style={{ height: 'calc(100vh - 56px)' }}>
+      <div className="flex items-center justify-center" style={{ height: 'calc(100vh - 40px)' }}>
         <div className="text-center">
           <ShieldCheck size={48} className="mx-auto text-gray-200 mb-4" />
           <h2 className="text-xl font-bold text-gray-500 mb-2">Không có quyền truy cập</h2>
@@ -207,7 +207,7 @@ export default function AdminUsersPage() {
   const pendingDelete = users.find(u => u.id === deleteConfirm)
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 56px)' }}>
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 40px)' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white flex-shrink-0">
         <div>

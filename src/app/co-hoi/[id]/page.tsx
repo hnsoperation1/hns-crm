@@ -50,7 +50,7 @@ export default function OppDetailPage() {
       <div className="p-12 text-center">
         <div className="text-5xl mb-4">🔍</div>
         <div className="text-lg font-semibold text-gray-700 mb-2">Không tìm thấy đơn hàng</div>
-        <Link href="/pipeline" className="text-accent-500 hover:underline text-sm">← Quay lại Pipeline</Link>
+        <Link href="/don-hang" className="text-accent-500 hover:underline text-sm">← Quay lại Đơn hàng</Link>
       </div>
     )
   }
@@ -106,13 +106,13 @@ export default function OppDetailPage() {
         <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
           <Link href="/" className="hover:text-gray-600">Tổng quan</Link>
           <span>/</span>
-          <Link href="/pipeline" className="hover:text-gray-600">Pipeline</Link>
+          <Link href="/don-hang" className="hover:text-gray-600">Đơn hàng</Link>
           <span>/</span>
           <span className="text-gray-700 font-medium truncate">{opp.title}</span>
         </div>
 
         <div className="flex items-start gap-3">
-          <Link href="/pipeline" className="mt-1 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors flex-shrink-0">
+          <Link href="/don-hang" className="mt-1 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors flex-shrink-0">
             <ArrowLeft size={18} />
           </Link>
           <div className="flex-1 min-w-0">
