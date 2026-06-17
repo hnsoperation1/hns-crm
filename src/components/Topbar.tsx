@@ -7,7 +7,7 @@ const CURRENT_USER = { full_name: 'Lưu Trường Quốc', role: 'Quản trị v
 
 export default function Topbar() {
   return (
-    <header className="h-14 flex-shrink-0 bg-white border-b border-gray-200 flex items-center justify-end px-6 gap-3">
+    <header className="h-14 flex-shrink-0 bg-white flex items-center justify-end px-6 gap-3" style={{ borderBottom: '1px solid #9dd5ec' }}>
       <button className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors text-gray-500">
         <Bell size={18} />
       </button>

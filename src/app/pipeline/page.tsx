@@ -27,7 +27,7 @@ export default function PipelinePage() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white flex-shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pipeline</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Đơn hàng</h1>
           <p className="text-sm text-gray-400 mt-0.5">{activeCount} đơn đang xử lý</p>
         </div>
         <div className="flex items-center gap-3">
