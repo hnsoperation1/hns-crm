@@ -65,7 +65,9 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
-        {navItems.map(item => <NavLink key={item.href} {...item} />)}
+        {navItems
+          .filter(item => !(item.href === '/assign' && user?.is_sale_tv))
+          .map(item => <NavLink key={item.href} {...item} />)}
 
         {/* Admin section — chỉ hiện với super admin */}
         {user?.is_super_admin && (
