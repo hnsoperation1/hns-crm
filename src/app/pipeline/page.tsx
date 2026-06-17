@@ -6,6 +6,7 @@ import { Plus, Kanban, List, ChevronRight } from 'lucide-react'
 import { OPPORTUNITIES, getUserById, getContactById } from '@/lib/mock-data'
 import { STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS, formatVND, formatDate, daysUntil, getInitials } from '@/lib/utils'
 import type { OppStage } from '@/types'
+import { useAuth } from '@/contexts/auth'
 
 type ViewMode = 'kanban' | 'table'
 
@@ -19,6 +20,7 @@ const COLUMNS: { stage: OppStage; label: string }[] = [
 ]
 
 export default function PipelinePage() {
+  const { user } = useAuth()
   const [view, setView] = useState<ViewMode>('kanban')
   const activeCount = OPPORTUNITIES.filter(o => !['lost', 'cancelled'].includes(o.stage)).length
 
@@ -53,10 +55,12 @@ export default function PipelinePage() {
             </button>
           </div>
 
-          <Link href="/opportunities/new" className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">
-            <Plus size={16} strokeWidth={2.5} />
-            Thêm đơn
-          </Link>
+          {!user?.is_sale_tv && (
+            <Link href="/opportunities/new" className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">
+              <Plus size={16} strokeWidth={2.5} />
+              Thêm đơn
+            </Link>
+          )}
         </div>
       </div>
 
