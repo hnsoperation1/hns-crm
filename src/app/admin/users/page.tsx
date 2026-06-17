@@ -30,6 +30,7 @@ const ROLE_COLORS: Record<Role, string> = {
 type FormData = {
   full_name: string
   email: string
+  password: string
   phone: string
   role: Role
   is_sale_tv: boolean
@@ -42,6 +43,7 @@ type FormData = {
 const EMPTY_FORM: FormData = {
   full_name: '',
   email: '',
+  password: '',
   phone: '',
   role: 'sale',
   is_sale_tv: false,
@@ -111,6 +113,7 @@ export default function AdminUsersPage() {
     setForm({
       full_name: user.full_name,
       email: user.email,
+      password: '',
       phone: user.phone ?? '',
       role: user.role,
       is_sale_tv: user.is_sale_tv,
@@ -135,6 +138,10 @@ export default function AdminUsersPage() {
     if (!form.email.trim()) e.email = 'Bắt buộc'
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Email không hợp lệ'
     else if (!editingUser && users.some(u => u.email === form.email)) e.email = 'Email đã tồn tại'
+    if (!editingUser) {
+      if (!form.password) e.password = 'Bắt buộc'
+      else if (form.password.length < 6) e.password = 'Tối thiểu 6 ký tự'
+    }
     return e
   }
 
@@ -159,11 +166,24 @@ export default function AdminUsersPage() {
       if (error) { setErrors({ _: error.message }); setSaving(false); return }
       setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...payload } : u))
     } else {
-      // "Thêm" chỉ hỗ trợ tạo auth user qua Supabase dashboard rồi edit tại đây.
-      // Tạm thời không làm gì — nút Thêm chỉ để mở form chuẩn bị cho sau.
-      setErrors({ _: 'Để thêm user mới, tạo tài khoản trong Supabase Dashboard trước, rồi edit vai trò tại đây.' })
-      setSaving(false)
-      return
+      const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: form.email.trim(),
+          password: form.password,
+          full_name: form.full_name.trim(),
+          phone: form.phone.trim() || null,
+          role: form.role,
+          is_sale_tv: form.is_sale_tv,
+          can_manage_campaign: form.can_manage_campaign,
+          can_qualify_lead: form.can_qualify_lead,
+          can_cskh_post: form.can_cskh_post,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setErrors({ _: json.error ?? 'Tạo tài khoản thất bại' }); setSaving(false); return }
+      if (json.user) setUsers(prev => [...prev, json.user])
     }
 
     setSaving(false)
@@ -387,6 +407,19 @@ export default function AdminUsersPage() {
                 />
               </Field>
 
+              {/* Password — chỉ khi tạo mới */}
+              {!editingUser && (
+                <Field label="Mật khẩu" required error={errors.password}>
+                  <input
+                    type="password"
+                    value={form.password}
+                    onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                    className={inputCls(!!errors.password)}
+                    placeholder="Tối thiểu 6 ký tự"
+                  />
+                </Field>
+              )}
+
               {/* Phone */}
               <Field label="Số điện thoại">
                 <input
@@ -455,12 +488,6 @@ export default function AdminUsersPage() {
                 </div>
               )}
 
-              {/* Note for new users */}
-              {!editingUser && (
-                <div className="bg-sky-50 border border-sky-100 rounded-xl px-4 py-3 text-xs text-sky-700 leading-relaxed">
-                  <strong>Lưu ý:</strong> Tạo tài khoản trong <strong>Supabase Dashboard → Authentication → Add user</strong>, sau đó quay lại đây để chỉnh vai trò và quyền hạn.
-                </div>
-              )}
               {errors._ && (
                 <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-600">
                   {errors._}
