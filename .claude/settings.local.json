@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s /b)",
+      "Bash(Get-ChildItem -Recurse -Path \"c:\\\\Users\\\\hiiiiiiio\\\\Desktop\\\\hns-crm\")",
+      "Bash(Select-Object FullName)",
+      "Bash(npm install *)",
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\hiiiiiiio\\\\Desktop\\\\hns-crm\\\\src\\\\app\\\\tasks\")",
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"c:\\\\Users\\\\hiiiiiiio\\\\Desktop\\\\hns-crm\\\\src\\\\app\\\\assign\")"
+    ]
+  }
+}
