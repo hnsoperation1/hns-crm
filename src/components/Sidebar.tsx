@@ -10,7 +10,7 @@ import { getInitials } from '@/lib/utils'
 const navItems = [
   { href: '/', label: 'Tổng quan', icon: LayoutDashboard },
   { href: '/pipeline', label: 'Đơn hàng', icon: Kanban },
-  { href: '/tasks', label: 'Nhiệm vụ', icon: ClipboardList },
+  { href: '/tasks', label: 'Công việc', icon: ClipboardList },
   { href: '/assign', label: 'Giao việc', icon: UserPlus },
   { href: '/customers', label: 'Khách hàng', icon: Users },
   { href: '/staff', label: 'Nhân viên', icon: UserCheck },

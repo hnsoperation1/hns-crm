@@ -19,26 +19,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
 
   useEffect(() => {
-    // Lấy session hiện tại khi app load
-    supabase.auth.getUser().then(async ({ data: { user: authUser } }) => {
-      if (authUser) {
-        const profile = await fetchProfile(authUser.id)
-        setUser(profile)
-      }
-      setLoading(false)
-    })
+    let mounted = true
 
-    // Lắng nghe thay đổi auth state (login/logout từ tab khác, session hết hạn...)
+    // Lấy session hiện tại khi app load
+    supabase.auth.getUser()
+      .then(async ({ data: { user: authUser } }) => {
+        if (!mounted) return
+        if (authUser) {
+          const profile = await fetchProfile(authUser.id)
+          if (mounted) setUser(profile)
+        }
+      })
+      .catch(() => {}) // swallow network/config errors
+      .finally(() => { if (mounted) setLoading(false) })
+
+    // Lắng nghe thay đổi auth state (login/logout, session hết hạn...)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return
       if (session?.user) {
         const profile = await fetchProfile(session.user.id)
-        setUser(profile)
+        if (mounted) setUser(profile)
       } else {
-        setUser(null)
+        if (mounted) setUser(null)
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

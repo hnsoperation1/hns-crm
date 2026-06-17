@@ -11,7 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth'
 import {
   STAGE_LABELS, STAGE_COLORS, SOURCE_COLORS, SOURCE_LABELS,
-  formatVND, formatDate, getInitials, daysSince, daysUntil,
+  formatVND, formatDate, daysSince, daysUntil,
 } from '@/lib/utils'
 import type { Opportunity, Task, ActivityLog, OppStage } from '@/types'
 
@@ -92,18 +92,6 @@ export default function TasksPage() {
           <p className="text-sm text-gray-400 mt-0.5">{new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
         </div>
 
-        {currentUser && (
-          <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-2.5 shadow-sm">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #0e6a95, #052f43)' }}>
-              {getInitials(currentUser.full_name)}
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-900">{currentUser.full_name}</div>
-              <div className="text-xs text-gray-400">Nhiệm vụ của tôi</div>
-            </div>
-          </div>
-        )}
       </div>
 
       {loading ? (
