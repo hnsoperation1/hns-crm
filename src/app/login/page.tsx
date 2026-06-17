@@ -21,115 +21,87 @@ export default function LoginPage() {
       setError(err)
       setLoading(false)
     }
-    // nếu login thành công, AppShell redirect tới /
   }
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#031c29' }}>
-      {/* Left panel — branding */}
-      <div className="hidden lg:flex flex-col items-start justify-center w-[420px] flex-shrink-0 p-12"
-        style={{ borderRight: '1px solid rgba(18,127,175,0.2)' }}>
-        <div className="font-black text-3xl tracking-wide mb-3">
-          <span style={{ color: '#ef5e2f' }}>HNS</span>
-          <span style={{ color: '#2a9ac4' }}> CRM</span>
-        </div>
-        <p className="text-sm leading-relaxed" style={{ color: '#5cb5da' }}>
-          Hệ thống quản lý bán hàng nội bộ<br />Hanoi Sun Travel
-        </p>
-      </div>
-
-      {/* Right panel — login form */}
-      <div className="flex-1 flex items-center justify-center px-6">
-        <div className="w-full max-w-sm">
-          {/* Mobile logo */}
-          <div className="lg:hidden font-black text-2xl tracking-wide mb-8 text-center">
+    <div className="min-h-screen flex items-center justify-center px-6" style={{ background: '#031c29' }}>
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="text-center mb-6">
+          <div className="font-black text-3xl tracking-wide">
             <span style={{ color: '#ef5e2f' }}>HNS</span>
             <span style={{ color: '#2a9ac4' }}> CRM</span>
           </div>
+        </div>
 
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <h1 className="text-xl font-bold text-gray-900 mb-1">Đăng nhập</h1>
-            <p className="text-sm text-gray-400 mb-7">Nhập thông tin tài khoản để tiếp tục</p>
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <h1 className="text-xl font-bold text-gray-900 mb-1">Đăng nhập</h1>
+          <p className="text-sm text-gray-400 mb-7">Nhập thông tin tài khoản để tiếp tục</p>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Email */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  autoComplete="email"
-                  autoFocus
-                  required
-                  placeholder="email@hanoisuntravel.com"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 transition-colors"
-                />
-              </div>
-
-              {/* Password */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                  Mật khẩu
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPw ? 'text' : 'password'}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    autoComplete="current-password"
-                    required
-                    placeholder="••••••••"
-                    className="w-full px-4 py-3 pr-11 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPw(s => !s)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
-                    tabIndex={-1}
-                  >
-                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Error */}
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
-                  {error}
-                </div>
-              )}
-
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ background: '#ef5e2f' }}
-              >
-                {loading ? (
-                  <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <LogIn size={16} />
-                    Đăng nhập
-                  </>
-                )}
-              </button>
-            </form>
-
-            {/* Demo note */}
-            <div className="mt-6 bg-sky-50 border border-sky-100 rounded-xl px-4 py-3 text-xs text-sky-700 leading-relaxed">
-              <strong>Demo:</strong> Dùng bất kỳ mật khẩu nào. Email hợp lệ:
-              <ul className="mt-1.5 space-y-0.5 font-mono">
-                <li>operation1@hanoisuntravel.com</li>
-                <li>hung.sa@hns.vn</li>
-                <li>nguyet.stv@hns.vn</li>
-              </ul>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                autoComplete="email"
+                autoFocus
+                required
+                placeholder="email@hanoisuntravel.com"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 transition-colors"
+              />
             </div>
-          </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                Mật khẩu
+              </label>
+              <div className="relative">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                  placeholder="••••••••"
+                  className="w-full px-4 py-3 pr-11 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(s => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                  tabIndex={-1}
+                >
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ background: '#ef5e2f' }}
+            >
+              {loading ? (
+                <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  <LogIn size={16} />
+                  Đăng nhập
+                </>
+              )}
+            </button>
+          </form>
         </div>
       </div>
     </div>
