@@ -94,7 +94,7 @@ export default function PipelinePage() {
                       const isOverdue = deadline !== null && deadline < 0
                       return (
                         <Link key={opp.id} href={`/opportunities/${opp.id}`}>
-                          <div className={`bg-white rounded-xl border border-gray-200 border-l-4 ${sc.side} p-3.5 hover:shadow-md transition-all cursor-pointer group`}>
+                          <div className={`bg-white rounded-xl border border-l-4 ${sc.side} p-3.5 hover:shadow-md transition-all cursor-pointer group ${!opp.assigned_to ? 'border-amber-200' : 'border-gray-200'}`}>
                             <div className="font-semibold text-sm text-gray-900 group-hover:text-brand-700 transition-colors mb-0.5 line-clamp-2 leading-snug">
                               {opp.title}
                             </div>
@@ -108,14 +108,18 @@ export default function PipelinePage() {
                               )}
                             </div>
                             <div className="flex items-center justify-between">
-                              {user && (
+                              {!opp.assigned_to ? (
+                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                  Chờ phân công
+                                </span>
+                              ) : user ? (
                                 <div className="flex items-center gap-1.5">
                                   <div className="w-5 h-5 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">
                                     {getInitials(user.full_name)}
                                   </div>
                                   <span className="text-xs text-gray-500">{user.full_name.split(' ').pop()}</span>
                                 </div>
-                              )}
+                              ) : null}
                               <div className="text-right">
                                 {opp.deadline && (
                                   <span className={`text-[11px] font-medium ${isOverdue ? 'text-red-600' : isUrgent ? 'text-amber-600' : 'text-gray-400'}`}>
@@ -184,14 +188,18 @@ export default function PipelinePage() {
                         </span>
                       </td>
                       <td className="px-5 py-3.5">
-                        {user && (
+                        {!opp.assigned_to ? (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                            Chờ phân công
+                          </span>
+                        ) : user ? (
                           <div className="flex items-center gap-2">
                             <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">
                               {getInitials(user.full_name)}
                             </div>
                             <span className="text-gray-700 whitespace-nowrap">{user.full_name.split(' ').pop()}</span>
                           </div>
-                        )}
+                        ) : null}
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <span className="font-semibold text-gray-900 whitespace-nowrap">

@@ -2,8 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus } from 'lucide-react'
+import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog } from 'lucide-react'
 import clsx from 'clsx'
+import { useAuth } from '@/contexts/auth'
+import { getInitials } from '@/lib/utils'
 
 const navItems = [
   { href: '/', label: 'Tổng quan', icon: LayoutDashboard },
@@ -14,8 +16,42 @@ const navItems = [
   { href: '/staff', label: 'Nhân viên', icon: UserCheck },
 ]
 
+const adminItems = [
+  { href: '/admin/users', label: 'Người dùng', icon: UserCog },
+]
+
+const ROLE_LABELS: Record<string, string> = {
+  boss: 'Giám đốc',
+  admin: 'Quản trị viên',
+  sale_admin: 'Sale Admin',
+  mkt: 'Marketing',
+  cskh: 'Chăm sóc KH',
+  sale: 'Sale TV',
+}
+
 export default function Sidebar() {
   const pathname = usePathname()
+  const { user, logout } = useAuth()
+
+  function NavLink({ href, label, icon: Icon }: { href: string; label: string; icon: React.ElementType }) {
+    const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
+    return (
+      <Link
+        href={href}
+        className={clsx(
+          'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+          active ? 'text-white shadow-lg' : 'hover:bg-white/10'
+        )}
+        style={active
+          ? { background: '#ef5e2f', boxShadow: '0 4px 12px rgba(239,94,47,0.35)' }
+          : { color: '#9dd5ec' }
+        }
+      >
+        <Icon size={18} strokeWidth={active ? 2.5 : 2} />
+        {label}
+      </Link>
+    )
+  }
 
   return (
     <aside className="w-64 flex-shrink-0 flex flex-col h-full" style={{ background: '#031c29' }}>
@@ -28,45 +64,41 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 px-3 space-y-0.5">
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={clsx(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
-                active
-                  ? 'text-white shadow-lg'
-                  : 'hover:bg-white/10'
-              )}
-              style={active
-                ? { background: '#ef5e2f', boxShadow: '0 4px 12px rgba(239,94,47,0.35)' }
-                : { color: '#9dd5ec' }
-              }
-            >
-              <Icon size={18} strokeWidth={active ? 2.5 : 2} />
-              {label}
-            </Link>
-          )
-        })}
+      <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
+        {navItems.map(item => <NavLink key={item.href} {...item} />)}
+
+        {/* Admin section — chỉ hiện với super admin */}
+        {user?.is_super_admin && (
+          <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(18,127,175,0.2)' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1.5" style={{ color: '#4a8fa8' }}>
+              Quản trị
+            </p>
+            {adminItems.map(item => <NavLink key={item.href} {...item} />)}
+          </div>
+        )}
       </nav>
 
       {/* Current user */}
       <div className="px-4 py-4" style={{ borderTop: '1px solid rgba(18,127,175,0.25)' }}>
-        <div className="flex items-center gap-3 mb-3 px-1">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #0e6a95, #052f43)' }}>
-            LQ
+        {user && (
+          <div className="flex items-center gap-3 mb-3 px-1">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg, #0e6a95, #052f43)' }}>
+              {getInitials(user.full_name)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-white truncate">{user.full_name}</div>
+              <div className="text-xs truncate" style={{ color: '#5cb5da' }}>
+                {ROLE_LABELS[user.role] ?? user.role}
+              </div>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-white truncate">Lưu Trường Quốc</div>
-            <div className="text-xs" style={{ color: '#5cb5da' }}>Quản trị viên</div>
-          </div>
-        </div>
-        <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-white/10"
-          style={{ color: '#9dd5ec' }}>
+        )}
+        <button
+          onClick={logout}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-white/10"
+          style={{ color: '#9dd5ec' }}
+        >
           <LogOut size={14} />
           Đăng xuất
         </button>

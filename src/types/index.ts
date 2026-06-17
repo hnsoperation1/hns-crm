@@ -15,6 +15,7 @@ export interface User {
   can_manage_campaign: boolean
   can_qualify_lead: boolean
   can_cskh_post: boolean
+  is_super_admin?: boolean
   is_active: boolean
 }
 
