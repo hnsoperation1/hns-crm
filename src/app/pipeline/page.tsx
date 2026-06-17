@@ -55,7 +55,7 @@ export default function PipelinePage() {
             </button>
           </div>
 
-          {!user?.is_sale_tv && (
+          {user?.role !== 'sale' && (
             <Link href="/opportunities/new" className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">
               <Plus size={16} strokeWidth={2.5} />
               Thêm đơn
