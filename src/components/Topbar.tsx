@@ -21,7 +21,6 @@ export default function Topbar() {
   const { user, logout } = useAuth()
   const { breadcrumb } = useTopbar()
   const pathname = usePathname()
-  const router = useRouter()
   const [spinning] = useState(false)
 
   function handleRefresh() {
