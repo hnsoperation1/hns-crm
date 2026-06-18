@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { Bell, LogOut, ChevronDown, RotateCcw } from 'lucide-react'
 import { useAuth } from '@/contexts/auth'
 import { useTopbar } from '@/contexts/topbar'
@@ -22,12 +22,11 @@ export default function Topbar() {
   const { breadcrumb } = useTopbar()
   const pathname = usePathname()
   const router = useRouter()
-  const [spinning, setSpinning] = useState(false)
+  const [spinning] = useState(false)
 
   function handleRefresh() {
     setSpinning(true)
-    router.refresh()
-    setTimeout(() => setSpinning(false), 600)
+    window.location.reload()
   }
 
   const pageTitle = PAGE_TITLES[pathname]
