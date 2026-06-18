@@ -1,7 +1,7 @@
 export type Role = 'boss' | 'admin' | 'sale_admin' | 'mkt' | 'cskh' | 'sale'
 export type OppStage = 'stage_1' | 'stage_2' | 'stage_3' | 'stage_4' | 'stage_5' | 'lost' | 'cancelled'
 export type LeadSource = 'mkt' | 'sale' | 'partner' | 'bod' | 'cskh' | 'referral' | 'test'
-export type LeadScore = 'hot' | 'warm' | 'cold'
+export type LeadScore = 'new' | 'hot' | 'warm' | 'cold'
 export type LogType = 'sale_update' | 'stage_change' | 'cskh_care' | 'note'
 export type CustomerTier = 'vip' | 'potential' | 'warm' | 'cold'
 

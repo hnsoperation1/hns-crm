@@ -23,6 +23,7 @@ const SOURCES: { value: LeadSource; label: string }[] = [
 ]
 
 const SCORES: { value: LeadScore; label: string }[] = [
+  { value: 'new', label: '🆕 New' },
   { value: 'hot', label: '🔥 Hot' },
   { value: 'warm', label: '☀️ Warm' },
   { value: 'cold', label: '❄️ Cold' },
@@ -37,7 +38,7 @@ const ORG_TYPE_LABELS: Record<OrgType, string> = {
 const EMPTY_CONTACT_FORM = {
   name: '', phone: '', email: '',
   company: '', tax_code: '', city: '', company_address: '',
-  source: 'test' as LeadSource, lead_score: 'warm' as LeadScore,
+  source: 'test' as LeadSource, lead_score: 'new' as LeadScore,
   destination: '', opp_title: '',
 }
 
@@ -261,6 +262,7 @@ function ContactsTab() {
         <div className="flex gap-3">
           {[
             { label: 'Tổng', value: contacts.length, color: 'text-gray-900' },
+            { label: '🆕 New', value: contacts.filter(c => c.lead_score === 'new').length, color: 'text-sky-600' },
             { label: '🔥 Hot', value: contacts.filter(c => c.lead_score === 'hot').length, color: 'text-red-600' },
             { label: '☀️ Warm', value: contacts.filter(c => c.lead_score === 'warm').length, color: 'text-orange-500' },
           ].map(({ label, value, color }) => (

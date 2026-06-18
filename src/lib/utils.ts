@@ -68,13 +68,14 @@ export const SOURCE_COLORS: Record<LeadSource, string> = {
 }
 
 export const SCORE_COLORS: Record<LeadScore, string> = {
+  new: 'bg-sky-100 text-sky-700',
   hot: 'bg-red-100 text-red-700',
   warm: 'bg-orange-100 text-orange-700',
   cold: 'bg-slate-100 text-slate-600',
 }
 
 export const SCORE_LABELS: Record<LeadScore, string> = {
-  hot: '🔥 Hot', warm: '☀️ Warm', cold: '❄️ Cold',
+  new: '🆕 New', hot: '🔥 Hot', warm: '☀️ Warm', cold: '❄️ Cold',
 }
 
 export const TIER_COLORS: Record<CustomerTier, string> = {
