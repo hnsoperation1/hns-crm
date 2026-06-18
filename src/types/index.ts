@@ -26,6 +26,7 @@ export interface Organization {
   name: string
   tax_code?: string
   type: OrgType
+  city?: string
   address?: string
   phone?: string
   email?: string

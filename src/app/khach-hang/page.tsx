@@ -35,14 +35,15 @@ const ORG_TYPE_LABELS: Record<OrgType, string> = {
 }
 
 const EMPTY_CONTACT_FORM = {
-  name: '', company: '', tax_code: '', phone: '', email: '',
+  name: '', phone: '', email: '',
+  company: '', tax_code: '', city: '', company_address: '',
   source: 'test' as LeadSource, lead_score: 'warm' as LeadScore,
   destination: '', opp_title: '',
 }
 
 const EMPTY_ORG_FORM = {
   name: '', tax_code: '', type: 'company' as OrgType,
-  address: '', phone: '', email: '', website: '', note: '',
+  city: '', address: '', phone: '', email: '', website: '', note: '',
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -166,7 +167,15 @@ function ContactsTab() {
         } else {
           const { data: newOrg } = await supabase
             .from('organizations')
-            .insert({ name: companyName, tax_code: taxCode || null, type: 'company', contact_ids: [], created_by: user!.id })
+            .insert({
+              name: companyName,
+              tax_code: taxCode || null,
+              type: 'company',
+              city: form.city.trim() || null,
+              address: form.company_address.trim() || null,
+              contact_ids: [],
+              created_by: user!.id,
+            })
             .select('id')
             .single()
           orgId = newOrg?.id ?? null
@@ -359,22 +368,6 @@ function ContactsTab() {
                   onChange={e => handleNameChange(e.target.value)} className={inputCls(errors.name)} />
               </Field>
 
-              <Field label="Mã số thuế">
-                <div className="flex gap-2">
-                  <input type="text" placeholder="0123456789" value={form.tax_code}
-                    onChange={e => { setForm(f => ({ ...f, tax_code: e.target.value })); setLookupError('') }}
-                    onKeyDown={e => e.key === 'Enter' && handleTaxLookup()}
-                    className={`flex-1 ${inputCls(lookupError ? 'err' : '')}`} />
-                  <LookupButton loading={lookupLoading} disabled={!form.tax_code.trim()} onClick={handleTaxLookup} />
-                </div>
-                {lookupError && <p className="text-xs text-red-500 mt-1">{lookupError}</p>}
-              </Field>
-
-              <Field label="Công ty">
-                <input type="text" placeholder="Công ty TNHH ABC" value={form.company}
-                  onChange={e => handleCompanyChange(e.target.value)} className={inputCls()} />
-              </Field>
-
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Số điện thoại">
                   <input type="text" placeholder="0901234567" value={form.phone}
@@ -385,6 +378,33 @@ function ContactsTab() {
                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputCls()} />
                 </Field>
               </div>
+
+              <Field label="Công ty">
+                <input type="text" placeholder="Công ty TNHH ABC" value={form.company}
+                  onChange={e => handleCompanyChange(e.target.value)} className={inputCls()} />
+              </Field>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Mã số thuế">
+                  <div className="flex gap-2">
+                    <input type="text" placeholder="0123456789" value={form.tax_code}
+                      onChange={e => { setForm(f => ({ ...f, tax_code: e.target.value })); setLookupError('') }}
+                      onKeyDown={e => e.key === 'Enter' && handleTaxLookup()}
+                      className={`flex-1 ${inputCls(lookupError ? 'err' : '')}`} />
+                    <LookupButton loading={lookupLoading} disabled={!form.tax_code.trim()} onClick={handleTaxLookup} />
+                  </div>
+                  {lookupError && <p className="text-xs text-red-500 mt-1">{lookupError}</p>}
+                </Field>
+                <Field label="Khu vực">
+                  <input type="text" placeholder="VD: Hà Nội, TP.HCM..." value={form.city}
+                    onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className={inputCls()} />
+                </Field>
+              </div>
+
+              <Field label="Địa chỉ công ty">
+                <input type="text" placeholder="123 Đường ABC, Quận 1, TP.HCM" value={form.company_address}
+                  onChange={e => setForm(f => ({ ...f, company_address: e.target.value }))} className={inputCls()} />
+              </Field>
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Nguồn">
@@ -460,7 +480,7 @@ function OrganizationsTab() {
 
   function openEdit(org: Organization) {
     setEditingOrg(org)
-    setForm({ name: org.name, tax_code: org.tax_code ?? '', type: org.type, address: org.address ?? '', phone: org.phone ?? '', email: org.email ?? '', website: org.website ?? '', note: org.note ?? '' })
+    setForm({ name: org.name, tax_code: org.tax_code ?? '', type: org.type, city: org.city ?? '', address: org.address ?? '', phone: org.phone ?? '', email: org.email ?? '', website: org.website ?? '', note: org.note ?? '' })
     setErrors({}); setLookupError(''); setShowForm(true)
   }
 
@@ -496,6 +516,7 @@ function OrganizationsTab() {
             name: form.name.trim(),
             tax_code: form.tax_code.trim() || null,
             type: form.type,
+            city: form.city.trim() || null,
             address: form.address.trim() || null,
             phone: form.phone.trim() || null,
             email: form.email.trim() || null,
@@ -513,6 +534,7 @@ function OrganizationsTab() {
             name: form.name.trim(),
             tax_code: form.tax_code.trim() || null,
             type: form.type,
+            city: form.city.trim() || null,
             address: form.address.trim() || null,
             phone: form.phone.trim() || null,
             email: form.email.trim() || null,
@@ -676,13 +698,19 @@ function OrganizationsTab() {
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputCls(errors.name)} />
               </Field>
 
-              <Field label="Loại">
-                <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as OrgType }))} className={inputCls()}>
-                  {(Object.keys(ORG_TYPE_LABELS) as OrgType[]).map(k => (
-                    <option key={k} value={k}>{ORG_TYPE_LABELS[k]}</option>
-                  ))}
-                </select>
-              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Khu vực">
+                  <input type="text" placeholder="VD: Hà Nội, TP.HCM..." value={form.city}
+                    onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className={inputCls()} />
+                </Field>
+                <Field label="Loại">
+                  <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as OrgType }))} className={inputCls()}>
+                    {(Object.keys(ORG_TYPE_LABELS) as OrgType[]).map(k => (
+                      <option key={k} value={k}>{ORG_TYPE_LABELS[k]}</option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
 
               <Field label="Địa chỉ">
                 <input type="text" placeholder="123 Đường ABC, Quận 1, TP.HCM" value={form.address}
