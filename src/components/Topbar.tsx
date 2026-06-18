@@ -1,12 +1,28 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { Bell, LogOut, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/contexts/auth'
 import { getInitials } from '@/lib/utils'
 
+const PAGE_TITLES: Record<string, string> = {
+  '/':             'Tổng quan',
+  '/don-hang':     'Đơn hàng',
+  '/cong-viec':    'Công việc',
+  '/giao-viec':    'Giao việc',
+  '/khach-hang':   'Khách hàng',
+  '/nhan-vien':    'Nhân viên',
+  '/admin/users':  'Người dùng',
+}
+
 export default function Topbar() {
   const { user, logout } = useAuth()
+  const pathname = usePathname()
+
+  const pageTitle = PAGE_TITLES[pathname]
+    ?? Object.entries(PAGE_TITLES).find(([k]) => k !== '/' && pathname.startsWith(k))?.[1]
+    ?? ''
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -19,7 +35,8 @@ export default function Topbar() {
   }, [])
 
   return (
-    <header className="h-10 flex-shrink-0 bg-white flex items-center justify-end px-5 gap-3" style={{ borderBottom: '1px solid #9dd5ec' }}>
+    <header className="h-10 flex-shrink-0 bg-white flex items-center justify-between px-5 gap-3" style={{ borderBottom: '1px solid #9dd5ec' }}>
+      {pageTitle && <span className="text-sm font-semibold text-gray-700">{pageTitle}</span>}
       <button className="relative p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500">
         <Bell size={16} />
       </button>

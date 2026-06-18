@@ -52,11 +52,6 @@ export default function CustomersPage() {
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <h1 className="text-2xl font-bold text-gray-900">Khách hàng</h1>
-      </div>
-
       {/* Tab bar */}
       <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-xl w-fit">
         {([
