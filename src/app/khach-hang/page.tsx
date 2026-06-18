@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Search, Plus, X, Loader2, Building2, Users, Globe, Phone, Mail, MapPin, Trash2, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import DatePickerVN from '@/components/DatePickerVN'
 import { useAuth } from '@/contexts/auth'
 import {
   SOURCE_LABELS, SOURCE_COLORS, SCORE_LABELS, SCORE_COLORS,
@@ -109,7 +110,8 @@ function ContactsTab() {
 
   function autoOppTitle(company: string, name: string, destination: string, date: string) {
     const base = company || name
-    const parts = [base, destination, date].filter(Boolean)
+    const formattedDate = date ? date.split('-').reverse().join('') : ''
+    const parts = [base, destination, formattedDate].filter(Boolean)
     return parts.join(' - ')
   }
 
@@ -449,8 +451,11 @@ function ContactsTab() {
                         onChange={e => handleDestinationChange(e.target.value)} className={inputCls()} />
                     </Field>
                     <Field label="Ngày đi dự kiến">
-                      <input type="date" value={form.departure_date}
-                        onChange={e => handleDepartureDateChange(e.target.value)} className={inputCls()} />
+                      <DatePickerVN
+                        value={form.departure_date}
+                        onChange={handleDepartureDateChange}
+                        className={inputCls()}
+                      />
                     </Field>
                   </div>
                   <Field label="Tên cơ hội" required error={errors.opp_title}>
