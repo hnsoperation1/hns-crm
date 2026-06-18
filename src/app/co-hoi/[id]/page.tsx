@@ -212,8 +212,7 @@ export default function OppDetailPage() {
                     {isDone ? <span className="text-emerald-500">✓</span> : (
                       <span className={`w-1.5 h-1.5 rounded-full ${isActive ? ss.dot : 'bg-gray-300'}`} />
                     )}
-                    {STAGE_LABELS[s].split(' · ')[0]}
-                    {isActive && <span className="opacity-70">· {daysInStage}N</span>}
+                    {STAGE_LABELS[s]}
                   </div>
                   {i < PIPELINE.length - 1 && (
                     <div className={`w-6 h-0.5 ${isDone ? 'bg-emerald-300' : 'bg-gray-200'}`} />
@@ -580,8 +579,8 @@ export default function OppDetailPage() {
                 </div>
                 <div className={`text-lg font-black ${sc.text}`}>{STAGE_LABELS[opp.stage]}</div>
                 <div className={`text-xs mt-0.5 ${sc.text} opacity-70`}>
-                  Đã ở giai đoạn này {daysInStage} ngày
-                  {opp.stage_updated_at && ` · từ ${formatDate(opp.stage_updated_at)}`}
+                  Đã ở giai đoạn này {Math.abs(daysInStage)} ngày
+                  {opp.stage_updated_at && ` · từ ${formatDate(opp.stage_updated_at.split('T')[0])}`}
                 </div>
               </div>
               <div className="px-5 py-4 space-y-2.5">
@@ -641,7 +640,7 @@ export default function OppDetailPage() {
                             <span className="text-[11px] text-gray-400">{durationDays} ngày</span>
                           </div>
                           <div className="text-[11px] text-gray-400 mt-0.5">
-                            {formatDate(startDate)}{endDate ? ` → ${formatDate(endDate)}` : ' → nay'}
+                            {formatDate(startDate.split('T')[0])}{endDate ? ` → ${formatDate(endDate.split('T')[0])}` : ' → nay'}
                           </div>
                         </div>
                       </div>
