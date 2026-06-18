@@ -19,12 +19,33 @@ export interface User {
   is_active: boolean
 }
 
+export type OrgType = 'company' | 'government' | 'ngo'
+
+export interface Organization {
+  id: string
+  name: string
+  tax_code?: string
+  type: OrgType
+  address?: string
+  phone?: string
+  email?: string
+  website?: string
+  note?: string
+  primary_contact_id?: string
+  contact_ids: string[]
+  created_by: string
+  created_at: string
+  updated_at: string
+}
+
 export interface Contact {
   id: string
   name: string
   phone?: string
   email?: string
+  tax_code?: string
   company?: string
+  organization_ids: string[]
   source: LeadSource
   lead_score?: LeadScore
   campaign_id?: string
@@ -39,6 +60,8 @@ export interface Opportunity {
   description?: string
   contact_id: string
   contact?: Contact
+  organization_id?: string
+  organization?: Organization
   assigned_to: string
   assigned_user?: User
   created_by: string

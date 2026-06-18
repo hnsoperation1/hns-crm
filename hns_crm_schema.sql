@@ -119,6 +119,35 @@ CREATE TABLE IF NOT EXISTS contacts (
 );
 
 -- =============================================
+-- 4b. ORGANIZATIONS
+-- =============================================
+CREATE TABLE IF NOT EXISTS organizations (
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name               TEXT NOT NULL,
+  tax_code           TEXT UNIQUE,
+  type               TEXT NOT NULL DEFAULT 'company' CHECK (type IN ('company','government','ngo')),
+  address            TEXT,
+  phone              TEXT,
+  email              TEXT,
+  website            TEXT,
+  note               TEXT,
+
+  primary_contact_id UUID REFERENCES contacts(id) ON DELETE SET NULL,
+  contact_ids        UUID[] NOT NULL DEFAULT '{}',
+
+  created_by         UUID NOT NULL REFERENCES users(id),
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Thêm organization_ids vào contacts (chiều ngược)
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS organization_ids UUID[] NOT NULL DEFAULT '{}';
+ALTER TABLE contacts ADD COLUMN IF NOT EXISTS tax_code TEXT;
+
+-- Thêm organization_id vào opportunities (bảng đã tồn tại)
+ALTER TABLE opportunities ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL;
+
+-- =============================================
 -- 5. OPPORTUNITIES
 -- =============================================
 CREATE TABLE IF NOT EXISTS opportunities (
@@ -127,6 +156,7 @@ CREATE TABLE IF NOT EXISTS opportunities (
   description      TEXT,
 
   contact_id       UUID NOT NULL REFERENCES contacts(id) ON DELETE RESTRICT,
+  organization_id  UUID REFERENCES organizations(id) ON DELETE SET NULL,
   assigned_to      UUID REFERENCES users(id) ON DELETE SET NULL,
   created_by       UUID NOT NULL REFERENCES users(id),
   team_id          UUID REFERENCES teams(id) ON DELETE SET NULL,
@@ -227,6 +257,10 @@ CREATE INDEX IF NOT EXISTS idx_logs_user       ON activity_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_logs_date       ON activity_logs(log_date);
 CREATE INDEX IF NOT EXISTS idx_logs_type       ON activity_logs(log_type);
 
+CREATE INDEX IF NOT EXISTS idx_orgs_tax_code     ON organizations(tax_code);
+CREATE INDEX IF NOT EXISTS idx_orgs_type         ON organizations(type);
+CREATE INDEX IF NOT EXISTS idx_opp_org           ON opportunities(organization_id);
+
 CREATE INDEX IF NOT EXISTS idx_contacts_source   ON contacts(source);
 CREATE INDEX IF NOT EXISTS idx_contacts_campaign ON contacts(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_contacts_tier     ON contacts(customer_tier);
@@ -244,6 +278,7 @@ ALTER TABLE contacts       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaigns      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tasks          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cskh_care_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organizations  ENABLE ROW LEVEL SECURITY;
 
 -- Helper functions
 CREATE OR REPLACE FUNCTION is_super_admin()
@@ -325,6 +360,14 @@ CREATE POLICY "boss_admin_see_all_contacts" ON contacts FOR SELECT USING (curren
 CREATE POLICY "sale_tv_own_contacts"        ON contacts FOR SELECT USING (EXISTS (SELECT 1 FROM opportunities WHERE contact_id = contacts.id AND assigned_to = auth.uid()));
 CREATE POLICY "mkt_cskh_insert_contact"     ON contacts FOR INSERT WITH CHECK (current_user_role() IN ('mkt','cskh','admin','sale_admin') OR current_user_flag('can_qualify_lead'));
 
+-- ORGANIZATIONS policies
+DROP POLICY IF EXISTS "boss_admin_see_all_orgs" ON organizations;
+DROP POLICY IF EXISTS "all_authenticated_see_orgs" ON organizations;
+DROP POLICY IF EXISTS "admin_manage_orgs" ON organizations;
+
+CREATE POLICY "all_authenticated_see_orgs" ON organizations FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "admin_manage_orgs"           ON organizations FOR ALL    USING (current_user_role() IN ('boss','admin','sale_admin'));
+
 -- CSKH CARE LOGS policies
 DROP POLICY IF EXISTS "cskh_manage_care_logs" ON cskh_care_logs;
 
@@ -341,12 +384,14 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_users_updated_at         ON users;
 DROP TRIGGER IF EXISTS trg_opportunities_updated_at ON opportunities;
 DROP TRIGGER IF EXISTS trg_contacts_updated_at      ON contacts;
-DROP TRIGGER IF EXISTS trg_campaigns_updated_at     ON campaigns;
+DROP TRIGGER IF EXISTS trg_campaigns_updated_at      ON campaigns;
+DROP TRIGGER IF EXISTS trg_organizations_updated_at  ON organizations;
 
-CREATE TRIGGER trg_users_updated_at         BEFORE UPDATE ON users         FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_opportunities_updated_at BEFORE UPDATE ON opportunities  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_contacts_updated_at      BEFORE UPDATE ON contacts       FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-CREATE TRIGGER trg_campaigns_updated_at     BEFORE UPDATE ON campaigns      FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_users_updated_at          BEFORE UPDATE ON users          FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_opportunities_updated_at  BEFORE UPDATE ON opportunities   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_contacts_updated_at       BEFORE UPDATE ON contacts        FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_campaigns_updated_at      BEFORE UPDATE ON campaigns       FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_organizations_updated_at  BEFORE UPDATE ON organizations   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- =============================================
 -- TRIGGER: log stage change tự động
