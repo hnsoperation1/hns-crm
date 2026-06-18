@@ -37,7 +37,7 @@ const ORG_TYPE_LABELS: Record<OrgType, string> = {
 const EMPTY_CONTACT_FORM = {
   name: '', company: '', tax_code: '', phone: '', email: '',
   source: 'test' as LeadSource, lead_score: 'warm' as LeadScore,
-  opp_title: '',
+  destination: '', opp_title: '',
 }
 
 const EMPTY_ORG_FORM = {
@@ -210,6 +210,7 @@ function ContactsTab() {
       // Tạo cơ hội
       await supabase.from('opportunities').insert({
         title: form.opp_title.trim(),
+        description: form.destination.trim() || null,
         contact_id: newContact.id,
         organization_id: orgId,
         created_by: user!.id,
@@ -400,7 +401,11 @@ function ContactsTab() {
 
               <div className="border-t border-gray-100 pt-4">
                 <SectionLabel>Cơ hội phát sinh</SectionLabel>
-                <div className="mt-3">
+                <div className="mt-3 space-y-4">
+                  <Field label="Điểm đến dự kiến">
+                    <input type="text" placeholder="VD: Đà Nẵng, Phú Quốc, Nhật Bản..." value={form.destination}
+                      onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputCls()} />
+                  </Field>
                   <Field label="Tên cơ hội" required error={errors.opp_title}>
                     <input type="text" placeholder="VD: Công ty ABC – Tour hè 2026" value={form.opp_title}
                       onChange={e => setForm(f => ({ ...f, opp_title: e.target.value }))} className={inputCls(errors.opp_title)} />
