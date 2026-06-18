@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Search, Plus, X, Loader2, Building2, Users, Globe, Phone, Mail, MapPin, Trash2, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import DatePickerVN from '@/components/DatePickerVN'
@@ -324,15 +325,15 @@ function ContactsTab() {
               return (
                 <tr key={contact.id} className="hover:bg-gray-50/70 transition-colors">
                   <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-3">
+                    <Link href={`/khach-hang/${contact.id}`} className="flex items-center gap-3 group/name">
                       <div className="w-9 h-9 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full flex items-center justify-center text-xs font-bold text-brand-700 flex-shrink-0">
                         {getInitials(contact.name)}
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-900">{contact.name}</div>
+                        <div className="font-semibold text-gray-900 group-hover/name:text-brand-600 transition-colors">{contact.name}</div>
                         {contact.company && <div className="text-xs text-gray-400">{contact.company}</div>}
                       </div>
-                    </div>
+                    </Link>
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="text-gray-700">{contact.phone ?? '—'}</div>
@@ -355,7 +356,7 @@ function ContactsTab() {
                   </td>
                   <td className="px-5 py-3.5">
                     {currentOpp
-                      ? <span className="text-accent-500 font-semibold text-xs">{currentOpp.title}</span>
+                      ? <Link href={`/co-hoi/${currentOpp.id}`} className="text-accent-500 hover:text-accent-600 hover:underline font-semibold text-xs">{currentOpp.title}</Link>
                       : <span className="text-gray-300 text-xs">—</span>}
                   </td>
                   <td className="px-5 py-3.5 text-gray-400 text-xs whitespace-nowrap">{formatDate(contact.created_at)}</td>

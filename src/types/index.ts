@@ -46,6 +46,8 @@ export interface Contact {
   email?: string
   tax_code?: string
   company?: string
+  city?: string
+  company_address?: string
   organization_ids: string[]
   source: LeadSource
   lead_score?: LeadScore
