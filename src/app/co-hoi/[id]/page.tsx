@@ -10,6 +10,7 @@ import {
   ClipboardList, UserPlus, Loader2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useTopbar } from '@/contexts/topbar'
 import {
   STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS,
   formatVND, formatDate, getInitials, daysSince, daysUntil,
@@ -46,6 +47,8 @@ const LOG_FILTERS: { key: LogFilter; label: string }[] = [
 export default function OppDetailPage() {
   const { id } = useParams<{ id: string }>()
   const supabase = createClient()
+
+  const { setBreadcrumb } = useTopbar()
 
   const [opp, setOpp] = useState<OppDetail | null>(null)
   const [allLogs, setAllLogs] = useState<LogDetail[]>([])
@@ -96,6 +99,20 @@ export default function OppDetailPage() {
     }
     load()
   }, [id])
+
+  useEffect(() => {
+    if (!opp) return
+    setBreadcrumb(
+      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+        <Link href="/" className="hover:text-gray-700">Tổng quan</Link>
+        <span className="text-gray-300">/</span>
+        <Link href="/don-hang" className="hover:text-gray-700">Đơn hàng</Link>
+        <span className="text-gray-300">/</span>
+        <span className="text-gray-700 font-semibold truncate max-w-xs">{opp.title}</span>
+      </div>
+    )
+    return () => setBreadcrumb(null)
+  }, [opp?.title])
 
   if (loading) {
     return (
@@ -155,14 +172,6 @@ export default function OppDetailPage() {
 
       {/* ─── HEADER ───────────────────────────────────────────── */}
       <div className="px-6 py-4 border-b border-gray-200 bg-white flex-shrink-0">
-        <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
-          <Link href="/" className="hover:text-gray-600">Tổng quan</Link>
-          <span>/</span>
-          <Link href="/don-hang" className="hover:text-gray-600">Đơn hàng</Link>
-          <span>/</span>
-          <span className="text-gray-700 font-medium truncate">{opp.title}</span>
-        </div>
-
         <div className="flex items-start gap-3">
           <Link href="/don-hang" className="mt-1 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors flex-shrink-0">
             <ArrowLeft size={18} />

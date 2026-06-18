@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { Bell, LogOut, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/contexts/auth'
+import { useTopbar } from '@/contexts/topbar'
 import { getInitials } from '@/lib/utils'
 
 const PAGE_TITLES: Record<string, string> = {
@@ -18,6 +19,7 @@ const PAGE_TITLES: Record<string, string> = {
 
 export default function Topbar() {
   const { user, logout } = useAuth()
+  const { breadcrumb } = useTopbar()
   const pathname = usePathname()
 
   const pageTitle = PAGE_TITLES[pathname]
@@ -36,7 +38,9 @@ export default function Topbar() {
 
   return (
     <header className="h-10 flex-shrink-0 bg-white flex items-center px-5 gap-3" style={{ borderBottom: '1px solid #9dd5ec' }}>
-      <span className="flex-1 text-sm font-semibold text-gray-700">{pageTitle}</span>
+      <div className="flex-1 min-w-0">
+        {breadcrumb ?? <span className="text-sm font-semibold text-gray-700">{pageTitle}</span>}
+      </div>
       <button className="relative p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500">
         <Bell size={16} />
       </button>
