@@ -19,6 +19,7 @@ const SOURCES: { value: LeadSource; label: string }[] = [
   { value: 'bod', label: 'Ban Giám đốc' },
   { value: 'referral', label: 'Giới thiệu' },
   { value: 'cskh', label: 'CSKH' },
+  { value: 'test', label: 'Test' },
 ]
 
 const SCORES: { value: LeadScore; label: string }[] = [
@@ -35,7 +36,7 @@ const ORG_TYPE_LABELS: Record<OrgType, string> = {
 
 const EMPTY_CONTACT_FORM = {
   name: '', company: '', tax_code: '', phone: '', email: '',
-  source: 'sale' as LeadSource, lead_score: 'warm' as LeadScore,
+  source: 'test' as LeadSource, lead_score: 'warm' as LeadScore,
   opp_title: '',
 }
 

@@ -54,7 +54,7 @@ export const STAGE_COLORS: Record<OppStage, { bg: string; text: string; border: 
 
 export const SOURCE_LABELS: Record<LeadSource, string> = {
   mkt: 'Marketing', sale: 'Sale', partner: 'Đối tác',
-  bod: 'Ban GĐ', cskh: 'CSKH', referral: 'Giới thiệu',
+  bod: 'Ban GĐ', cskh: 'CSKH', referral: 'Giới thiệu', test: 'Test',
 }
 
 export const SOURCE_COLORS: Record<LeadSource, string> = {
@@ -64,6 +64,7 @@ export const SOURCE_COLORS: Record<LeadSource, string> = {
   bod: 'bg-amber-100 text-amber-700',
   cskh: 'bg-teal-100 text-teal-700',
   referral: 'bg-green-100 text-green-700',
+  test: 'bg-gray-100 text-gray-500',
 }
 
 export const SCORE_COLORS: Record<LeadScore, string> = {
