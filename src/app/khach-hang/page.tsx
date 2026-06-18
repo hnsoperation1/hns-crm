@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Plus, X, Loader2, Building2, Users, Globe, Phone, Mail, MapPin, Trash2, Pencil } from 'lucide-react'
-import { CONTACTS, OPPORTUNITIES } from '@/lib/mock-data'
+import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/contexts/auth'
 import {
   SOURCE_LABELS, SOURCE_COLORS, SCORE_LABELS, SCORE_COLORS,
   TIER_LABELS, TIER_COLORS, formatDate, getInitials,
@@ -52,7 +53,6 @@ export default function CustomersPage() {
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
-      {/* Tab bar */}
       <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-xl w-fit">
         {([
           { key: 'contacts', label: 'Liên hệ', icon: Users },
@@ -79,27 +79,30 @@ export default function CustomersPage() {
 // ─── Contacts Tab ─────────────────────────────────────────────────────────────
 
 function ContactsTab() {
+  const { user } = useAuth()
+  const supabase = createClient()
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [opps, setOpps] = useState<Opportunity[]>([])
+  const [dataLoading, setDataLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ ...EMPTY_CONTACT_FORM })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [lookupLoading, setLookupLoading] = useState(false)
   const [lookupError, setLookupError] = useState('')
-  const [localContacts, setLocalContacts] = useState<Contact[]>([])
-  const [localOpps, setLocalOpps] = useState<Opportunity[]>([])
+  const [submitting, setSubmitting] = useState(false)
 
-  const allContacts = [...CONTACTS, ...localContacts]
-  const allOpps = [...OPPORTUNITIES, ...localOpps]
+  useEffect(() => { loadData() }, [])
 
-  const filtered = allContacts.filter(c => {
-    if (!search) return true
-    const q = search.toLowerCase()
-    return (
-      c.name.toLowerCase().includes(q) ||
-      (c.company ?? '').toLowerCase().includes(q) ||
-      (c.phone ?? '').includes(q)
-    )
-  })
+  async function loadData() {
+    const [{ data: c }, { data: o }] = await Promise.all([
+      supabase.from('contacts').select('*').order('created_at', { ascending: false }),
+      supabase.from('opportunities').select('id, title, contact_id, stage'),
+    ])
+    setContacts((c ?? []) as Contact[])
+    setOpps((o ?? []) as Opportunity[])
+    setDataLoading(false)
+  }
 
   function handleNameChange(name: string) {
     setForm(f => ({
@@ -141,40 +144,103 @@ function ContactsTab() {
     return Object.keys(errs).length === 0
   }
 
-  function handleSubmit() {
-    if (!validate()) return
-    const now = new Date().toISOString()
-    const today = now.split('T')[0]
-    const newContact: Contact = {
-      id: `c-local-${Date.now()}`,
-      name: form.name.trim(),
-      company: form.company.trim() || undefined,
-      tax_code: form.tax_code.trim() || undefined,
-      phone: form.phone.trim() || undefined,
-      email: form.email.trim() || undefined,
-      source: form.source,
-      lead_score: form.lead_score,
-      organization_ids: [],
-      created_by: 'u8',
-      created_at: today,
+  async function handleSubmit() {
+    if (!validate() || submitting) return
+    setSubmitting(true)
+
+    const companyName = form.company.trim()
+    const taxCode = form.tax_code.trim()
+    let orgId: string | null = null
+
+    try {
+      if (companyName) {
+        // Tìm org đã tồn tại
+        const q = taxCode
+          ? supabase.from('organizations').select('id, contact_ids, primary_contact_id').eq('tax_code', taxCode).limit(1)
+          : supabase.from('organizations').select('id, contact_ids, primary_contact_id').ilike('name', companyName).limit(1)
+        const { data: found } = await q
+
+        if (found && found.length > 0) {
+          orgId = found[0].id
+        } else {
+          const { data: newOrg } = await supabase
+            .from('organizations')
+            .insert({ name: companyName, tax_code: taxCode || null, type: 'company', contact_ids: [], created_by: user!.id })
+            .select('id')
+            .single()
+          orgId = newOrg?.id ?? null
+        }
+      }
+
+      // Tạo contact
+      const { data: newContact, error: cErr } = await supabase
+        .from('contacts')
+        .insert({
+          name: form.name.trim(),
+          company: companyName || null,
+          tax_code: taxCode || null,
+          phone: form.phone.trim() || null,
+          email: form.email.trim() || null,
+          source: form.source,
+          lead_score: form.lead_score,
+          organization_ids: orgId ? [orgId] : [],
+          created_by: user!.id,
+        })
+        .select('*')
+        .single()
+
+      if (cErr || !newContact) throw cErr ?? new Error('Tạo liên hệ thất bại')
+
+      // Cập nhật org: thêm contact vào contact_ids
+      if (orgId) {
+        const { data: org } = await supabase
+          .from('organizations')
+          .select('contact_ids, primary_contact_id')
+          .eq('id', orgId)
+          .single()
+        if (org) {
+          await supabase.from('organizations').update({
+            contact_ids: [...(org.contact_ids ?? []), newContact.id],
+            ...(org.primary_contact_id ? {} : { primary_contact_id: newContact.id }),
+          }).eq('id', orgId)
+        }
+      }
+
+      // Tạo cơ hội
+      await supabase.from('opportunities').insert({
+        title: form.opp_title.trim(),
+        contact_id: newContact.id,
+        organization_id: orgId,
+        created_by: user!.id,
+        source: form.source,
+        stage: 'stage_1',
+        stage_updated_at: new Date().toISOString().split('T')[0],
+        updated_at: new Date().toISOString(),
+      })
+
+      await loadData()
+      setForm({ ...EMPTY_CONTACT_FORM })
+      setErrors({}); setLookupError('')
+      setShowForm(false)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setSubmitting(false)
     }
-    const newOpp: Opportunity = {
-      id: `opp-local-${Date.now()}`,
-      title: form.opp_title.trim(),
-      contact_id: newContact.id,
-      assigned_to: '',
-      created_by: 'u8',
-      source: form.source,
-      stage: 'stage_1',
-      stage_updated_at: today,
-      created_at: today,
-      updated_at: today,
-    }
-    setLocalContacts(prev => [newContact, ...prev])
-    setLocalOpps(prev => [newOpp, ...prev])
-    setForm({ ...EMPTY_CONTACT_FORM })
-    setErrors({}); setLookupError('')
-    setShowForm(false)
+  }
+
+  const filtered = contacts.filter(c => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return (
+      c.name.toLowerCase().includes(q) ||
+      (c.company ?? '').toLowerCase().includes(q) ||
+      (c.phone ?? '').includes(q)
+    )
+  })
+
+  if (dataLoading) {
+    return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-gray-300" size={28} /></div>
   }
 
   return (
@@ -183,9 +249,9 @@ function ContactsTab() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-3">
           {[
-            { label: 'Tổng', value: allContacts.length, color: 'text-gray-900' },
-            { label: '🔥 Hot', value: allContacts.filter(c => c.lead_score === 'hot').length, color: 'text-red-600' },
-            { label: '☀️ Warm', value: allContacts.filter(c => c.lead_score === 'warm').length, color: 'text-orange-500' },
+            { label: 'Tổng', value: contacts.length, color: 'text-gray-900' },
+            { label: '🔥 Hot', value: contacts.filter(c => c.lead_score === 'hot').length, color: 'text-red-600' },
+            { label: '☀️ Warm', value: contacts.filter(c => c.lead_score === 'warm').length, color: 'text-orange-500' },
           ].map(({ label, value, color }) => (
             <div key={label} className="bg-white rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm text-center min-w-[80px]">
               <div className="text-xs text-gray-400">{label}</div>
@@ -220,7 +286,7 @@ function ContactsTab() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filtered.map(contact => {
-              const currentOpp = allOpps.find(o => o.contact_id === contact.id && !['lost', 'cancelled', 'stage_5'].includes(o.stage))
+              const currentOpp = opps.find(o => o.contact_id === contact.id && !['lost', 'cancelled', 'stage_5'].includes(o.stage))
               return (
                 <tr key={contact.id} className="hover:bg-gray-50/70 transition-colors">
                   <td className="px-5 py-3.5">
@@ -263,7 +329,9 @@ function ContactsTab() {
               )
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={7} className="px-5 py-12 text-center text-gray-400">Không tìm thấy liên hệ</td></tr>
+              <tr><td colSpan={7} className="px-5 py-12 text-center text-gray-400">
+                {contacts.length === 0 ? 'Chưa có liên hệ nào. Nhấn "Thêm liên hệ" để bắt đầu.' : 'Không tìm thấy liên hệ'}
+              </td></tr>
             )}
           </tbody>
         </table>
@@ -273,12 +341,9 @@ function ContactsTab() {
       {showForm && (
         <>
           <div className="fixed inset-0 bg-black/30 z-40" onClick={() => { setShowForm(false); setErrors({}); setLookupError('') }} />
-          <div className="fixed top-0 right-0 h-full w-[420px] bg-white shadow-2xl z-50 flex flex-col">
+          <div className="fixed top-0 right-0 h-full w-[840px] bg-white shadow-2xl z-50 flex flex-col">
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 flex-shrink-0">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">Thêm liên hệ mới</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Tạo kèm 1 cơ hội ở GĐ1 · Chờ phân công</p>
-              </div>
+              <h2 className="text-lg font-bold text-gray-900">Thêm liên hệ mới</h2>
               <button onClick={() => { setShowForm(false); setErrors({}); setLookupError('') }} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400">
                 <X size={18} />
               </button>
@@ -339,14 +404,14 @@ function ContactsTab() {
                     <input type="text" placeholder="VD: Công ty ABC – Tour hè 2026" value={form.opp_title}
                       onChange={e => setForm(f => ({ ...f, opp_title: e.target.value }))} className={inputCls(errors.opp_title)} />
                   </Field>
-                  <p className="text-xs text-gray-400 mt-1.5">Cơ hội được tạo ở <span className="font-semibold text-blue-600">GĐ1 · Tư vấn</span>, chờ sale admin phân công.</p>
                 </div>
               </div>
             </div>
 
             <div className="px-6 py-4 border-t border-gray-200 flex gap-3 flex-shrink-0">
-              <button onClick={handleSubmit}
-                className="flex-1 bg-accent-500 hover:bg-accent-600 text-white py-2.5 rounded-xl text-sm font-bold transition-colors">
+              <button onClick={handleSubmit} disabled={submitting}
+                className="flex-1 flex items-center justify-center gap-2 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-bold transition-colors">
+                {submitting && <Loader2 size={14} className="animate-spin" />}
                 Tạo liên hệ & cơ hội
               </button>
               <button onClick={() => { setShowForm(false); setErrors({}); setLookupError('') }}
@@ -364,6 +429,10 @@ function ContactsTab() {
 // ─── Organizations Tab ────────────────────────────────────────────────────────
 
 function OrganizationsTab() {
+  const { user } = useAuth()
+  const supabase = createClient()
+  const [orgs, setOrgs] = useState<Organization[]>([])
+  const [dataLoading, setDataLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null)
@@ -372,13 +441,12 @@ function OrganizationsTab() {
   const [lookupError, setLookupError] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
-  const [orgs, setOrgs] = useState<Organization[]>([])
+  const [submitting, setSubmitting] = useState(false)
 
-  const filtered = orgs.filter(o => {
-    if (!search) return true
-    const q = search.toLowerCase()
-    return o.name.toLowerCase().includes(q) || (o.tax_code ?? '').includes(q)
-  })
+  useEffect(() => {
+    supabase.from('organizations').select('*').order('created_at', { ascending: false })
+      .then(({ data }) => { setOrgs((data ?? []) as Organization[]); setDataLoading(false) })
+  }, [])
 
   function openAdd() {
     setEditingOrg(null); setForm({ ...EMPTY_ORG_FORM }); setErrors({}); setLookupError(''); setShowForm(true)
@@ -411,38 +479,70 @@ function OrganizationsTab() {
     return Object.keys(e).length === 0
   }
 
-  function handleSubmit() {
-    if (!validate()) return
-    const now = new Date().toISOString()
-    if (editingOrg) {
-      setOrgs(prev => prev.map(o => o.id === editingOrg.id ? {
-        ...o, ...form, name: form.name.trim(), tax_code: form.tax_code.trim() || undefined,
-        address: form.address.trim() || undefined, phone: form.phone.trim() || undefined,
-        email: form.email.trim() || undefined, website: form.website.trim() || undefined,
-        note: form.note.trim() || undefined, updated_at: now,
-      } : o))
-    } else {
-      const newOrg: Organization = {
-        id: `org-local-${Date.now()}`,
-        name: form.name.trim(),
-        tax_code: form.tax_code.trim() || undefined,
-        type: form.type,
-        address: form.address.trim() || undefined,
-        phone: form.phone.trim() || undefined,
-        email: form.email.trim() || undefined,
-        website: form.website.trim() || undefined,
-        note: form.note.trim() || undefined,
-        contact_ids: [],
-        created_by: 'u8',
-        created_at: now.split('T')[0],
-        updated_at: now,
+  async function handleSubmit() {
+    if (!validate() || submitting) return
+    setSubmitting(true)
+    try {
+      if (editingOrg) {
+        const { data } = await supabase
+          .from('organizations')
+          .update({
+            name: form.name.trim(),
+            tax_code: form.tax_code.trim() || null,
+            type: form.type,
+            address: form.address.trim() || null,
+            phone: form.phone.trim() || null,
+            email: form.email.trim() || null,
+            website: form.website.trim() || null,
+            note: form.note.trim() || null,
+          })
+          .eq('id', editingOrg.id)
+          .select('*')
+          .single()
+        if (data) setOrgs(prev => prev.map(o => o.id === editingOrg.id ? data as Organization : o))
+      } else {
+        const { data } = await supabase
+          .from('organizations')
+          .insert({
+            name: form.name.trim(),
+            tax_code: form.tax_code.trim() || null,
+            type: form.type,
+            address: form.address.trim() || null,
+            phone: form.phone.trim() || null,
+            email: form.email.trim() || null,
+            website: form.website.trim() || null,
+            note: form.note.trim() || null,
+            contact_ids: [],
+            created_by: user!.id,
+          })
+          .select('*')
+          .single()
+        if (data) setOrgs(prev => [data as Organization, ...prev])
       }
-      setOrgs(prev => [newOrg, ...prev])
+      closePanel()
+    } finally {
+      setSubmitting(false)
     }
-    closePanel()
   }
 
+  async function handleDelete() {
+    if (!deleteConfirm) return
+    await supabase.from('organizations').delete().eq('id', deleteConfirm)
+    setOrgs(prev => prev.filter(o => o.id !== deleteConfirm))
+    setDeleteConfirm(null)
+  }
+
+  const filtered = orgs.filter(o => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return o.name.toLowerCase().includes(q) || (o.tax_code ?? '').includes(q)
+  })
+
   const pendingDelete = orgs.find(o => o.id === deleteConfirm)
+
+  if (dataLoading) {
+    return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-gray-300" size={28} /></div>
+  }
 
   return (
     <>
@@ -607,8 +707,9 @@ function OrganizationsTab() {
             </div>
 
             <div className="px-6 py-4 border-t border-gray-200 flex gap-3 flex-shrink-0">
-              <button onClick={handleSubmit}
-                className="flex-1 bg-accent-500 hover:bg-accent-600 text-white py-2.5 rounded-xl text-sm font-bold transition-colors">
+              <button onClick={handleSubmit} disabled={submitting}
+                className="flex-1 flex items-center justify-center gap-2 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-bold transition-colors">
+                {submitting && <Loader2 size={14} className="animate-spin" />}
                 {editingOrg ? 'Lưu thay đổi' : 'Tạo tổ chức'}
               </button>
               <button onClick={closePanel}
@@ -638,7 +739,7 @@ function OrganizationsTab() {
                   className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
                   Hủy
                 </button>
-                <button onClick={() => { setOrgs(prev => prev.filter(o => o.id !== deleteConfirm)); setDeleteConfirm(null) }}
+                <button onClick={handleDelete}
                   className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-sm font-semibold text-white">
                   Xóa
                 </button>
