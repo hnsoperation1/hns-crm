@@ -123,7 +123,7 @@ export default function PipelinePage() {
                       const isOverdue = deadline !== null && deadline < 0
                       return (
                         <Link key={opp.id} href={`/co-hoi/${opp.id}`} className="block">
-                          <div className={`bg-white rounded-xl border border-l-4 ${sc.side} p-3.5 hover:shadow-md transition-all cursor-pointer group ${!opp.assigned_to ? 'border-amber-200' : 'border-gray-200'}`}>
+                          <div className={`bg-white rounded-xl border p-3.5 hover:shadow-md transition-all cursor-pointer group ${!opp.assigned_to ? 'border-amber-200' : 'border-gray-200'}`}>
                             <div className="font-semibold text-sm text-gray-900 group-hover:text-brand-700 transition-colors mb-0.5 line-clamp-2 leading-snug">
                               {opp.title}
                             </div>
