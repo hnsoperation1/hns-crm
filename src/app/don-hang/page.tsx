@@ -116,13 +116,13 @@ export default function PipelinePage() {
                     )}
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-3 space-y-4 pt-4">
+                  <div className="flex-1 overflow-y-auto p-3 pt-4 flex flex-col gap-4">
                     {cards.map(opp => {
                       const deadline = opp.deadline ? daysUntil(opp.deadline) : null
                       const isUrgent = deadline !== null && deadline >= 0 && deadline <= 5
                       const isOverdue = deadline !== null && deadline < 0
                       return (
-                        <Link key={opp.id} href={`/co-hoi/${opp.id}`}>
+                        <Link key={opp.id} href={`/co-hoi/${opp.id}`} className="block">
                           <div className={`bg-white rounded-xl border border-l-4 ${sc.side} p-3.5 hover:shadow-md transition-all cursor-pointer group ${!opp.assigned_to ? 'border-amber-200' : 'border-gray-200'}`}>
                             <div className="font-semibold text-sm text-gray-900 group-hover:text-brand-700 transition-colors mb-0.5 line-clamp-2 leading-snug">
                               {opp.title}
