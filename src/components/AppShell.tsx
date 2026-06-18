@@ -26,7 +26,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span style={{ color: '#ef5e2f' }}>HNS</span>
             <span style={{ color: '#2a9ac4' }}> CRM</span>
           </div>
-          <div className="text-xs text-gray-400">Đang tải...</div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: '#ef5e2f' }}
+          >
+            Tải lại
+          </button>
         </div>
       </div>
     )
