@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   ArrowLeft, CheckCircle2, AlertTriangle, CalendarDays,
   DollarSign, User, Building2, FileText, Tag, ChevronRight,
 } from 'lucide-react'
+import { useTopbar } from '@/contexts/topbar'
 import { USERS, CONTACTS } from '@/lib/mock-data'
 import {
   STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, formatVND, getInitials,
@@ -43,10 +44,22 @@ const EMPTY: FormData = {
 type Errors = Partial<Record<keyof FormData, string>>
 
 export default function NewOpportunityPage() {
+  const { setBreadcrumb } = useTopbar()
   const [form, setForm] = useState<FormData>({ ...EMPTY })
   const [errors, setErrors] = useState<Errors>({})
   const [submitted, setSubmitted] = useState(false)
   const [fakeId] = useState(() => `opp-${Date.now()}`)
+
+  useEffect(() => {
+    setBreadcrumb(
+      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+        <Link href="/don-hang" className="hover:text-gray-700">Đơn hàng</Link>
+        <ChevronRight size={11} className="text-gray-300" />
+        <span className="text-gray-700 font-semibold">Tạo đơn mới</span>
+      </div>
+    )
+    return () => setBreadcrumb(null)
+  }, [])
 
   function set<K extends keyof FormData>(field: K, value: FormData[K]) {
     setForm(f => ({ ...f, [field]: value }))
@@ -118,11 +131,6 @@ export default function NewOpportunityPage() {
             <ArrowLeft size={18} />
           </Link>
           <div className="flex-1">
-            <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-0.5">
-              <Link href="/don-hang" className="hover:text-gray-600">Đơn hàng</Link>
-              <ChevronRight size={12} />
-              <span className="text-gray-700 font-medium">Tạo đơn mới</span>
-            </div>
             <h1 className="text-lg font-bold text-gray-900">Thêm đơn hàng mới</h1>
           </div>
           <button
