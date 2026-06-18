@@ -235,7 +235,7 @@ export default function OppDetailPage() {
           {effectiveAssignedUser && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <User size={12} className="text-gray-400" />
-              <span>Sale TV: <span className="font-semibold text-gray-700">{effectiveAssignedUser.full_name.split(' ').slice(-2).join(' ')}</span></span>
+              <span>Sale TV: <span className="font-semibold text-gray-700">{effectiveAssignedUser.full_name}</span></span>
             </div>
           )}
           {opp.estimated_value && (
@@ -707,7 +707,7 @@ export default function OppDetailPage() {
                       <select value={reassignTarget || effectiveAssigneeId}
                         onChange={e => setReassignTarget(e.target.value)}
                         className="text-xs border border-brand-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-400 bg-white text-gray-700">
-                        {saleUsers.map(u => <option key={u.id} value={u.id}>{u.full_name.split(' ').slice(-2).join(' ')}</option>)}
+                        {saleUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
                       </select>
                       <button onClick={() => {
                         if (reassignTarget) { setReassignSuccess(true); setTimeout(() => setReassignSuccess(false), 3000) }

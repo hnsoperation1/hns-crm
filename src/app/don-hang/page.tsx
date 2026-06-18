@@ -148,7 +148,7 @@ export default function PipelinePage() {
                                   <div className="w-5 h-5 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">
                                     {getInitials(opp.assigned_user.full_name)}
                                   </div>
-                                  <span className="text-xs text-gray-500">{opp.assigned_user.full_name.split(' ').pop()}</span>
+                                  <span className="text-xs text-gray-500">{opp.assigned_user.full_name}</span>
                                 </div>
                               ) : null}
                               <div className="text-right">
@@ -227,7 +227,7 @@ export default function PipelinePage() {
                             <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">
                               {getInitials(opp.assigned_user.full_name)}
                             </div>
-                            <span className="text-gray-700 whitespace-nowrap">{opp.assigned_user.full_name.split(' ').pop()}</span>
+                            <span className="text-gray-700 whitespace-nowrap">{opp.assigned_user.full_name}</span>
                           </div>
                         ) : null}
                       </td>
