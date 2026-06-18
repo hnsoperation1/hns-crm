@@ -306,12 +306,14 @@ $$ LANGUAGE SQL SECURITY DEFINER STABLE;
 -- USERS policies
 DROP POLICY IF EXISTS "users_read_own"          ON users;
 DROP POLICY IF EXISTS "admins_read_all_users"   ON users;
+DROP POLICY IF EXISTS "cskh_read_all_users"     ON users;
 DROP POLICY IF EXISTS "super_admin_insert_user" ON users;
 DROP POLICY IF EXISTS "super_admin_update_user" ON users;
 DROP POLICY IF EXISTS "super_admin_delete_user" ON users;
 
 CREATE POLICY "users_read_own"          ON users FOR SELECT USING (id = auth.uid());
 CREATE POLICY "admins_read_all_users"   ON users FOR SELECT USING (current_user_role() IN ('boss','admin','sale_admin'));
+CREATE POLICY "cskh_read_all_users"     ON users FOR SELECT USING (current_user_role() = 'cskh');
 CREATE POLICY "super_admin_insert_user" ON users FOR INSERT WITH CHECK (is_super_admin());
 CREATE POLICY "super_admin_update_user" ON users FOR UPDATE USING (is_super_admin() OR id = auth.uid());
 CREATE POLICY "super_admin_delete_user" ON users FOR DELETE USING (is_super_admin());
@@ -321,13 +323,14 @@ DROP POLICY IF EXISTS "boss_admin_see_all_opps" ON opportunities;
 DROP POLICY IF EXISTS "sale_tv_own_opps"        ON opportunities;
 DROP POLICY IF EXISTS "mkt_own_source_opps"     ON opportunities;
 DROP POLICY IF EXISTS "cskh_post_opps"          ON opportunities;
+DROP POLICY IF EXISTS "cskh_see_all_opps"       ON opportunities;
 DROP POLICY IF EXISTS "sale_admin_insert_opp"   ON opportunities;
 DROP POLICY IF EXISTS "sale_tv_update_own_opp"  ON opportunities;
 
 CREATE POLICY "boss_admin_see_all_opps" ON opportunities FOR SELECT USING (current_user_role() IN ('boss','admin','sale_admin'));
+CREATE POLICY "cskh_see_all_opps"       ON opportunities FOR SELECT USING (current_user_role() = 'cskh');
 CREATE POLICY "sale_tv_own_opps"        ON opportunities FOR SELECT USING (assigned_to = auth.uid() AND current_user_flag('is_sale_tv'));
 CREATE POLICY "mkt_own_source_opps"     ON opportunities FOR SELECT USING (source = 'mkt' AND current_user_role() = 'mkt');
-CREATE POLICY "cskh_post_opps"          ON opportunities FOR SELECT USING (stage IN ('stage_5','lost') AND current_user_flag('can_cskh_post'));
 CREATE POLICY "sale_admin_insert_opp"   ON opportunities FOR INSERT WITH CHECK (current_user_role() IN ('admin','sale_admin') OR (current_user_role() = 'mkt' AND source = 'mkt'));
 CREATE POLICY "sale_tv_update_own_opp"  ON opportunities FOR UPDATE USING (assigned_to = auth.uid() AND current_user_flag('is_sale_tv'));
 
@@ -355,8 +358,10 @@ CREATE POLICY "boss_admin_see_campaigns" ON campaigns FOR SELECT USING (current_
 DROP POLICY IF EXISTS "boss_admin_see_all_contacts" ON contacts;
 DROP POLICY IF EXISTS "sale_tv_own_contacts"        ON contacts;
 DROP POLICY IF EXISTS "mkt_cskh_insert_contact"     ON contacts;
+DROP POLICY IF EXISTS "cskh_see_all_contacts"       ON contacts;
 
 CREATE POLICY "boss_admin_see_all_contacts" ON contacts FOR SELECT USING (current_user_role() IN ('boss','admin','sale_admin'));
+CREATE POLICY "cskh_see_all_contacts"       ON contacts FOR SELECT USING (current_user_role() = 'cskh');
 CREATE POLICY "sale_tv_own_contacts"        ON contacts FOR SELECT USING (EXISTS (SELECT 1 FROM opportunities WHERE contact_id = contacts.id AND assigned_to = auth.uid()));
 CREATE POLICY "mkt_cskh_insert_contact"     ON contacts FOR INSERT WITH CHECK (current_user_role() IN ('mkt','cskh','admin','sale_admin') OR current_user_flag('can_qualify_lead'));
 
