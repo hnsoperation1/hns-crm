@@ -1,14 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Kanban, List, ChevronRight } from 'lucide-react'
-import { OPPORTUNITIES, getUserById, getContactById } from '@/lib/mock-data'
+import { Plus, Kanban, List, ChevronRight, Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import { STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS, formatVND, formatDate, daysUntil, getInitials } from '@/lib/utils'
-import type { OppStage } from '@/types'
+import type { Opportunity, OppStage } from '@/types'
 import { useAuth } from '@/contexts/auth'
 
 type ViewMode = 'kanban' | 'table'
+
+type OppWithRelations = Opportunity & {
+  contact: { name: string; company?: string } | null
+  assigned_user: { full_name: string } | null
+}
 
 const COLUMNS: { stage: OppStage; label: string }[] = [
   { stage: 'stage_1', label: 'GĐ1 · Tư vấn' },
@@ -21,8 +26,31 @@ const COLUMNS: { stage: OppStage; label: string }[] = [
 
 export default function PipelinePage() {
   const { user } = useAuth()
+  const supabase = createClient()
   const [view, setView] = useState<ViewMode>('kanban')
-  const activeCount = OPPORTUNITIES.filter(o => !['lost', 'cancelled'].includes(o.stage)).length
+  const [opps, setOpps] = useState<OppWithRelations[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase
+      .from('opportunities')
+      .select('*, contact:contacts(name, company), assigned_user:users!assigned_to(full_name)')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        setOpps((data ?? []) as OppWithRelations[])
+        setLoading(false)
+      })
+  }, [])
+
+  const activeCount = opps.filter(o => !['lost', 'cancelled'].includes(o.stage)).length
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="animate-spin text-gray-300" size={28} />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 40px)' }}>
@@ -33,7 +61,6 @@ export default function PipelinePage() {
           <p className="text-sm text-gray-400 mt-0.5">{activeCount} đơn đang xử lý</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* View switcher */}
           <div className="flex items-center bg-gray-100 rounded-xl p-1 gap-0.5">
             <button
               onClick={() => setView('kanban')}
@@ -69,7 +96,7 @@ export default function PipelinePage() {
         <div className="flex-1 overflow-x-auto overflow-y-hidden">
           <div className="flex h-full" style={{ minWidth: `${COLUMNS.length * 290}px` }}>
             {COLUMNS.map(({ stage, label }) => {
-              const cards = OPPORTUNITIES.filter(o => o.stage === stage)
+              const cards = opps.filter(o => o.stage === stage)
               const totalValue = cards.reduce((s, o) => s + (o.estimated_value ?? 0), 0)
               const sc = STAGE_COLORS[stage]
               return (
@@ -91,8 +118,6 @@ export default function PipelinePage() {
 
                   <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
                     {cards.map(opp => {
-                      const contact = getContactById(opp.contact_id)
-                      const user = getUserById(opp.assigned_to)
                       const deadline = opp.deadline ? daysUntil(opp.deadline) : null
                       const isUrgent = deadline !== null && deadline >= 0 && deadline <= 5
                       const isOverdue = deadline !== null && deadline < 0
@@ -102,7 +127,9 @@ export default function PipelinePage() {
                             <div className="font-semibold text-sm text-gray-900 group-hover:text-brand-700 transition-colors mb-0.5 line-clamp-2 leading-snug">
                               {opp.title}
                             </div>
-                            <div className="text-xs text-gray-400 mb-2.5">{contact?.company ?? contact?.name}</div>
+                            <div className="text-xs text-gray-400 mb-2.5">
+                              {opp.contact?.company ?? opp.contact?.name}
+                            </div>
                             <div className="flex items-center justify-between mb-2.5">
                               <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SOURCE_COLORS[opp.source]}`}>
                                 {SOURCE_LABELS[opp.source]}
@@ -116,12 +143,12 @@ export default function PipelinePage() {
                                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
                                   Chờ phân công
                                 </span>
-                              ) : user ? (
+                              ) : opp.assigned_user ? (
                                 <div className="flex items-center gap-1.5">
                                   <div className="w-5 h-5 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">
-                                    {getInitials(user.full_name)}
+                                    {getInitials(opp.assigned_user.full_name)}
                                   </div>
-                                  <span className="text-xs text-gray-500">{user.full_name.split(' ').pop()}</span>
+                                  <span className="text-xs text-gray-500">{opp.assigned_user.full_name.split(' ').pop()}</span>
                                 </div>
                               ) : null}
                               <div className="text-right">
@@ -170,16 +197,17 @@ export default function PipelinePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {OPPORTUNITIES.map(opp => {
-                  const contact = getContactById(opp.contact_id)
-                  const user = getUserById(opp.assigned_to)
+                {opps.length === 0 && (
+                  <tr><td colSpan={8} className="px-5 py-12 text-center text-gray-400">Chưa có đơn hàng nào</td></tr>
+                )}
+                {opps.map(opp => {
                   const sc = STAGE_COLORS[opp.stage]
                   const deadline = opp.deadline ? daysUntil(opp.deadline) : null
                   return (
                     <tr key={opp.id} className="hover:bg-gray-50/70 group transition-colors">
                       <td className="px-5 py-3.5">
                         <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{opp.title}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">{contact?.company ?? contact?.name}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">{opp.contact?.company ?? opp.contact?.name}</div>
                       </td>
                       <td className="px-5 py-3.5">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SOURCE_COLORS[opp.source]}`}>
@@ -193,15 +221,13 @@ export default function PipelinePage() {
                       </td>
                       <td className="px-5 py-3.5">
                         {!opp.assigned_to ? (
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                            Chờ phân công
-                          </span>
-                        ) : user ? (
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Chờ phân công</span>
+                        ) : opp.assigned_user ? (
                           <div className="flex items-center gap-2">
                             <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">
-                              {getInitials(user.full_name)}
+                              {getInitials(opp.assigned_user.full_name)}
                             </div>
-                            <span className="text-gray-700 whitespace-nowrap">{user.full_name.split(' ').pop()}</span>
+                            <span className="text-gray-700 whitespace-nowrap">{opp.assigned_user.full_name.split(' ').pop()}</span>
                           </div>
                         ) : null}
                       </td>
