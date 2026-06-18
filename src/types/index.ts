@@ -92,6 +92,22 @@ export interface Task {
   assigned_to?: string
 }
 
+export type IssueStatus = 'open' | 'processing' | 'resolved'
+
+export interface Issue {
+  id: string
+  opportunity_id?: string
+  opportunity?: Pick<Opportunity, 'id' | 'title'>
+  description: string
+  assigned_to?: string
+  assigned_user?: Pick<User, 'id' | 'full_name'>
+  status: IssueStatus
+  created_by: string
+  creator?: Pick<User, 'id' | 'full_name'>
+  created_at: string
+  updated_at: string
+}
+
 export interface ActivityLog {
   id: string
   opportunity_id: string

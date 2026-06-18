@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog } from 'lucide-react'
+import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, HeadphonesIcon } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/contexts/auth'
 import { getInitials } from '@/lib/utils'
@@ -68,6 +68,16 @@ export default function Sidebar() {
         {navItems
           .filter(item => !(item.href === '/giao-viec' && user?.is_sale_tv))
           .map(item => <NavLink key={item.href} {...item} />)}
+
+        {/* CSKH section — chỉ hiện với cskh / admin / boss */}
+        {(user?.role === 'cskh' || user?.role === 'admin' || user?.role === 'boss' || user?.is_super_admin) && (
+          <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(18,127,175,0.2)' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1.5" style={{ color: '#4a8fa8' }}>
+              CSKH
+            </p>
+            <NavLink href="/cskh" label="Issues" icon={HeadphonesIcon} />
+          </div>
+        )}
 
         {/* Admin section — chỉ hiện với super admin */}
         {user?.is_super_admin && (
