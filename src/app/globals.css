@@ -2,7 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Scrollbar mặc định (dọc) */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: #ebf6fb; }
 ::-webkit-scrollbar-thumb { background: #9dd5ec; border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: #5cb5da; }
+
+/* Scrollbar ngang kanban — dày và rõ */
+.kanban-scroll::-webkit-scrollbar { height: 10px; }
+.kanban-scroll::-webkit-scrollbar-track { background: #f0f4f8; border-radius: 999px; }
+.kanban-scroll::-webkit-scrollbar-thumb { background: #9dd5ec; border-radius: 999px; border: 2px solid #f0f4f8; }
+.kanban-scroll::-webkit-scrollbar-thumb:hover { background: #2a9ac4; }

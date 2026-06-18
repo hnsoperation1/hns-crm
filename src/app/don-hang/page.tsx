@@ -93,7 +93,7 @@ export default function PipelinePage() {
 
       {/* Kanban */}
       {view === 'kanban' && (
-        <div className="flex-1 overflow-x-auto overflow-y-hidden">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden kanban-scroll">
           <div className="flex h-full" style={{ minWidth: `${COLUMNS.length * 290}px` }}>
             {COLUMNS.map(({ stage, label }) => {
               const cards = opps.filter(o => o.stage === stage)
