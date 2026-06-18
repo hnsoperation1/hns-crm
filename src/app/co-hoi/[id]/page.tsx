@@ -1,22 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2,
   MessageSquare, Plus, CheckSquare, Square,
   Clock, CalendarDays, DollarSign, User, Pencil, CheckCircle2, X,
-  ClipboardList, UserPlus,
+  ClipboardList, UserPlus, Loader2,
 } from 'lucide-react'
-import { getOppById, getContactById, getUserById, getLogsForOpp, getTasksForOpp, USERS } from '@/lib/mock-data'
+import { createClient } from '@/lib/supabase/client'
 import {
   STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS,
   formatVND, formatDate, getInitials, daysSince, daysUntil,
 } from '@/lib/utils'
-import type { OppStage, LogType } from '@/types'
+import type { OppStage, LogType, Opportunity, Contact, ActivityLog } from '@/types'
 
-const SALE_TV_USERS = USERS.filter(u => u.is_sale_tv && u.is_active)
+// ─── Local types for Supabase joins ──────────────────────────────────────────
+
+type UserMin = { id: string; full_name: string; is_sale_tv?: boolean; is_active?: boolean }
+
+type OppDetail = Opportunity & {
+  contact: (Contact & { id: string }) | null
+  assigned_user: UserMin | null
+  creator: UserMin | null
+}
+
+type LogDetail = ActivityLog & {
+  user: UserMin | null
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const PIPELINE: OppStage[] = ['stage_1', 'stage_2', 'stage_3', 'stage_4', 'stage_5']
 
@@ -27,12 +41,22 @@ const LOG_FILTERS: { key: LogFilter; label: string }[] = [
   { key: 'sale_update', label: 'Cập nhật sale' },
 ]
 
+// ─── Page ────────────────────────────────────────────────────────────────────
+
 export default function OppDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const supabase = createClient()
+
+  const [opp, setOpp] = useState<OppDetail | null>(null)
+  const [allLogs, setAllLogs] = useState<LogDetail[]>([])
+  const [tasks, setTasks] = useState<{ id: string; title: string; due_date?: string; assigned_to?: string; is_done: boolean; stage: number }[]>([])
+  const [saleUsers, setSaleUsers] = useState<UserMin[]>([])
+  const [allUsers, setAllUsers] = useState<UserMin[]>([])
+  const [loading, setLoading] = useState(true)
+
   const [logFilter, setLogFilter] = useState<LogFilter>('all')
   const [showReassign, setShowReassign] = useState(false)
   const [reassignTarget, setReassignTarget] = useState('')
-  const [currentAssignee, setCurrentAssignee] = useState<string | null>(null)
   const [reassignSuccess, setReassignSuccess] = useState(false)
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
@@ -43,7 +67,43 @@ export default function OppDetailPage() {
   const [showNewTask, setShowNewTask] = useState(false)
   const [newTask, setNewTask] = useState({ title: '', due_date: '', assigned_to: '' })
 
-  const opp = getOppById(id)
+  useEffect(() => {
+    async function load() {
+      const [{ data: oppData }, { data: logsData }, { data: tasksData }, { data: usersData }] = await Promise.all([
+        supabase.from('opportunities')
+          .select('*, contact:contacts(id,name,phone,email,company,tax_code,organization_ids,source,lead_score,created_by,created_at), assigned_user:users!assigned_to(id,full_name), creator:users!created_by(id,full_name)')
+          .eq('id', id)
+          .single(),
+        supabase.from('activity_logs')
+          .select('*, user:users(id,full_name)')
+          .eq('opportunity_id', id)
+          .order('log_date', { ascending: false }),
+        supabase.from('tasks')
+          .select('*')
+          .eq('opportunity_id', id)
+          .order('created_at', { ascending: true }),
+        supabase.from('users')
+          .select('id, full_name, is_sale_tv, is_active')
+          .eq('is_active', true),
+      ])
+      setOpp(oppData as OppDetail | null)
+      setAllLogs((logsData ?? []) as LogDetail[])
+      setTasks(tasksData ?? [])
+      const users = (usersData ?? []) as UserMin[]
+      setAllUsers(users)
+      setSaleUsers(users.filter(u => u.is_sale_tv))
+      setLoading(false)
+    }
+    load()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="animate-spin text-gray-300" size={28} />
+      </div>
+    )
+  }
 
   if (!opp) {
     return (
@@ -55,21 +115,17 @@ export default function OppDetailPage() {
     )
   }
 
-  const contact = getContactById(opp.contact_id)
-  const effectiveAssigneeId = currentAssignee ?? opp.assigned_to
-  const assignedUser = getUserById(effectiveAssigneeId)
-  const createdByUser = getUserById(opp.created_by)
-  const allLogs = getLogsForOpp(opp.id)
-  const tasks = getTasksForOpp(opp.id)
+  const contact = opp.contact
+  const assignedUser = opp.assigned_user
+  const createdByUser = opp.creator
   const sc = STAGE_COLORS[opp.stage]
   const isLost = opp.stage === 'lost' || opp.stage === 'cancelled'
   const stageIndex = PIPELINE.indexOf(opp.stage as OppStage)
 
   const filteredLogs = logFilter === 'all'
     ? allLogs
-    : allLogs.filter(l => l.log_type === logFilter)
+    : allLogs.filter(l => l.log_type === (logFilter as LogType))
 
-  // Stage history: derive from stage_change logs (sorted oldest→newest)
   const stageChanges = allLogs
     .filter(l => l.log_type === 'stage_change' && l.stage_from && l.stage_to)
     .sort((a, b) => new Date(a.log_date).getTime() - new Date(b.log_date).getTime())
@@ -84,25 +140,21 @@ export default function OppDetailPage() {
   }
   stageHistory.push({ stage: curStage, startDate: cursor, endDate: null, isCurrent: true })
 
-  // Task summary
-  const tasksByStage = [1, 2, 3, 4, 5].map(s => ({
-    stageKey: `stage_${s}` as OppStage,
-    tasks: tasks.filter(t => t.stage === s),
-  })).filter(g => g.tasks.length > 0)
-  const doneTasks = tasks.filter(t => t.is_done).length
-
-  // Countdown values
+  const doneTasks = tasks.filter(t => taskDone[t.id] !== undefined ? taskDone[t.id] : t.is_done).length
   const daysInStage = daysSince(opp.stage_updated_at)
   const daysToTour = opp.tour_date ? daysUntil(opp.tour_date) : null
   const daysToDeadline = opp.deadline ? daysUntil(opp.deadline) : null
+
+  const effectiveAssigneeId = reassignSuccess && reassignTarget ? reassignTarget : (opp.assigned_to ?? '')
+  const effectiveAssignedUser = reassignTarget && reassignSuccess
+    ? allUsers.find(u => u.id === effectiveAssigneeId) ?? assignedUser
+    : assignedUser
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
 
       {/* ─── HEADER ───────────────────────────────────────────── */}
       <div className="px-6 py-4 border-b border-gray-200 bg-white flex-shrink-0">
-
-        {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
           <Link href="/" className="hover:text-gray-600">Tổng quan</Link>
           <span>/</span>
@@ -181,10 +233,10 @@ export default function OppDetailPage() {
 
         {/* Key stats strip */}
         <div className="flex items-center gap-4 mt-4 ml-10 flex-wrap">
-          {assignedUser && (
+          {effectiveAssignedUser && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <User size={12} className="text-gray-400" />
-              <span>Sale TV: <span className="font-semibold text-gray-700">{assignedUser.full_name.split(' ').slice(-2).join(' ')}</span></span>
+              <span>Sale TV: <span className="font-semibold text-gray-700">{effectiveAssignedUser.full_name.split(' ').slice(-2).join(' ')}</span></span>
             </div>
           )}
           {opp.estimated_value && (
@@ -219,7 +271,6 @@ export default function OppDetailPage() {
           {/* ── LEFT: Tabbed (Activity / Tasks) ───────── */}
           <div className="col-span-2 space-y-4">
 
-            {/* ── Main tab switcher ── */}
             <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-2xl p-1 shadow-sm">
               <button
                 onClick={() => setMainTab('activity')}
@@ -248,8 +299,6 @@ export default function OppDetailPage() {
             {/* ══════════ HOẠT ĐỘNG TAB ══════════ */}
             {mainTab === 'activity' && (
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-
-              {/* Log filter */}
               <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
                 <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
                   {LOG_FILTERS.map(({ key, label }) => (
@@ -268,32 +317,22 @@ export default function OppDetailPage() {
                     </button>
                   ))}
                 </div>
-                <span className="text-xs text-gray-400">
-                  {filteredLogs.length} / {allLogs.length} log
-                </span>
+                <span className="text-xs text-gray-400">{filteredLogs.length} / {allLogs.length} log</span>
               </div>
 
-              {/* Timeline */}
               <div className="p-5">
                 {filteredLogs.length === 0 && (
-                  <div className="text-center text-gray-400 py-8 text-sm">
-                    Không có log phù hợp
-                  </div>
+                  <div className="text-center text-gray-400 py-8 text-sm">Chưa có hoạt động nào</div>
                 )}
-
                 {filteredLogs.map((log, i) => {
-                  const user = getUserById(log.user_id)
+                  const logUser = log.user
                   const logSc = STAGE_COLORS[log.stage_at_log]
                   const isStageChange = log.log_type === 'stage_change'
-
                   return (
                     <div key={log.id} className="flex gap-4 group">
-                      {/* Icon + line */}
                       <div className="flex flex-col items-center flex-shrink-0">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center mt-1 flex-shrink-0 transition-transform group-hover:scale-110 ${
-                          isStageChange
-                            ? `${logSc.dot} text-white`
-                            : 'bg-gray-100 text-gray-400'
+                          isStageChange ? `${logSc.dot} text-white` : 'bg-gray-100 text-gray-400'
                         }`}>
                           {isStageChange ? <ArrowRight size={13} strokeWidth={2.5} /> : <MessageSquare size={12} />}
                         </div>
@@ -301,22 +340,18 @@ export default function OppDetailPage() {
                           <div className="w-0.5 bg-gray-100 flex-1 my-1 min-h-[20px]" />
                         )}
                       </div>
-
-                      {/* Content */}
                       <div className={`flex-1 ${i < filteredLogs.length - 1 ? 'pb-5' : 'pb-2'}`}>
-                        {/* Meta row */}
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          {user && (
+                          {logUser && (
                             <div className="flex items-center gap-1.5">
                               <div className="w-5 h-5 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">
-                                {getInitials(user.full_name)}
+                                {getInitials(logUser.full_name)}
                               </div>
-                              <span className="text-sm font-semibold text-gray-800">{user.full_name}</span>
+                              <span className="text-sm font-semibold text-gray-800">{logUser.full_name}</span>
                             </div>
                           )}
                           <span className="text-xs text-gray-400">·</span>
                           <span className="text-xs text-gray-400">{formatDate(log.log_date)}</span>
-
                           {isStageChange && log.stage_from && log.stage_to && (
                             <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full ${logSc.bg} ${logSc.text}`}>
                               {STAGE_LABELS[log.stage_from].split(' · ')[0]}
@@ -325,27 +360,17 @@ export default function OppDetailPage() {
                             </span>
                           )}
                         </div>
-
-                        {/* Body */}
                         <div className={`text-sm text-gray-700 leading-relaxed rounded-xl p-3.5 ${
-                          isStageChange
-                            ? `${logSc.bg} border ${logSc.border}`
-                            : 'bg-gray-50 border border-gray-100'
+                          isStageChange ? `${logSc.bg} border ${logSc.border}` : 'bg-gray-50 border border-gray-100'
                         }`}>
                           {log.description}
                         </div>
-
-                        {/* Next step */}
                         {log.next_step && (
                           <div className="flex items-start gap-2 mt-2 text-xs">
-                            <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold whitespace-nowrap flex-shrink-0">
-                              Bước tiếp
-                            </span>
+                            <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold whitespace-nowrap flex-shrink-0">Bước tiếp</span>
                             <span className="text-gray-600">
                               {log.next_step}
-                              {log.next_step_due && (
-                                <span className="text-gray-400"> · trước {formatDate(log.next_step_due)}</span>
-                              )}
+                              {log.next_step_due && <span className="text-gray-400"> · trước {formatDate(log.next_step_due)}</span>}
                             </span>
                           </div>
                         )}
@@ -355,7 +380,6 @@ export default function OppDetailPage() {
                 })}
               </div>
 
-              {/* ── Add log form ── */}
               <div className="mx-5 mb-5 rounded-xl border border-dashed border-brand-200 bg-brand-50/40 p-4">
                 <div className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                   <Plus size={14} className="text-accent-500" />
@@ -368,11 +392,7 @@ export default function OppDetailPage() {
                 />
                 <div className="flex items-center justify-between mt-3 gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <input
-                      type="date"
-                      defaultValue="2026-06-08"
-                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white shadow-sm"
-                    />
+                    <input type="date" className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white shadow-sm" />
                     <select className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-600 shadow-sm">
                       <option value="sale_update">Cập nhật sale</option>
                       <option value="stage_change">Chuyển giai đoạn</option>
@@ -385,11 +405,11 @@ export default function OppDetailPage() {
                 </div>
               </div>
             </div>
-            )} {/* end activity tab */}
+            )}
 
             {/* ══════════ CÔNG VIỆC TAB ══════════ */}
             {mainTab === 'tasks' && (() => {
-              const allTasks = [
+              const allTasksCombined = [
                 ...tasks.map(t => ({
                   id: t.id, title: t.title, due_date: t.due_date ?? '',
                   assigned_to: taskAssignees[t.id] ?? t.assigned_to ?? '',
@@ -402,22 +422,19 @@ export default function OppDetailPage() {
                   stage: 99, isNew: true,
                 })),
               ]
-              const doneCount = allTasks.filter(t => t.is_done).length
-              const pct = allTasks.length > 0 ? Math.round((doneCount / allTasks.length) * 100) : 0
+              const doneCount = allTasksCombined.filter(t => t.is_done).length
+              const pct = allTasksCombined.length > 0 ? Math.round((doneCount / allTasksCombined.length) * 100) : 0
 
               return (
                 <div className="space-y-4">
-                  {/* Progress header */}
                   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <span className="text-sm font-bold text-gray-900">{doneCount}/{allTasks.length} nhiệm vụ hoàn thành</span>
+                        <span className="text-sm font-bold text-gray-900">{doneCount}/{allTasksCombined.length} nhiệm vụ hoàn thành</span>
                         <span className="text-xs text-gray-400 ml-2">({pct}%)</span>
                       </div>
-                      <button
-                        onClick={() => setShowNewTask(true)}
-                        className="flex items-center gap-1.5 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
-                      >
+                      <button onClick={() => setShowNewTask(true)}
+                        className="flex items-center gap-1.5 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
                         <Plus size={14} /> Thêm nhiệm vụ
                       </button>
                     </div>
@@ -426,7 +443,6 @@ export default function OppDetailPage() {
                     </div>
                   </div>
 
-                  {/* New task form */}
                   {showNewTask && (
                     <div className="bg-white rounded-2xl border-2 border-brand-200 shadow-sm p-5">
                       <div className="flex items-center justify-between mb-4">
@@ -436,85 +452,60 @@ export default function OppDetailPage() {
                       <div className="grid grid-cols-2 gap-3 mb-3">
                         <div className="col-span-2">
                           <label className="block text-xs font-semibold text-gray-500 mb-1">Tên nhiệm vụ <span className="text-red-400">*</span></label>
-                          <input
-                            type="text"
-                            placeholder="VD: Liên hệ xác nhận danh sách khách"
-                            value={newTask.title}
-                            onChange={e => setNewTask(t => ({ ...t, title: e.target.value }))}
-                            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
-                          />
+                          <input type="text" placeholder="VD: Liên hệ xác nhận danh sách khách"
+                            value={newTask.title} onChange={e => setNewTask(t => ({ ...t, title: e.target.value }))}
+                            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white" />
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 mb-1">Deadline</label>
-                          <input
-                            type="date"
-                            value={newTask.due_date}
-                            onChange={e => setNewTask(t => ({ ...t, due_date: e.target.value }))}
-                            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
-                          />
+                          <input type="date" value={newTask.due_date} onChange={e => setNewTask(t => ({ ...t, due_date: e.target.value }))}
+                            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white" />
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 mb-1">Giao cho</label>
-                          <select
-                            value={newTask.assigned_to}
-                            onChange={e => setNewTask(t => ({ ...t, assigned_to: e.target.value }))}
-                            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-700"
-                          >
+                          <select value={newTask.assigned_to} onChange={e => setNewTask(t => ({ ...t, assigned_to: e.target.value }))}
+                            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-700">
                             <option value="">— Chưa giao —</option>
-                            {USERS.filter(u => u.is_active).map(u => (
-                              <option key={u.id} value={u.id}>{u.full_name}</option>
-                            ))}
+                            {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
                           </select>
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            if (!newTask.title.trim()) return
-                            setAddedTasks(prev => [...prev, { id: `local-${Date.now()}`, ...newTask }])
-                            setNewTask({ title: '', due_date: '', assigned_to: '' })
-                            setShowNewTask(false)
-                          }}
-                          className="flex-1 bg-accent-500 hover:bg-accent-600 text-white py-2 rounded-xl text-sm font-bold transition-colors"
-                        >
+                        <button onClick={() => {
+                          if (!newTask.title.trim()) return
+                          setAddedTasks(prev => [...prev, { id: `local-${Date.now()}`, ...newTask }])
+                          setNewTask({ title: '', due_date: '', assigned_to: '' })
+                          setShowNewTask(false)
+                        }} className="flex-1 bg-accent-500 hover:bg-accent-600 text-white py-2 rounded-xl text-sm font-bold transition-colors">
                           Thêm nhiệm vụ
                         </button>
-                        <button onClick={() => setShowNewTask(false)} className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">
-                          Huỷ
-                        </button>
+                        <button onClick={() => setShowNewTask(false)} className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">Huỷ</button>
                       </div>
                     </div>
                   )}
 
-                  {/* Task list */}
-                  {allTasks.length === 0 ? (
+                  {allTasksCombined.length === 0 ? (
                     <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-10 text-center">
                       <ClipboardList size={32} className="text-gray-200 mx-auto mb-3" />
                       <div className="text-sm font-semibold text-gray-400 mb-1">Chưa có nhiệm vụ nào</div>
-                      <div className="text-xs text-gray-300 mb-4">Thêm nhiệm vụ để phân công cho nhân viên</div>
-                      <button
-                        onClick={() => setShowNewTask(true)}
-                        className="inline-flex items-center gap-2 bg-accent-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-accent-600 transition-colors"
-                      >
+                      <button onClick={() => setShowNewTask(true)}
+                        className="inline-flex items-center gap-2 bg-accent-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-accent-600 transition-colors mt-4">
                         <Plus size={14} /> Thêm nhiệm vụ đầu tiên
                       </button>
                     </div>
                   ) : (
                     <div className="space-y-2.5">
-                      {allTasks.map(task => {
-                        const assigneeUser = task.assigned_to ? getUserById(task.assigned_to) : null
+                      {allTasksCombined.map(task => {
+                        const assigneeUser = task.assigned_to ? allUsers.find(u => u.id === task.assigned_to) : null
                         const isAssigning = openTaskAssign === task.id
                         return (
                           <div key={task.id} className={`bg-white rounded-2xl border shadow-sm transition-all ${
                             task.is_done ? 'border-gray-100 opacity-70' : 'border-gray-200 hover:border-brand-200 hover:shadow-md'
                           }`}>
                             <div className="p-4">
-                              {/* Title row */}
                               <div className="flex items-start gap-3 mb-3">
-                                <button
-                                  onClick={() => setTaskDone(prev => ({ ...prev, [task.id]: !task.is_done }))}
-                                  className="mt-0.5 flex-shrink-0 transition-transform hover:scale-110"
-                                >
+                                <button onClick={() => setTaskDone(prev => ({ ...prev, [task.id]: !task.is_done }))}
+                                  className="mt-0.5 flex-shrink-0 transition-transform hover:scale-110">
                                   {task.is_done
                                     ? <CheckSquare size={18} className="text-emerald-500" />
                                     : <Square size={18} className="text-gray-300 hover:text-brand-400" />}
@@ -530,30 +521,18 @@ export default function OppDetailPage() {
                                   )}
                                 </div>
                               </div>
-
-                              {/* Assignment row */}
                               {!task.is_done && (
                                 <div className="ml-9 flex items-center gap-2">
                                   <span className="text-xs text-gray-400 font-medium flex-shrink-0">Người thực hiện:</span>
                                   {isAssigning ? (
                                     <div className="flex items-center gap-2 flex-1">
-                                      <select
-                                        value={taskAssignSelect}
-                                        onChange={e => setTaskAssignSelect(e.target.value)}
-                                        className="flex-1 text-xs border border-brand-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-700"
-                                      >
+                                      <select value={taskAssignSelect} onChange={e => setTaskAssignSelect(e.target.value)}
+                                        className="flex-1 text-xs border border-brand-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-700">
                                         <option value="">— Chưa giao —</option>
-                                        {USERS.filter(u => u.is_active).map(u => (
-                                          <option key={u.id} value={u.id}>{u.full_name}</option>
-                                        ))}
+                                        {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
                                       </select>
-                                      <button
-                                        onClick={() => {
-                                          setTaskAssignees(prev => ({ ...prev, [task.id]: taskAssignSelect }))
-                                          setOpenTaskAssign(null)
-                                        }}
-                                        className="flex items-center gap-1 bg-accent-500 hover:bg-accent-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex-shrink-0"
-                                      >
+                                      <button onClick={() => { setTaskAssignees(prev => ({ ...prev, [task.id]: taskAssignSelect })); setOpenTaskAssign(null) }}
+                                        className="flex items-center gap-1 bg-accent-500 hover:bg-accent-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex-shrink-0">
                                         <CheckCircle2 size={12} /> Lưu
                                       </button>
                                       <button onClick={() => setOpenTaskAssign(null)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 flex-shrink-0">
@@ -561,10 +540,8 @@ export default function OppDetailPage() {
                                       </button>
                                     </div>
                                   ) : assigneeUser ? (
-                                    <button
-                                      onClick={() => { setOpenTaskAssign(task.id); setTaskAssignSelect(task.assigned_to) }}
-                                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-50 border border-brand-200 hover:bg-brand-100 transition-colors"
-                                    >
+                                    <button onClick={() => { setOpenTaskAssign(task.id); setTaskAssignSelect(task.assigned_to) }}
+                                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-50 border border-brand-200 hover:bg-brand-100 transition-colors">
                                       <div className="w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0">
                                         {getInitials(assigneeUser.full_name)}
                                       </div>
@@ -572,12 +549,9 @@ export default function OppDetailPage() {
                                       <Pencil size={11} className="text-brand-400" />
                                     </button>
                                   ) : (
-                                    <button
-                                      onClick={() => { setOpenTaskAssign(task.id); setTaskAssignSelect('') }}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-dashed border-brand-300 hover:border-indigo-400 hover:bg-brand-50 text-brand-500 hover:text-brand-700 text-xs font-bold transition-all"
-                                    >
-                                      <UserPlus size={13} />
-                                      Giao việc cho nhân viên
+                                    <button onClick={() => { setOpenTaskAssign(task.id); setTaskAssignSelect('') }}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-dashed border-brand-300 hover:border-indigo-400 hover:bg-brand-50 text-brand-500 hover:text-brand-700 text-xs font-bold transition-all">
+                                      <UserPlus size={13} /> Giao việc cho nhân viên
                                     </button>
                                   )}
                                 </div>
@@ -597,7 +571,7 @@ export default function OppDetailPage() {
           {/* ── RIGHT: Info sidebar ────────────── */}
           <div className="space-y-4">
 
-            {/* ── Status Card (NEW) ── */}
+            {/* Status Card */}
             <div className={`rounded-2xl border shadow-sm overflow-hidden ${sc.border} ${sc.bg}`}>
               <div className={`px-5 py-4 border-b ${sc.border}`}>
                 <div className="flex items-center justify-between mb-1">
@@ -610,59 +584,37 @@ export default function OppDetailPage() {
                   {opp.stage_updated_at && ` · từ ${formatDate(opp.stage_updated_at)}`}
                 </div>
               </div>
-
-              {/* Countdown chips */}
               <div className="px-5 py-4 space-y-2.5">
                 {daysToTour !== null && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className={`${sc.text} opacity-80 flex items-center gap-1.5 text-xs`}>
-                      <CalendarDays size={13} /> Ngày tour
-                    </span>
-                    <span className={`font-bold text-sm ${sc.text}`}>
-                      {daysToTour <= 0 ? '🟢 Đang diễn ra' : `${daysToTour} ngày nữa`}
-                    </span>
+                    <span className={`${sc.text} opacity-80 flex items-center gap-1.5 text-xs`}><CalendarDays size={13} /> Ngày tour</span>
+                    <span className={`font-bold text-sm ${sc.text}`}>{daysToTour <= 0 ? '🟢 Đang diễn ra' : `${daysToTour} ngày nữa`}</span>
                   </div>
                 )}
                 {daysToDeadline !== null && (
                   <div className="flex items-center justify-between">
-                    <span className={`${sc.text} opacity-80 flex items-center gap-1.5 text-xs`}>
-                      <Clock size={13} /> Deadline
-                    </span>
-                    <span className={`font-bold text-sm ${
-                      daysToDeadline < 0 ? 'text-red-600'
-                      : daysToDeadline <= 5 ? 'text-red-500'
-                      : sc.text
-                    }`}>
-                      {daysToDeadline < 0
-                        ? `⚠ Quá hạn ${Math.abs(daysToDeadline)}N`
-                        : daysToDeadline <= 5
-                        ? `⏰ Còn ${daysToDeadline} ngày`
-                        : `Còn ${daysToDeadline} ngày`}
+                    <span className={`${sc.text} opacity-80 flex items-center gap-1.5 text-xs`}><Clock size={13} /> Deadline</span>
+                    <span className={`font-bold text-sm ${daysToDeadline < 0 ? 'text-red-600' : daysToDeadline <= 5 ? 'text-red-500' : sc.text}`}>
+                      {daysToDeadline < 0 ? `⚠ Quá hạn ${Math.abs(daysToDeadline)}N` : daysToDeadline <= 5 ? `⏰ Còn ${daysToDeadline} ngày` : `Còn ${daysToDeadline} ngày`}
                     </span>
                   </div>
                 )}
                 {opp.estimated_value && (
                   <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
-                    <span className={`${sc.text} opacity-80 flex items-center gap-1.5 text-xs`}>
-                      <DollarSign size={13} /> Giá trị
-                    </span>
+                    <span className={`${sc.text} opacity-80 flex items-center gap-1.5 text-xs`}><DollarSign size={13} /> Giá trị</span>
                     <span className={`font-black text-sm ${sc.text}`}>{formatVND(opp.estimated_value)}</span>
                   </div>
                 )}
               </div>
-
-              {/* Lost reason */}
               {isLost && opp.lost_reason && (
                 <div className="px-5 pb-4">
                   <div className="text-xs font-bold text-red-600 mb-1">Lý do mất đơn</div>
-                  <div className="text-xs text-red-700 bg-white/60 rounded-lg p-3 leading-relaxed border border-red-200">
-                    {opp.lost_reason}
-                  </div>
+                  <div className="text-xs text-red-700 bg-white/60 rounded-lg p-3 leading-relaxed border border-red-200">{opp.lost_reason}</div>
                 </div>
               )}
             </div>
 
-            {/* ── Stage History (NEW) ── */}
+            {/* Stage History */}
             {stageHistory.length > 0 && (
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-gray-100">
@@ -678,9 +630,7 @@ export default function OppDetailPage() {
                       <div key={i} className="flex gap-3">
                         <div className="flex flex-col items-center">
                           <div className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${isCurrent ? hSc.dot : 'bg-emerald-400'}`} />
-                          {i < stageHistory.length - 1 && (
-                            <div className="w-0.5 bg-gray-200 flex-1 my-1 min-h-[14px]" />
-                          )}
+                          {i < stageHistory.length - 1 && <div className="w-0.5 bg-gray-200 flex-1 my-1 min-h-[14px]" />}
                         </div>
                         <div className={`flex-1 pb-3 ${i === stageHistory.length - 1 ? 'pb-1' : ''}`}>
                           <div className="flex items-center justify-between">
@@ -701,7 +651,7 @@ export default function OppDetailPage() {
               </div>
             )}
 
-            {/* ── Contact ── */}
+            {/* Contact */}
             {contact && (
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-gray-100">
@@ -720,8 +670,7 @@ export default function OppDetailPage() {
                   <div className="space-y-2 text-sm">
                     {contact.phone && (
                       <div className="flex items-center gap-2.5 text-gray-600">
-                        <Phone size={13} className="text-gray-400 flex-shrink-0" />
-                        <span>{contact.phone}</span>
+                        <Phone size={13} className="text-gray-400 flex-shrink-0" /><span>{contact.phone}</span>
                       </div>
                     )}
                     {contact.email && (
@@ -741,7 +690,7 @@ export default function OppDetailPage() {
               </div>
             )}
 
-            {/* ── Deal Info ── */}
+            {/* Deal Info */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900 text-sm">Thông tin đơn hàng</h3>
@@ -752,49 +701,31 @@ export default function OppDetailPage() {
                 )}
               </div>
               <div className="p-5 space-y-2.5">
-                {/* Sale phụ trách — interactive */}
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-gray-400 text-xs whitespace-nowrap">Sale phụ trách</span>
                   {showReassign ? (
                     <div className="flex items-center gap-1.5">
-                      <select
-                        value={reassignTarget || effectiveAssigneeId}
+                      <select value={reassignTarget || effectiveAssigneeId}
                         onChange={e => setReassignTarget(e.target.value)}
-                        className="text-xs border border-brand-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-400 bg-white text-gray-700"
-                      >
-                        {SALE_TV_USERS.map(u => (
-                          <option key={u.id} value={u.id}>{u.full_name.split(' ').slice(-2).join(' ')}</option>
-                        ))}
+                        className="text-xs border border-brand-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-400 bg-white text-gray-700">
+                        {saleUsers.map(u => <option key={u.id} value={u.id}>{u.full_name.split(' ').slice(-2).join(' ')}</option>)}
                       </select>
-                      <button
-                        onClick={() => {
-                          if (reassignTarget) setCurrentAssignee(reassignTarget)
-                          setShowReassign(false)
-                          setReassignTarget('')
-                          setReassignSuccess(true)
-                          setTimeout(() => setReassignSuccess(false), 3000)
-                        }}
-                        className="p-1 rounded-lg bg-accent-500 text-white hover:bg-accent-600 transition-colors"
-                      >
+                      <button onClick={() => {
+                        if (reassignTarget) { setReassignSuccess(true); setTimeout(() => setReassignSuccess(false), 3000) }
+                        setShowReassign(false); setReassignTarget('')
+                      }} className="p-1 rounded-lg bg-accent-500 text-white hover:bg-accent-600 transition-colors">
                         <CheckCircle2 size={13} />
                       </button>
-                      <button
-                        onClick={() => { setShowReassign(false); setReassignTarget('') }}
-                        className="p-1 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
-                      >
+                      <button onClick={() => { setShowReassign(false); setReassignTarget('') }}
+                        className="p-1 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors">
                         <X size={13} />
                       </button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-xs text-gray-800">
-                        {assignedUser?.full_name ?? '—'}
-                      </span>
-                      <button
-                        onClick={() => { setShowReassign(true); setReassignTarget(effectiveAssigneeId) }}
-                        className="p-1 rounded-md text-gray-300 hover:text-accent-500 hover:bg-brand-50 transition-colors"
-                        title="Đổi Sale TV"
-                      >
+                      <span className="font-semibold text-xs text-gray-800">{effectiveAssignedUser?.full_name ?? '—'}</span>
+                      <button onClick={() => { setShowReassign(true); setReassignTarget(effectiveAssigneeId) }}
+                        className="p-1 rounded-md text-gray-300 hover:text-accent-500 hover:bg-brand-50 transition-colors" title="Đổi Sale TV">
                         <Pencil size={11} />
                       </button>
                     </div>
@@ -806,22 +737,14 @@ export default function OppDetailPage() {
                 {opp.deadline && <InfoRow label="Deadline" value={formatDate(opp.deadline)} warn />}
                 <div className="border-t border-gray-100 pt-2.5 space-y-2.5">
                   <InfoRow label="Giá trị ước tính" value={opp.estimated_value ? formatVND(opp.estimated_value) : '—'} />
-                  {opp.stage === 'stage_3' && opp.estimated_value && (
-                    <InfoRow label="Đã đặt cọc 70%" value={formatVND(Math.round(opp.estimated_value * 0.7))} highlight />
-                  )}
-                  {opp.actual_value && (
-                    <InfoRow label="Doanh thu thực tế" value={formatVND(opp.actual_value)} highlight />
-                  )}
+                  {opp.actual_value && <InfoRow label="Doanh thu thực tế" value={formatVND(opp.actual_value)} highlight />}
                 </div>
               </div>
             </div>
 
-            {/* Công việc shortcut */}
             {tasks.length > 0 && (
-              <button
-                onClick={() => setMainTab('tasks')}
-                className="w-full flex items-center justify-between px-4 py-3 bg-brand-50 border border-brand-200 rounded-2xl hover:bg-brand-100 transition-colors"
-              >
+              <button onClick={() => setMainTab('tasks')}
+                className="w-full flex items-center justify-between px-4 py-3 bg-brand-50 border border-brand-200 rounded-2xl hover:bg-brand-100 transition-colors">
                 <div className="flex items-center gap-2 text-brand-700">
                   <ClipboardList size={14} />
                   <span className="text-xs font-semibold">{doneTasks}/{tasks.length} nhiệm vụ hoàn thành</span>

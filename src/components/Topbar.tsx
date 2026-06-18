@@ -35,8 +35,8 @@ export default function Topbar() {
   }, [])
 
   return (
-    <header className="h-10 flex-shrink-0 bg-white flex items-center justify-between px-5 gap-3" style={{ borderBottom: '1px solid #9dd5ec' }}>
-      {pageTitle && <span className="text-sm font-semibold text-gray-700">{pageTitle}</span>}
+    <header className="h-10 flex-shrink-0 bg-white flex items-center px-5 gap-3" style={{ borderBottom: '1px solid #9dd5ec' }}>
+      <span className="flex-1 text-sm font-semibold text-gray-700">{pageTitle}</span>
       <button className="relative p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500">
         <Bell size={16} />
       </button>
