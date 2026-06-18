@@ -116,7 +116,7 @@ export default function PipelinePage() {
                     )}
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-3 space-y-3 pt-4">
+                  <div className="flex-1 overflow-y-auto p-3 space-y-4 pt-4">
                     {cards.map(opp => {
                       const deadline = opp.deadline ? daysUntil(opp.deadline) : null
                       const isUrgent = deadline !== null && deadline >= 0 && deadline <= 5
