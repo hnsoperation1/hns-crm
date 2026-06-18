@@ -39,7 +39,7 @@ const EMPTY_CONTACT_FORM = {
   name: '', phone: '', email: '',
   company: '', tax_code: '', city: '', company_address: '',
   source: 'test' as LeadSource, lead_score: 'new' as LeadScore,
-  destination: '', opp_title: '',
+  destination: '', departure_date: '', opp_title: '',
 }
 
 const EMPTY_ORG_FORM = {
@@ -107,24 +107,42 @@ function ContactsTab() {
     setDataLoading(false)
   }
 
+  function autoOppTitle(company: string, name: string, destination: string, date: string) {
+    const base = company || name
+    const parts = [base, destination, date].filter(Boolean)
+    return parts.join(' - ')
+  }
+
   function handleNameChange(name: string) {
     setForm(f => ({
       ...f, name,
-      opp_title: f.opp_title === autoOppTitle(f.company, f.name) || f.opp_title === ''
-        ? autoOppTitle(f.company, name) : f.opp_title,
+      opp_title: f.opp_title === autoOppTitle(f.company, f.name, f.destination, f.departure_date) || f.opp_title === ''
+        ? autoOppTitle(f.company, name, f.destination, f.departure_date) : f.opp_title,
     }))
   }
 
   function handleCompanyChange(company: string) {
     setForm(f => ({
       ...f, company,
-      opp_title: f.opp_title === autoOppTitle(f.company, f.name) || f.opp_title === ''
-        ? autoOppTitle(company, f.name) : f.opp_title,
+      opp_title: f.opp_title === autoOppTitle(f.company, f.name, f.destination, f.departure_date) || f.opp_title === ''
+        ? autoOppTitle(company, f.name, f.destination, f.departure_date) : f.opp_title,
     }))
   }
 
-  function autoOppTitle(company: string, name: string) {
-    return company || name
+  function handleDestinationChange(destination: string) {
+    setForm(f => ({
+      ...f, destination,
+      opp_title: f.opp_title === autoOppTitle(f.company, f.name, f.destination, f.departure_date) || f.opp_title === ''
+        ? autoOppTitle(f.company, f.name, destination, f.departure_date) : f.opp_title,
+    }))
+  }
+
+  function handleDepartureDateChange(departure_date: string) {
+    setForm(f => ({
+      ...f, departure_date,
+      opp_title: f.opp_title === autoOppTitle(f.company, f.name, f.destination, f.departure_date) || f.opp_title === ''
+        ? autoOppTitle(f.company, f.name, f.destination, departure_date) : f.opp_title,
+    }))
   }
 
   async function handleTaxLookup() {
@@ -221,6 +239,7 @@ function ContactsTab() {
       await supabase.from('opportunities').insert({
         title: form.opp_title.trim(),
         description: form.destination.trim() || null,
+        tour_date: form.departure_date || null,
         contact_id: newContact.id,
         organization_id: orgId,
         created_by: user!.id,
@@ -424,10 +443,16 @@ function ContactsTab() {
               <div className="border-t border-gray-100 pt-4">
                 <SectionLabel>Cơ hội phát sinh</SectionLabel>
                 <div className="mt-3 space-y-4">
-                  <Field label="Điểm đến dự kiến">
-                    <input type="text" placeholder="VD: Đà Nẵng, Phú Quốc, Nhật Bản..." value={form.destination}
-                      onChange={e => setForm(f => ({ ...f, destination: e.target.value }))} className={inputCls()} />
-                  </Field>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Điểm đến dự kiến">
+                      <input type="text" placeholder="VD: Đà Nẵng, Nhật Bản..." value={form.destination}
+                        onChange={e => handleDestinationChange(e.target.value)} className={inputCls()} />
+                    </Field>
+                    <Field label="Ngày đi dự kiến">
+                      <input type="date" value={form.departure_date}
+                        onChange={e => handleDepartureDateChange(e.target.value)} className={inputCls()} />
+                    </Field>
+                  </div>
                   <Field label="Tên cơ hội" required error={errors.opp_title}>
                     <input type="text" placeholder="VD: Công ty ABC – Tour hè 2026" value={form.opp_title}
                       onChange={e => setForm(f => ({ ...f, opp_title: e.target.value }))} className={inputCls(errors.opp_title)} />
