@@ -324,6 +324,7 @@ DROP POLICY IF EXISTS "sale_tv_own_opps"        ON opportunities;
 DROP POLICY IF EXISTS "mkt_own_source_opps"     ON opportunities;
 DROP POLICY IF EXISTS "cskh_post_opps"          ON opportunities;
 DROP POLICY IF EXISTS "cskh_see_all_opps"       ON opportunities;
+DROP POLICY IF EXISTS "cskh_insert_opp"         ON opportunities;
 DROP POLICY IF EXISTS "sale_admin_insert_opp"   ON opportunities;
 DROP POLICY IF EXISTS "sale_tv_update_own_opp"  ON opportunities;
 
@@ -332,6 +333,7 @@ CREATE POLICY "cskh_see_all_opps"       ON opportunities FOR SELECT USING (curre
 CREATE POLICY "sale_tv_own_opps"        ON opportunities FOR SELECT USING (assigned_to = auth.uid() AND current_user_flag('is_sale_tv'));
 CREATE POLICY "mkt_own_source_opps"     ON opportunities FOR SELECT USING (source = 'mkt' AND current_user_role() = 'mkt');
 CREATE POLICY "sale_admin_insert_opp"   ON opportunities FOR INSERT WITH CHECK (current_user_role() IN ('admin','sale_admin') OR (current_user_role() = 'mkt' AND source = 'mkt'));
+CREATE POLICY "cskh_insert_opp"         ON opportunities FOR INSERT WITH CHECK (current_user_role() = 'cskh');
 CREATE POLICY "sale_tv_update_own_opp"  ON opportunities FOR UPDATE USING (assigned_to = auth.uid() AND current_user_flag('is_sale_tv'));
 
 -- ACTIVITY LOGS policies
@@ -369,8 +371,10 @@ CREATE POLICY "mkt_cskh_insert_contact"     ON contacts FOR INSERT WITH CHECK (c
 DROP POLICY IF EXISTS "boss_admin_see_all_orgs" ON organizations;
 DROP POLICY IF EXISTS "all_authenticated_see_orgs" ON organizations;
 DROP POLICY IF EXISTS "admin_manage_orgs" ON organizations;
+DROP POLICY IF EXISTS "cskh_manage_orgs" ON organizations;
 
 CREATE POLICY "all_authenticated_see_orgs" ON organizations FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "cskh_manage_orgs"           ON organizations FOR ALL USING (current_user_role() = 'cskh') WITH CHECK (current_user_role() = 'cskh');
 CREATE POLICY "admin_manage_orgs"           ON organizations FOR ALL    USING (current_user_role() IN ('boss','admin','sale_admin'));
 
 -- CSKH CARE LOGS policies

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { usePathname } from 'next/navigation'
-import { Bell, LogOut, ChevronDown } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { Bell, LogOut, ChevronDown, RotateCcw } from 'lucide-react'
 import { useAuth } from '@/contexts/auth'
 import { useTopbar } from '@/contexts/topbar'
 import { getInitials } from '@/lib/utils'
@@ -21,6 +21,14 @@ export default function Topbar() {
   const { user, logout } = useAuth()
   const { breadcrumb } = useTopbar()
   const pathname = usePathname()
+  const router = useRouter()
+  const [spinning, setSpinning] = useState(false)
+
+  function handleRefresh() {
+    setSpinning(true)
+    router.refresh()
+    setTimeout(() => setSpinning(false), 600)
+  }
 
   const pageTitle = PAGE_TITLES[pathname]
     ?? Object.entries(PAGE_TITLES).find(([k]) => k !== '/' && pathname.startsWith(k))?.[1]
@@ -41,6 +49,10 @@ export default function Topbar() {
       <div className="flex-1 min-w-0">
         {breadcrumb ?? <span className="text-sm font-semibold text-gray-700">{pageTitle}</span>}
       </div>
+      <button onClick={handleRefresh}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-700 text-xs font-medium">
+        Làm mới <RotateCcw size={12} className={spinning ? 'animate-spin' : ''} />
+      </button>
       <button className="relative p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500">
         <Bell size={16} />
       </button>

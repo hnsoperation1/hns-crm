@@ -191,7 +191,7 @@ export default function PipelinePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  {['Đơn hàng', 'Nguồn', 'Giai đoạn', 'Sale TV', 'Giá trị', 'Ngày tour', 'Deadline', ''].map(h => (
+                  {['Đơn hàng', 'Nguồn', 'Giai đoạn', 'Sale TV', 'Giá trị', 'Ngày tour', 'Deadline'].map(h => (
                     <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -204,7 +204,7 @@ export default function PipelinePage() {
                   const sc = STAGE_COLORS[opp.stage]
                   const deadline = opp.deadline ? daysUntil(opp.deadline) : null
                   return (
-                    <tr key={opp.id} className="hover:bg-gray-50/70 group transition-colors">
+                    <tr key={opp.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => window.location.href = `/co-hoi/${opp.id}`}>
                       <td className="px-5 py-3.5">
                         <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{opp.title}</div>
                         <div className="text-xs text-gray-400 mt-0.5">{opp.contact?.company ?? opp.contact?.name}</div>
@@ -250,12 +250,6 @@ export default function PipelinePage() {
                             {deadline !== null && deadline >= 0 && deadline <= 7 && ` · ${deadline}N`}
                           </span>
                         ) : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <Link href={`/co-hoi/${opp.id}`}
-                          className="p-1.5 rounded-lg hover:bg-brand-50 text-gray-300 hover:text-accent-500 transition-colors inline-flex">
-                          <ChevronRight size={16} />
-                        </Link>
                       </td>
                     </tr>
                   )
