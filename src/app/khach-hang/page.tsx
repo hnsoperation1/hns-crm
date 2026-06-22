@@ -61,7 +61,7 @@ export default function CustomersPage() {
       <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-xl w-fit">
         {([
           { key: 'contacts', label: 'Liên hệ', icon: Users },
-          { key: 'organizations', label: 'Tổ chức', icon: Building2 },
+          { key: 'organizations', label: 'Công ty / Tổ chức', icon: Building2 },
         ] as { key: Tab; label: string; icon: React.ElementType }[]).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
