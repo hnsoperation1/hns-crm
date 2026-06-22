@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Search, Plus, X, Loader2, Building2, Users, Globe, Phone, Mail, MapPin, Trash2, Pencil } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -88,6 +88,7 @@ function ContactsTab() {
   const supabase = createClient()
   const [contacts, setContacts] = useState<Contact[]>([])
   const [opps, setOpps] = useState<Opportunity[]>([])
+  const [orgs, setOrgs] = useState<Organization[]>([])
   const [dataLoading, setDataLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
@@ -96,16 +97,28 @@ function ContactsTab() {
   const [lookupLoading, setLookupLoading] = useState(false)
   const [lookupError, setLookupError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [showCompanyDrop, setShowCompanyDrop] = useState(false)
+  const companyRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (companyRef.current && !companyRef.current.contains(e.target as Node)) setShowCompanyDrop(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
 
   useEffect(() => { loadData() }, [])
 
   async function loadData() {
-    const [{ data: c }, { data: o }] = await Promise.all([
+    const [{ data: c }, { data: o }, { data: og }] = await Promise.all([
       supabase.from('contacts').select('*').order('created_at', { ascending: false }),
       supabase.from('opportunities').select('id, title, contact_id, stage'),
+      supabase.from('organizations').select('id, name, tax_code, city, address').order('name'),
     ])
     setContacts((c ?? []) as Contact[])
     setOpps((o ?? []) as Opportunity[])
+    setOrgs((og ?? []) as Organization[])
     setDataLoading(false)
   }
 
@@ -404,8 +417,46 @@ function ContactsTab() {
               </div>
 
               <Field label="Công ty">
-                <input type="text" placeholder="Công ty TNHH ABC" value={form.company}
-                  onChange={e => handleCompanyChange(e.target.value)} className={inputCls()} />
+                <div ref={companyRef} className="relative">
+                  <input
+                    type="text"
+                    placeholder="Công ty TNHH ABC"
+                    value={form.company}
+                    onChange={e => { handleCompanyChange(e.target.value); setShowCompanyDrop(true) }}
+                    onFocus={() => setShowCompanyDrop(true)}
+                    className={inputCls()}
+                  />
+                  {showCompanyDrop && (() => {
+                    const q = form.company.toLowerCase()
+                    const matched = orgs.filter(o => !q || o.name.toLowerCase().includes(q)).slice(0, 8)
+                    return matched.length > 0 ? (
+                      <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
+                        {matched.map(org => (
+                          <button
+                            key={org.id}
+                            type="button"
+                            onMouseDown={e => e.preventDefault()}
+                            onClick={() => {
+                              handleCompanyChange(org.name)
+                              setForm(f => ({
+                                ...f,
+                                company: org.name,
+                                tax_code: org.tax_code ?? f.tax_code,
+                                city: org.city ?? f.city,
+                                company_address: org.address ?? f.company_address,
+                              }))
+                              setShowCompanyDrop(false)
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
+                          >
+                            <div className="font-medium text-gray-800">{org.name}</div>
+                            {org.tax_code && <div className="text-xs text-gray-400">MST: {org.tax_code}</div>}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null
+                  })()}
+                </div>
               </Field>
 
               <div className="grid grid-cols-2 gap-3">
