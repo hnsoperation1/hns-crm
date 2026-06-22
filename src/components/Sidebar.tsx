@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, HeadphonesIcon } from 'lucide-react'
+import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/contexts/auth'
 import { getInitials } from '@/lib/utils'
@@ -75,7 +75,7 @@ export default function Sidebar() {
             <p className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1.5" style={{ color: '#4a8fa8' }}>
               CSKH
             </p>
-            <NavLink href="/cskh" label="Issues" icon={HeadphonesIcon} />
+            <NavLink href="/cskh" label="Issues" icon={Headphones} />
           </div>
         )}
 
