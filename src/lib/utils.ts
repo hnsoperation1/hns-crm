@@ -13,7 +13,7 @@ export function getInitials(name: string): string {
 }
 
 export function formatDate(d: string): string {
-  const [y, m, day] = d.split('-')
+  const [y, m, day] = d.split('T')[0].split('-')
   return `${day}/${m}/${y}`
 }
 
