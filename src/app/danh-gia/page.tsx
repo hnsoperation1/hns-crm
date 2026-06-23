@@ -404,12 +404,13 @@ export default function DanhGiaPage() {
                 <div className="py-16 text-center text-sm text-gray-300">Không có đánh giá Kém nào</div>
               ) : (
                 <ResponsiveContainer width="100%" height={Math.max(poorData.length * 38, 120)}>
-                  <BarChart data={poorData} layout="vertical" margin={{ left: 8, right: 32, top: 0, bottom: 0 }}
-                    onClick={(d: any) => d?.activePayload?.[0] && handlePoorClick(d.activePayload[0].payload)}>
+                  <BarChart data={poorData} layout="vertical" margin={{ left: 8, right: 32, top: 0, bottom: 0 }}>
                     <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
                     <YAxis type="category" dataKey="name" width={180} tick={{ fontSize: 11 }} />
                     <Tooltip formatter={(v) => [`${v} lượt`, 'Đánh giá Kém']} />
-                    <Bar dataKey="count" radius={[0, 6, 6, 0]} cursor="pointer" label={{ position: 'right', fontSize: 11, fill: '#6b7280' }}>
+                    <Bar dataKey="count" radius={[0, 6, 6, 0]} cursor="pointer"
+                      label={{ position: 'right', fontSize: 11, fill: '#6b7280' }}
+                      onClick={(data: any) => handlePoorClick(data)}>
                       {poorData.map((entry, i) => (
                         <Cell key={i} fill={selected?.title.includes(entry.name) ? '#ef4444' : '#fca5a5'} />
                       ))}
@@ -436,12 +437,13 @@ export default function DanhGiaPage() {
                 <div className="py-16 text-center"><MapPin size={32} className="text-gray-200 mx-auto mb-3" /><p className="text-sm text-gray-300">Chưa có dữ liệu</p></div>
               ) : (
                 <ResponsiveContainer width="100%" height={Math.max(destData.length * 38, 120)}>
-                  <BarChart data={destData} layout="vertical" margin={{ left: 8, right: 32, top: 0, bottom: 0 }}
-                    onClick={(d: any) => d?.activePayload?.[0] && handleDestClick(d.activePayload[0].payload)}>
+                  <BarChart data={destData} layout="vertical" margin={{ left: 8, right: 32, top: 0, bottom: 0 }}>
                     <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
                     <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
                     <Tooltip formatter={(v) => [`${v} khách`, 'Quan tâm']} />
-                    <Bar dataKey="count" radius={[0, 6, 6, 0]} cursor="pointer" label={{ position: 'right', fontSize: 11, fill: '#6b7280' }}>
+                    <Bar dataKey="count" radius={[0, 6, 6, 0]} cursor="pointer"
+                      label={{ position: 'right', fontSize: 11, fill: '#6b7280' }}
+                      onClick={(data: any) => handleDestClick(data)}>
                       {destData.map((entry, i) => (
                         <Cell key={i} fill={selected?.title.includes(entry.name) ? '#0ea5e9' : '#7dd3fc'} />
                       ))}
