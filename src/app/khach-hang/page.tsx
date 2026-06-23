@@ -699,7 +699,7 @@ function OrganizationsTab() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filtered.map(org => {
-              const contactCount = org.contact_ids.length + (org.primary_contact_id ? 1 : 0)
+              const contactCount = org.contact_ids.length
               return (
                 <tr key={org.id} className="hover:bg-gray-50/70 transition-colors group">
                   <td className="px-5 py-3.5">
