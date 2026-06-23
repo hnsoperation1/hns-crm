@@ -538,6 +538,8 @@ function ContactsTab() {
 
 // ─── Organizations Tab ────────────────────────────────────────────────────────
 
+type NewContactRow = { name: string; phone: string; email: string }
+
 function OrganizationsTab() {
   const { user } = useAuth()
   const supabase = createClient()
@@ -552,23 +554,34 @@ function OrganizationsTab() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [orgContacts, setOrgContacts] = useState<Contact[]>([])
+  const [newRows, setNewRows] = useState<NewContactRow[]>([])
 
   useEffect(() => {
     supabase.from('organizations').select('*').order('created_at', { ascending: false })
       .then(({ data }) => { setOrgs((data ?? []) as Organization[]); setDataLoading(false) })
   }, [])
 
+  async function loadOrgContacts(org: Organization) {
+    if (!org.contact_ids?.length) { setOrgContacts([]); return }
+    const { data } = await supabase.from('contacts').select('*').in('id', org.contact_ids)
+    setOrgContacts((data ?? []) as Contact[])
+  }
+
   function openAdd() {
-    setEditingOrg(null); setForm({ ...EMPTY_ORG_FORM }); setErrors({}); setLookupError(''); setShowForm(true)
+    setEditingOrg(null); setForm({ ...EMPTY_ORG_FORM }); setErrors({}); setLookupError('')
+    setOrgContacts([]); setNewRows([]); setShowForm(true)
   }
 
   function openEdit(org: Organization) {
     setEditingOrg(org)
     setForm({ name: org.name, tax_code: org.tax_code ?? '', type: org.type, city: org.city ?? '', address: org.address ?? '', phone: org.phone ?? '', email: org.email ?? '', website: org.website ?? '', note: org.note ?? '' })
-    setErrors({}); setLookupError(''); setShowForm(true)
+    setErrors({}); setLookupError(''); setNewRows([])
+    loadOrgContacts(org)
+    setShowForm(true)
   }
 
-  function closePanel() { setShowForm(false); setEditingOrg(null); setErrors({}); setLookupError('') }
+  function closePanel() { setShowForm(false); setEditingOrg(null); setErrors({}); setLookupError(''); setNewRows([]); setOrgContacts([]) }
 
   async function handleTaxLookup() {
     if (!form.tax_code.trim()) return
@@ -594,6 +607,20 @@ function OrganizationsTab() {
     setSubmitting(true)
     try {
       if (editingOrg) {
+        // Tạo các liên hệ mới từ newRows
+        const validRows = newRows.filter(r => r.name.trim())
+        let updatedContactIds = [...(editingOrg.contact_ids ?? [])]
+        for (const row of validRows) {
+          const { data: nc } = await supabase.from('contacts').insert({
+            name: row.name.trim(),
+            phone: row.phone.trim() || null,
+            email: row.email.trim() || null,
+            source: 'test',
+            organization_ids: [editingOrg.id],
+            created_by: user!.id,
+          }).select('id').single()
+          if (nc) updatedContactIds = [...updatedContactIds, nc.id]
+        }
         const { data } = await supabase
           .from('organizations')
           .update({
@@ -606,6 +633,7 @@ function OrganizationsTab() {
             email: form.email.trim() || null,
             website: form.website.trim() || null,
             note: form.note.trim() || null,
+            contact_ids: updatedContactIds,
           })
           .eq('id', editingOrg.id)
           .select('*')
@@ -759,69 +787,180 @@ function OrganizationsTab() {
       {showForm && (
         <>
           <div className="fixed inset-0 bg-black/30 z-40" onClick={closePanel} />
-          <div className="fixed top-0 right-0 h-full w-[440px] bg-white shadow-2xl z-50 flex flex-col">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 flex-shrink-0">
+          <div className="fixed top-0 right-0 h-full w-[880px] bg-white shadow-2xl z-50 flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
               <h2 className="text-lg font-bold text-gray-900">{editingOrg ? 'Chỉnh sửa tổ chức' : 'Thêm tổ chức mới'}</h2>
               <button onClick={closePanel} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400"><X size={18} /></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-              <Field label="Mã số thuế">
-                <div className="flex gap-2">
-                  <input type="text" placeholder="0123456789" value={form.tax_code}
-                    onChange={e => { setForm(f => ({ ...f, tax_code: e.target.value })); setLookupError('') }}
-                    onKeyDown={e => e.key === 'Enter' && handleTaxLookup()}
-                    className={`flex-1 ${inputCls(lookupError ? 'err' : '')}`} />
-                  <LookupButton loading={lookupLoading} disabled={!form.tax_code.trim()} onClick={handleTaxLookup} />
+            <div className="flex-1 overflow-hidden flex">
+              {/* Cột trái: thông tin tổ chức */}
+              <div className="w-[400px] flex-shrink-0 overflow-y-auto px-6 py-5 space-y-4 border-r border-gray-100">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Thông tin tổ chức</p>
+
+                <Field label="Mã số thuế">
+                  <div className="flex gap-2">
+                    <input type="text" placeholder="0123456789" value={form.tax_code}
+                      onChange={e => { setForm(f => ({ ...f, tax_code: e.target.value })); setLookupError('') }}
+                      onKeyDown={e => e.key === 'Enter' && handleTaxLookup()}
+                      className={`flex-1 ${inputCls(lookupError ? 'err' : '')}`} />
+                    <LookupButton loading={lookupLoading} disabled={!form.tax_code.trim()} onClick={handleTaxLookup} />
+                  </div>
+                  {lookupError && <p className="text-xs text-red-500 mt-1">{lookupError}</p>}
+                </Field>
+
+                <Field label="Tên tổ chức" required error={errors.name}>
+                  <input type="text" placeholder="Công ty TNHH ABC" value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputCls(errors.name)} />
+                </Field>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Khu vực">
+                    <input type="text" placeholder="VD: Hà Nội, TP.HCM..." value={form.city}
+                      onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className={inputCls()} />
+                  </Field>
+                  <Field label="Loại">
+                    <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as OrgType }))} className={inputCls()}>
+                      {(Object.keys(ORG_TYPE_LABELS) as OrgType[]).map(k => (
+                        <option key={k} value={k}>{ORG_TYPE_LABELS[k]}</option>
+                      ))}
+                    </select>
+                  </Field>
                 </div>
-                {lookupError && <p className="text-xs text-red-500 mt-1">{lookupError}</p>}
-              </Field>
 
-              <Field label="Tên tổ chức" required error={errors.name}>
-                <input type="text" placeholder="Công ty TNHH ABC" value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputCls(errors.name)} />
-              </Field>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Khu vực">
-                  <input type="text" placeholder="VD: Hà Nội, TP.HCM..." value={form.city}
-                    onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className={inputCls()} />
+                <Field label="Địa chỉ">
+                  <input type="text" placeholder="123 Đường ABC, Quận 1, TP.HCM" value={form.address}
+                    onChange={e => setForm(f => ({ ...f, address: e.target.value }))} className={inputCls()} />
                 </Field>
-                <Field label="Loại">
-                  <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as OrgType }))} className={inputCls()}>
-                    {(Object.keys(ORG_TYPE_LABELS) as OrgType[]).map(k => (
-                      <option key={k} value={k}>{ORG_TYPE_LABELS[k]}</option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
 
-              <Field label="Địa chỉ">
-                <input type="text" placeholder="123 Đường ABC, Quận 1, TP.HCM" value={form.address}
-                  onChange={e => setForm(f => ({ ...f, address: e.target.value }))} className={inputCls()} />
-              </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Số điện thoại">
+                    <input type="text" placeholder="024 1234 5678" value={form.phone}
+                      onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className={inputCls()} />
+                  </Field>
+                  <Field label="Email">
+                    <input type="email" placeholder="info@cty.vn" value={form.email}
+                      onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputCls()} />
+                  </Field>
+                </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Số điện thoại">
-                  <input type="text" placeholder="024 1234 5678" value={form.phone}
-                    onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className={inputCls()} />
+                <Field label="Website">
+                  <input type="text" placeholder="https://cty.vn" value={form.website}
+                    onChange={e => setForm(f => ({ ...f, website: e.target.value }))} className={inputCls()} />
                 </Field>
-                <Field label="Email">
-                  <input type="email" placeholder="info@cty.vn" value={form.email}
-                    onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputCls()} />
+
+                <Field label="Ghi chú">
+                  <textarea placeholder="Ghi chú thêm..." value={form.note} rows={3}
+                    onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
+                    className={`${inputCls()} resize-none`} />
                 </Field>
               </div>
 
-              <Field label="Website">
-                <input type="text" placeholder="https://cty.vn" value={form.website}
-                  onChange={e => setForm(f => ({ ...f, website: e.target.value }))} className={inputCls()} />
-              </Field>
+              {/* Cột phải: danh sách liên hệ */}
+              <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Danh sách liên hệ</p>
 
-              <Field label="Ghi chú">
-                <textarea placeholder="Ghi chú thêm..." value={form.note} rows={3}
-                  onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
-                  className={`${inputCls()} resize-none`} />
-              </Field>
+                {/* Existing contacts */}
+                {orgContacts.length > 0 && (
+                  <div className="rounded-xl border border-gray-200 overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400">Họ tên</th>
+                          <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400">SĐT</th>
+                          <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400">Email</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {orgContacts.map(c => (
+                          <tr key={c.id} className="hover:bg-gray-50">
+                            <td className="px-3 py-2.5">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-brand-100 flex items-center justify-center text-[10px] font-bold text-brand-700 flex-shrink-0">
+                                  {getInitials(c.name)}
+                                </div>
+                                <span className="font-medium text-gray-800 text-xs">{c.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5 text-xs text-gray-500">{c.phone ?? '—'}</td>
+                            <td className="px-3 py-2.5 text-xs text-gray-500 truncate max-w-[140px]">{c.email ?? '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* New contact rows */}
+                {newRows.length > 0 && (
+                  <div className="rounded-xl border border-brand-200 overflow-hidden bg-brand-50/30">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-brand-200">
+                          <th className="text-left px-3 py-2 text-xs font-semibold text-brand-600">Họ tên *</th>
+                          <th className="text-left px-3 py-2 text-xs font-semibold text-brand-600">SĐT</th>
+                          <th className="text-left px-3 py-2 text-xs font-semibold text-brand-600">Email</th>
+                          <th className="w-8" />
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-brand-100">
+                        {newRows.map((row, i) => (
+                          <tr key={i}>
+                            <td className="px-2 py-2">
+                              <input
+                                autoFocus={i === newRows.length - 1}
+                                placeholder="Nguyễn Văn A"
+                                value={row.name}
+                                onChange={e => setNewRows(rs => rs.map((r, j) => j === i ? { ...r, name: e.target.value } : r))}
+                                className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <input
+                                placeholder="0901234567"
+                                value={row.phone}
+                                onChange={e => setNewRows(rs => rs.map((r, j) => j === i ? { ...r, phone: e.target.value } : r))}
+                                className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <input
+                                placeholder="email@cty.vn"
+                                value={row.email}
+                                onChange={e => setNewRows(rs => rs.map((r, j) => j === i ? { ...r, email: e.target.value } : r))}
+                                className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <button onClick={() => setNewRows(rs => rs.filter((_, j) => j !== i))}
+                                className="p-1 rounded hover:bg-red-100 text-gray-300 hover:text-red-500 transition-colors">
+                                <X size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {orgContacts.length === 0 && newRows.length === 0 && (
+                  <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
+                    <Users size={32} className="text-gray-200 mb-3" />
+                    <p className="text-sm text-gray-400 mb-1">Chưa có liên hệ nào</p>
+                    <p className="text-xs text-gray-300">Nhấn "+ Thêm liên hệ" để thêm</p>
+                  </div>
+                )}
+
+                {/* Add row button ở dưới cùng */}
+                <button
+                  onClick={() => setNewRows(r => [...r, { name: '', phone: '', email: '' }])}
+                  className="flex items-center gap-2 text-xs text-gray-400 hover:text-brand-600 py-2 px-3 rounded-lg hover:bg-brand-50 transition-colors border border-dashed border-gray-200 hover:border-brand-300 w-full justify-center"
+                >
+                  <Plus size={13} />
+                  Thêm liên hệ
+                </button>
+              </div>
             </div>
 
             <div className="px-6 py-4 border-t border-gray-200 flex gap-3 flex-shrink-0">
