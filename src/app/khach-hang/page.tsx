@@ -787,7 +787,7 @@ function OrganizationsTab() {
       {showForm && (
         <>
           <div className="fixed inset-0 bg-black/30 z-40" onClick={closePanel} />
-          <div className="fixed top-0 right-0 h-full w-[880px] bg-white shadow-2xl z-50 flex flex-col">
+          <div className="fixed top-0 right-0 h-full w-[90vw] max-w-[1200px] bg-white shadow-2xl z-50 flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
               <h2 className="text-lg font-bold text-gray-900">{editingOrg ? 'Chỉnh sửa tổ chức' : 'Thêm tổ chức mới'}</h2>
               <button onClick={closePanel} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400"><X size={18} /></button>
