@@ -18,6 +18,7 @@ export default function DateInput({ value, onChange, className = '', placeholder
   const initMonth = value?.length >= 10 ? parseInt(value.slice(5, 7)) - 1 : new Date().getMonth()
 
   const [open, setOpen]           = useState(false)
+  const [alignRight, setAlignRight] = useState(false)
   const [viewYear, setViewYear]   = useState(initYear)
   const [viewMonth, setViewMonth] = useState(initMonth)
   const ref = useRef<HTMLDivElement>(null)
@@ -76,7 +77,13 @@ export default function DateInput({ value, onChange, className = '', placeholder
     <div ref={ref} className={`relative ${className}`}>
       {/* Input */}
       <div
-        onClick={() => setOpen(o => !o)}
+        onClick={() => {
+          if (!open && ref.current) {
+            const rect = ref.current.getBoundingClientRect()
+            setAlignRight(rect.left + 256 > window.innerWidth - 16)
+          }
+          setOpen(o => !o)
+        }}
         className={`w-full flex items-center gap-2 text-sm border rounded-lg px-3 py-1.5 bg-white cursor-pointer transition-all select-none
           ${open ? 'border-brand-400 ring-2 ring-brand-100' : 'border-gray-200 hover:border-brand-300'}`}
       >
@@ -86,7 +93,7 @@ export default function DateInput({ value, onChange, className = '', placeholder
 
       {/* Popup */}
       {open && (
-        <div className="absolute top-full mt-2 z-[200] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden w-64">
+        <div className={`absolute top-full mt-2 z-[200] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden w-64 ${alignRight ? 'right-0' : 'left-0'}`}>
           {/* Header gradient */}
           <div className="bg-gradient-to-br from-brand-600 to-brand-800 px-3 py-3">
             <div className="flex items-center justify-between">
