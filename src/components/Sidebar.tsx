@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones } from 'lucide-react'
+import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones, Star } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/contexts/auth'
 import { getInitials } from '@/lib/utils'
@@ -76,6 +76,7 @@ export default function Sidebar() {
               CSKH
             </p>
             <NavLink href="/cskh" label="Issues" icon={Headphones} />
+            <NavLink href="/danh-gia" label="Đánh giá KH" icon={Star} />
           </div>
         )}
 

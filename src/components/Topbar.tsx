@@ -16,6 +16,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/nhan-vien':    'Nhân viên',
   '/admin/users':  'Người dùng',
   '/cskh':         'CSKH · Issues',
+  '/danh-gia':     'CSKH · Đánh giá khách hàng',
 }
 
 export default function Topbar() {
