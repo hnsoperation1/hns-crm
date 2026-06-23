@@ -320,6 +320,14 @@ export default function OppDetailPage() {
                 <DollarSign size={15} /> Thông tin đơn
               </button>
               <button
+                onClick={() => setMainTab('checklist')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  mainTab === 'checklist' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <ClipboardList size={15} /> Checklist
+              </button>
+              <button
                 onClick={() => setMainTab('activity')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   mainTab === 'activity' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
@@ -779,6 +787,15 @@ export default function OppDetailPage() {
                 </div>
               )
             })()}
+
+            {/* ══════════ CHECKLIST TAB ══════════ */}
+            {mainTab === 'checklist' && opp && (
+              <ChecklistTab
+                oppId={id as string}
+                oppTitle={opp.title}
+                tourDate={opp.tour_date}
+              />
+            )}
 
             {/* ══════════ THÔNG TIN ĐƠN TAB ══════════ */}
             {mainTab === 'info' && (() => {
