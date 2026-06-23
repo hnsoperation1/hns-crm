@@ -63,6 +63,8 @@ export default function OppDetailPage() {
   const [loading, setLoading] = useState(true)
 
   const [logFilter, setLogFilter] = useState<LogFilter>('all')
+  const [logForm, setLogForm] = useState({ description: '', log_date: new Date().toISOString().slice(0, 10), log_type: 'note' as LogType, next_step: '', next_step_due: '' })
+  const [logSaving, setLogSaving] = useState(false)
   const [showReassign, setShowReassign] = useState(false)
   const [reassignTarget, setReassignTarget] = useState('')
   const [reassignSuccess, setReassignSuccess] = useState(false)
@@ -435,30 +437,86 @@ export default function OppDetailPage() {
                 })}
               </div>
 
-              <div className="mx-5 mb-5 rounded-xl border border-dashed border-brand-200 bg-brand-50/40 p-4">
-                <div className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <Plus size={14} className="text-accent-500" />
-                  Thêm log hoạt động
-                </div>
-                <textarea
-                  className="w-full text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white placeholder-gray-400 shadow-sm"
-                  placeholder="Ghi lại kết quả cuộc gọi, thông tin mới từ khách, vấn đề phát sinh..."
-                  rows={3}
-                />
-                <div className="flex items-center justify-between mt-3 gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <input type="date" className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white shadow-sm" />
-                    <select className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-600 shadow-sm">
-                      <option value="sale_update">Cập nhật sale</option>
-                      <option value="stage_change">Chuyển giai đoạn</option>
-                      <option value="note">Ghi chú</option>
-                    </select>
+              {(() => {
+                async function handleSaveLog() {
+                  if (!logForm.description.trim()) return
+                  setLogSaving(true)
+                  const { data: { user: authUser } } = await supabase.auth.getUser()
+                  if (!authUser) { setLogSaving(false); return }
+                  const { data } = await supabase.from('activity_logs').insert({
+                    opportunity_id: id,
+                    user_id: authUser.id,
+                    log_type: logForm.log_type,
+                    log_date: logForm.log_date || new Date().toISOString().slice(0, 10),
+                    description: logForm.description.trim(),
+                    next_step: logForm.next_step.trim() || null,
+                    next_step_due: logForm.next_step_due || null,
+                    stage_at_log: opp?.stage ?? 'stage_1',
+                  }).select('*, user:users(id,full_name)').single()
+                  setLogSaving(false)
+                  if (data) {
+                    setAllLogs(prev => [data as LogDetail, ...prev])
+                    setLogForm({ description: '', log_date: new Date().toISOString().slice(0, 10), log_type: 'note', next_step: '', next_step_due: '' })
+                  }
+                }
+                return (
+                  <div className="mx-5 mb-5 rounded-xl border border-dashed border-brand-200 bg-brand-50/40 p-4">
+                    <div className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <Plus size={14} className="text-accent-500" />
+                      Thêm log hoạt động
+                    </div>
+                    <textarea
+                      value={logForm.description}
+                      onChange={e => setLogForm(f => ({ ...f, description: e.target.value }))}
+                      className="w-full text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white placeholder-gray-400 shadow-sm"
+                      placeholder="Ghi lại kết quả cuộc gọi, thông tin mới từ khách, vấn đề phát sinh..."
+                      rows={3}
+                    />
+                    <input
+                      type="text"
+                      value={logForm.next_step}
+                      onChange={e => setLogForm(f => ({ ...f, next_step: e.target.value }))}
+                      placeholder="Bước tiếp theo (tuỳ chọn)..."
+                      className="w-full mt-2 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white placeholder-gray-400 shadow-sm"
+                    />
+                    <div className="flex items-center justify-between mt-3 gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <input
+                          type="date"
+                          value={logForm.log_date}
+                          onChange={e => setLogForm(f => ({ ...f, log_date: e.target.value }))}
+                          className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white shadow-sm"
+                        />
+                        <select
+                          value={logForm.log_type}
+                          onChange={e => setLogForm(f => ({ ...f, log_type: e.target.value as LogType }))}
+                          className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-600 shadow-sm"
+                        >
+                          <option value="note">Ghi chú</option>
+                          <option value="sale_update">Cập nhật sale</option>
+                          <option value="cskh_care">Chăm sóc KH</option>
+                        </select>
+                        {logForm.next_step && (
+                          <input
+                            type="date"
+                            value={logForm.next_step_due}
+                            onChange={e => setLogForm(f => ({ ...f, next_step_due: e.target.value }))}
+                            placeholder="Deadline bước tiếp"
+                            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white shadow-sm"
+                          />
+                        )}
+                      </div>
+                      <button
+                        onClick={handleSaveLog}
+                        disabled={!logForm.description.trim() || logSaving}
+                        className="bg-accent-500 hover:bg-accent-600 text-white px-5 py-1.5 rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {logSaving ? 'Đang lưu...' : 'Lưu log'}
+                      </button>
+                    </div>
                   </div>
-                  <button className="bg-accent-500 hover:bg-accent-600 text-white px-5 py-1.5 rounded-lg text-sm font-semibold transition-colors shadow-sm">
-                    Lưu log
-                  </button>
-                </div>
-              </div>
+                )
+              })()}
             </div>
             )}
 
