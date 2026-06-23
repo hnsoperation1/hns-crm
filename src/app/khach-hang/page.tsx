@@ -731,17 +731,17 @@ function OrganizationsTab() {
               return (
                 <tr key={org.id} className="hover:bg-gray-50/70 transition-colors group">
                   <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-3">
+                    <button onClick={() => openEdit(org)} className="flex items-center gap-3 text-left group/name">
                       <div className="w-9 h-9 bg-gradient-to-br from-teal-100 to-sky-200 rounded-xl flex items-center justify-center text-xs font-bold text-brand-700 flex-shrink-0">
                         {getInitials(org.name)}
                       </div>
                       <div>
-                        <div className="font-semibold text-gray-900">{org.name}</div>
+                        <div className="font-semibold text-gray-900 group-hover/name:text-brand-600 transition-colors">{org.name}</div>
                         <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
                           {ORG_TYPE_LABELS[org.type]}
                         </span>
                       </div>
-                    </div>
+                    </button>
                   </td>
                   <td className="px-5 py-3.5 text-gray-500 font-mono text-xs">{org.tax_code ?? '—'}</td>
                   <td className="px-5 py-3.5">
@@ -795,7 +795,7 @@ function OrganizationsTab() {
 
             <div className="flex-1 overflow-hidden flex">
               {/* Cột trái: thông tin tổ chức */}
-              <div className="w-[400px] flex-shrink-0 overflow-y-auto px-6 py-5 space-y-4 border-r border-gray-100">
+              <div className="w-[560px] flex-shrink-0 overflow-y-auto px-6 py-5 space-y-4 border-r border-gray-100">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Thông tin tổ chức</p>
 
                 <Field label="Mã số thuế">
@@ -967,7 +967,7 @@ function OrganizationsTab() {
               <button onClick={handleSubmit} disabled={submitting}
                 className="flex-1 flex items-center justify-center gap-2 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-bold transition-colors">
                 {submitting && <Loader2 size={14} className="animate-spin" />}
-                {editingOrg ? 'Lưu thay đổi' : 'Tạo tổ chức'}
+                {editingOrg ? 'Lưu thay đổi' : 'Thêm CTY / Tổ chức'}
               </button>
               <button onClick={closePanel}
                 className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-colors">
