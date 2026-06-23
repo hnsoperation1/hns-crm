@@ -41,7 +41,7 @@ const EMPTY_CONTACT_FORM = {
   name: '', phone: '', email: '',
   company: '', tax_code: '', city: '', company_address: '',
   source: 'test' as LeadSource, lead_score: 'new' as LeadScore,
-  destination: '', departure_date: '', opp_title: '',
+  destination: '', departure_date: '', return_date: '', opp_title: '',
 }
 
 const EMPTY_ORG_FORM = {
@@ -256,6 +256,7 @@ function ContactsTab() {
         title: form.opp_title.trim(),
         description: form.destination.trim() || null,
         tour_date: form.departure_date || null,
+        tour_end_date: form.return_date || null,
         contact_id: newContact.id,
         organization_id: orgId,
         created_by: user!.id,
@@ -497,17 +498,16 @@ function ContactsTab() {
               <div className="border-t border-gray-100 pt-4">
                 <SectionLabel>Cơ hội phát sinh</SectionLabel>
                 <div className="mt-3 space-y-4">
+                  <Field label="Điểm đến dự kiến">
+                    <input type="text" placeholder="VD: Đà Nẵng, Nhật Bản..." value={form.destination}
+                      onChange={e => handleDestinationChange(e.target.value)} className={inputCls()} />
+                  </Field>
                   <div className="grid grid-cols-2 gap-3">
-                    <Field label="Điểm đến dự kiến">
-                      <input type="text" placeholder="VD: Đà Nẵng, Nhật Bản..." value={form.destination}
-                        onChange={e => handleDestinationChange(e.target.value)} className={inputCls()} />
-                    </Field>
                     <Field label="Ngày đi dự kiến">
-                      <DatePickerVN
-                        value={form.departure_date}
-                        onChange={handleDepartureDateChange}
-                        className={inputCls()}
-                      />
+                      <DatePickerVN value={form.departure_date} onChange={handleDepartureDateChange} className={inputCls()} />
+                    </Field>
+                    <Field label="Ngày về dự kiến">
+                      <DatePickerVN value={form.return_date} onChange={v => setForm(f => ({ ...f, return_date: v }))} className={inputCls()} />
                     </Field>
                   </div>
                   <Field label="Tên cơ hội" required error={errors.opp_title}>

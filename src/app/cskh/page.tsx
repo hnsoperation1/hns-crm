@@ -41,6 +41,16 @@ export default function CSKHPage() {
   const [showPanel, setShowPanel] = useState(false)
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [oppSearch, setOppSearch] = useState('')
+  const [showOppDrop, setShowOppDrop] = useState(false)
+  const oppRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (oppRef.current && !oppRef.current.contains(e.target as Node)) setShowOppDrop(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
   const [submitting, setSubmitting] = useState(false)
   const [filterStatus, setFilterStatus] = useState<IssueStatus | 'all'>('all')
   const [search, setSearch] = useState('')
@@ -263,18 +273,19 @@ export default function CSKHPage() {
             {/* Panel body */}
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
               {/* Đơn hàng */}
-              <div>
+              <div ref={oppRef}>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Đơn hàng liên quan</label>
                 <input
                   value={oppSearch}
-                  onChange={e => { setOppSearch(e.target.value); setForm(f => ({ ...f, opportunity_id: '' })) }}
+                  onChange={e => { setOppSearch(e.target.value); setForm(f => ({ ...f, opportunity_id: '' })); setShowOppDrop(true) }}
+                  onFocus={() => setShowOppDrop(true)}
                   placeholder="Tìm tên đơn hàng..."
                   className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
                 />
-                {oppSearch && !form.opportunity_id && filteredOpps.length > 0 && (
+                {showOppDrop && !form.opportunity_id && filteredOpps.length > 0 && (
                   <div className="mt-1 border border-gray-200 rounded-xl bg-white shadow-md max-h-48 overflow-y-auto">
-                    {filteredOpps.slice(0, 8).map(o => (
-                      <button key={o.id} onClick={() => { setForm(f => ({ ...f, opportunity_id: o.id })); setOppSearch(o.title) }}
+                    {filteredOpps.slice(0, 10).map(o => (
+                      <button key={o.id} onMouseDown={e => e.preventDefault()} onClick={() => { setForm(f => ({ ...f, opportunity_id: o.id })); setOppSearch(o.title); setShowOppDrop(false) }}
                         className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0">
                         {o.title}
                       </button>

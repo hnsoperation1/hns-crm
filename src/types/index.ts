@@ -76,6 +76,7 @@ export interface Opportunity {
   estimated_value?: number
   actual_value?: number
   tour_date?: string
+  tour_end_date?: string
   deadline?: string
   created_at: string
   updated_at: string
