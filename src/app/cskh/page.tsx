@@ -56,16 +56,23 @@ export default function CSKHPage() {
   const [search, setSearch] = useState('')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [openStatusId, setOpenStatusId] = useState<string | null>(null)
-  const statusDropRef = useRef<HTMLDivElement>(null)
+  const [dropPos, setDropPos] = useState<{ top: number; left: number } | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    function onClickOutsideStatus(e: MouseEvent) {
-      if (statusDropRef.current && !statusDropRef.current.contains(e.target as Node)) setOpenStatusId(null)
+    function onClickOutsideStatus() { setOpenStatusId(null); setDropPos(null) }
+    if (openStatusId) {
+      document.addEventListener('mousedown', onClickOutsideStatus)
+      return () => document.removeEventListener('mousedown', onClickOutsideStatus)
     }
-    document.addEventListener('mousedown', onClickOutsideStatus)
-    return () => document.removeEventListener('mousedown', onClickOutsideStatus)
-  }, [])
+  }, [openStatusId])
+
+  function openDrop(e: React.MouseEvent<HTMLButtonElement>, id: string) {
+    if (openStatusId === id) { setOpenStatusId(null); setDropPos(null); return }
+    const rect = e.currentTarget.getBoundingClientRect()
+    setDropPos({ top: rect.bottom + 6, left: rect.left })
+    setOpenStatusId(id)
+  }
 
   useEffect(() => { loadAll() }, [])
 
@@ -207,33 +214,13 @@ export default function CSKHPage() {
                 return (
                   <tr key={issue.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3.5">
-                      <div className="relative inline-block" ref={openStatusId === issue.id ? statusDropRef : undefined}>
-                        <button
-                          onClick={() => setOpenStatusId(openStatusId === issue.id ? null : issue.id)}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border} cursor-pointer hover:opacity-80 transition-opacity`}
-                        >
-                          {updatingId === issue.id ? <Loader2 size={11} className="animate-spin" /> : <Icon size={11} />}
-                          {cfg.label}
-                        </button>
-                        {openStatusId === issue.id && (
-                          <div className="absolute z-50 left-0 bottom-full mb-1 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-[160px]">
-                            {(Object.entries(STATUS_CONFIG) as [IssueStatus, typeof STATUS_CONFIG[IssueStatus]][]).map(([s, c]) => {
-                              const SI = c.icon
-                              return (
-                                <button
-                                  key={s}
-                                  onMouseDown={e => e.preventDefault()}
-                                  onClick={() => { handleStatusChange(issue.id, s); setOpenStatusId(null) }}
-                                  className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 transition-colors ${issue.status === s ? 'font-bold' : ''}`}
-                                >
-                                  <SI size={13} className={c.text} />
-                                  <span>{c.label}</span>
-                                </button>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
+                      <button
+                        onClick={e => openDrop(e, issue.id)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border} cursor-pointer hover:opacity-80 transition-opacity`}
+                      >
+                        {updatingId === issue.id ? <Loader2 size={11} className="animate-spin" /> : <Icon size={11} />}
+                        {cfg.label}
+                      </button>
                     </td>
                     <td className="px-5 py-3.5">
                       {issue.opportunity ? (
@@ -386,6 +373,30 @@ export default function CSKHPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Status dropdown — fixed position để thoát overflow */}
+      {openStatusId && dropPos && (
+        <div
+          style={{ position: 'fixed', top: dropPos.top, left: dropPos.left, zIndex: 9999 }}
+          className="bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-[160px]"
+          onMouseDown={e => e.stopPropagation()}
+        >
+          {(Object.entries(STATUS_CONFIG) as [IssueStatus, typeof STATUS_CONFIG[IssueStatus]][]).map(([s, c]) => {
+            const SI = c.icon
+            const currentIssue = issues.find(i => i.id === openStatusId)
+            return (
+              <button
+                key={s}
+                onClick={() => { handleStatusChange(openStatusId, s); setOpenStatusId(null); setDropPos(null) }}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 transition-colors ${currentIssue?.status === s ? 'font-bold' : ''}`}
+              >
+                <SI size={13} className={c.text} />
+                <span>{c.label}</span>
+              </button>
+            )
+          })}
+        </div>
       )}
     </div>
   )
