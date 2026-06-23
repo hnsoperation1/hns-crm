@@ -194,7 +194,7 @@ export default function PipelinePage() {
             return (
               <button key={stage} onClick={() => setStageFilter(stage)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
-                  active ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                  active ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
                 }`}>
                 {sc && <span className={`w-2 h-2 rounded-full flex-shrink-0 ${sc.dot}`} />}
                 {label}
