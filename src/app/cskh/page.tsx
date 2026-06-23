@@ -216,7 +216,7 @@ export default function CSKHPage() {
                           {cfg.label}
                         </button>
                         {openStatusId === issue.id && (
-                          <div className="absolute z-50 left-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-[160px]">
+                          <div className="absolute z-50 left-0 bottom-full mb-1 bg-white rounded-xl shadow-xl border border-gray-100 py-1 min-w-[160px]">
                             {(Object.entries(STATUS_CONFIG) as [IssueStatus, typeof STATUS_CONFIG[IssueStatus]][]).map(([s, c]) => {
                               const SI = c.icon
                               return (
