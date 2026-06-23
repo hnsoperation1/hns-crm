@@ -114,7 +114,7 @@ function ContactsTab() {
     const [{ data: c }, { data: o }, { data: og }] = await Promise.all([
       supabase.from('contacts').select('*').order('created_at', { ascending: false }),
       supabase.from('opportunities').select('id, title, contact_id, stage'),
-      supabase.from('organizations').select('id, name, tax_code, city, address').order('name'),
+      supabase.from('organizations').select('*').order('name'),
     ])
     setContacts((c ?? []) as Contact[])
     setOpps((o ?? []) as Opportunity[])
@@ -544,10 +544,17 @@ function OrganizationsTab() {
   const [submitting, setSubmitting] = useState(false)
   const [orgContacts, setOrgContacts] = useState<Contact[]>([])
   const [newRows, setNewRows] = useState<NewContactRow[]>([])
+  const [allContacts, setAllContacts] = useState<Contact[]>([])
 
   useEffect(() => {
-    supabase.from('organizations').select('*').order('created_at', { ascending: false })
-      .then(({ data }) => { setOrgs((data ?? []) as Organization[]); setDataLoading(false) })
+    Promise.all([
+      supabase.from('organizations').select('*').order('created_at', { ascending: false }),
+      supabase.from('contacts').select('id, name, phone, email, company'),
+    ]).then(([{ data: orgData }, { data: ctData }]) => {
+      setOrgs((orgData ?? []) as Organization[])
+      setAllContacts((ctData ?? []) as Contact[])
+      setDataLoading(false)
+    })
   }, [])
 
   async function loadOrgContacts(org: Organization) {
@@ -627,7 +634,13 @@ function OrganizationsTab() {
           .eq('id', editingOrg.id)
           .select('*')
           .single()
-        if (data) setOrgs(prev => prev.map(o => o.id === editingOrg.id ? data as Organization : o))
+        if (data) {
+          setOrgs(prev => prev.map(o => o.id === editingOrg.id ? data as Organization : o))
+          if (validRows.length > 0) {
+            const { data: freshContacts } = await supabase.from('contacts').select('*').order('created_at', { ascending: false })
+            if (freshContacts) setOrgContacts(freshContacts.filter(c => (data as Organization).contact_ids?.includes(c.id)) as Contact[])
+          }
+        }
       } else {
         const { data } = await supabase
           .from('organizations')
@@ -716,7 +729,10 @@ function OrganizationsTab() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filtered.map(org => {
-              const contactCount = org.contact_ids.length
+              const contactCount = org.contact_ids?.length ?? 0
+              const primaryContact = org.primary_contact_id
+                ? allContacts.find(c => c.id === org.primary_contact_id)
+                : allContacts.find(c => org.contact_ids?.includes(c.id))
               return (
                 <tr key={org.id} className="hover:bg-gray-50/70 transition-colors group">
                   <td className="px-5 py-3.5">
@@ -734,10 +750,12 @@ function OrganizationsTab() {
                   </td>
                   <td className="px-5 py-3.5 text-gray-500 font-mono text-xs">{org.tax_code ?? '—'}</td>
                   <td className="px-5 py-3.5">
-                    {org.phone
-                      ? <div className="flex items-center gap-1.5 text-gray-600 text-xs"><Phone size={12} />{org.phone}</div>
-                      : <span className="text-gray-300 text-xs">—</span>}
-                    {org.address && <div className="flex items-center gap-1.5 text-gray-400 text-xs mt-0.5 max-w-[180px] truncate"><MapPin size={11} />{org.address}</div>}
+                    {primaryContact ? (
+                      <div>
+                        <div className="font-medium text-gray-800 text-xs">{primaryContact.name}</div>
+                        {primaryContact.phone && <div className="flex items-center gap-1 text-gray-500 text-xs mt-0.5"><Phone size={11} />{primaryContact.phone}</div>}
+                      </div>
+                    ) : <span className="text-gray-300 text-xs">—</span>}
                   </td>
                   <td className="px-5 py-3.5">
                     {org.email && <div className="flex items-center gap-1.5 text-gray-600 text-xs"><Mail size={12} />{org.email}</div>}
