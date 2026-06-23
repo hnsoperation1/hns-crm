@@ -1,61 +1,160 @@
 'use client'
-import { useRef, useState, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
+
+const VI_MONTHS = ['Tháng Một','Tháng Hai','Tháng Ba','Tháng Tư','Tháng Năm','Tháng Sáu','Tháng Bảy','Tháng Tám','Tháng Chín','Tháng Mười','Tháng Mười Một','Tháng Mười Hai']
+const DAY_HEADERS = ['Th 2','Th 3','Th 4','Th 5','Th 6','Th 7','CN']
 
 interface Props {
   value: string        // yyyy-mm-dd hoặc ''
   onChange: (val: string) => void
   className?: string
+  placeholder?: string
 }
 
-export default function DateInput({ value, onChange, className = '' }: Props) {
-  const [day, setDay]   = useState('')
-  const [mon, setMon]   = useState('')
-  const [year, setYear] = useState('')
-  const monRef  = useRef<HTMLInputElement>(null)
-  const yearRef = useRef<HTMLInputElement>(null)
+export default function DateInput({ value, onChange, className = '', placeholder = 'dd/mm/yyyy' }: Props) {
+  const today = new Date().toISOString().slice(0, 10)
+  const initYear  = value?.length >= 10 ? parseInt(value.slice(0, 4)) : new Date().getFullYear()
+  const initMonth = value?.length >= 10 ? parseInt(value.slice(5, 7)) - 1 : new Date().getMonth()
+
+  const [open, setOpen]           = useState(false)
+  const [viewYear, setViewYear]   = useState(initYear)
+  const [viewMonth, setViewMonth] = useState(initMonth)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const display = value?.length >= 10
+    ? `${value.slice(8, 10)}/${value.slice(5, 7)}/${value.slice(0, 4)}`
+    : ''
 
   useEffect(() => {
-    if (value && value.length >= 10) {
-      const [y, m, d] = value.slice(0, 10).split('-')
-      setDay(d ?? ''); setMon(m ?? ''); setYear(y ?? '')
-    } else if (!value) {
-      setDay(''); setMon(''); setYear('')
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  useEffect(() => {
+    if (value?.length >= 10) {
+      setViewYear(parseInt(value.slice(0, 4)))
+      setViewMonth(parseInt(value.slice(5, 7)) - 1)
     }
   }, [value])
 
-  function emit(d: string, m: string, y: string) {
-    if (d.length === 2 && m.length === 2 && y.length === 4) {
-      const iso = `${y}-${m}-${d}`
-      if (!isNaN(new Date(iso).getTime())) onChange(iso)
-    } else if (!d && !m && !y) {
-      onChange('')
-    }
+  function prevMonth() {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1) }
+    else setViewMonth(m => m - 1)
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1) }
+    else setViewMonth(m => m + 1)
   }
 
-  function handleDay(v: string) {
-    const s = v.replace(/\D/g, '').slice(0, 2)
-    setDay(s); emit(s, mon, year)
-    if (s.length === 2) monRef.current?.focus()
-  }
-  function handleMon(v: string) {
-    const s = v.replace(/\D/g, '').slice(0, 2)
-    setMon(s); emit(day, s, year)
-    if (s.length === 2) yearRef.current?.focus()
-  }
-  function handleYear(v: string) {
-    const s = v.replace(/\D/g, '').slice(0, 4)
-    setYear(s); emit(day, mon, s)
+  function selectDay(day: number) {
+    const mm = String(viewMonth + 1).padStart(2, '0')
+    const dd = String(day).padStart(2, '0')
+    onChange(`${viewYear}-${mm}-${dd}`)
+    setOpen(false)
   }
 
-  const inp = 'bg-transparent outline-none text-sm text-center'
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
+  const firstDay    = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7
+  const cells       = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
+
+  const selectedDay = value?.length >= 10
+    && parseInt(value.slice(0, 4)) === viewYear
+    && parseInt(value.slice(5, 7)) - 1 === viewMonth
+    ? parseInt(value.slice(8, 10)) : null
+
+  const todayDay = today.slice(0, 7) === `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`
+    ? parseInt(today.slice(8, 10)) : null
+
+  const years = Array.from({ length: 12 }, (_, i) => new Date().getFullYear() - 3 + i)
 
   return (
-    <div className={`inline-flex items-center border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus-within:ring-2 focus-within:ring-brand-400 focus-within:border-brand-400 ${className}`}>
-      <input value={day}  onChange={e => handleDay(e.target.value)}  placeholder="DD"   inputMode="numeric" className={`${inp} w-6`}  />
-      <span className="text-gray-300 select-none">/</span>
-      <input value={mon}  onChange={e => handleMon(e.target.value)}  placeholder="MM"   inputMode="numeric" className={`${inp} w-6`}  ref={monRef} />
-      <span className="text-gray-300 select-none">/</span>
-      <input value={year} onChange={e => handleYear(e.target.value)} placeholder="YYYY" inputMode="numeric" className={`${inp} w-12`} ref={yearRef} />
+    <div ref={ref} className={`relative ${className}`}>
+      {/* Input */}
+      <div
+        onClick={() => setOpen(o => !o)}
+        className={`w-full flex items-center gap-2 text-sm border rounded-lg px-3 py-1.5 bg-white cursor-pointer transition-all select-none
+          ${open ? 'border-brand-400 ring-2 ring-brand-100' : 'border-gray-200 hover:border-brand-300'}`}
+      >
+        <CalendarDays size={14} className={open ? 'text-brand-500' : 'text-gray-400'} />
+        <span className={display ? 'text-gray-800' : 'text-gray-400'}>{display || placeholder}</span>
+      </div>
+
+      {/* Popup */}
+      {open && (
+        <div className="absolute top-full mt-2 z-[200] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden w-64">
+          {/* Header gradient */}
+          <div className="bg-gradient-to-br from-brand-600 to-brand-800 px-3 py-3">
+            <div className="flex items-center justify-between">
+              <button onClick={prevMonth}
+                className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                <ChevronLeft size={14} />
+              </button>
+
+              <div className="flex items-center gap-1.5">
+                <select value={viewMonth} onChange={e => setViewMonth(Number(e.target.value))}
+                  className="text-sm font-bold text-white bg-transparent outline-none cursor-pointer appearance-none">
+                  {VI_MONTHS.map((m, i) => <option key={i} value={i} className="text-gray-800 bg-white">{m}</option>)}
+                </select>
+                <select value={viewYear} onChange={e => setViewYear(Number(e.target.value))}
+                  className="text-sm font-bold text-white bg-transparent outline-none cursor-pointer appearance-none">
+                  {years.map(y => <option key={y} value={y} className="text-gray-800 bg-white">{y}</option>)}
+                </select>
+              </div>
+
+              <button onClick={nextMonth}
+                className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-3">
+            {/* Day headers */}
+            <div className="grid grid-cols-7 mb-1">
+              {DAY_HEADERS.map(d => (
+                <div key={d} className={`text-[11px] font-bold text-center py-1 ${d === 'CN' ? 'text-accent-500' : 'text-gray-400'}`}>{d}</div>
+              ))}
+            </div>
+
+            {/* Days */}
+            <div className="grid grid-cols-7 gap-y-0.5">
+              {cells.map((day, i) => {
+                if (day === null) return <div key={`e-${i}`} />
+                const isSun = (firstDay + day - 1) % 7 === 6
+                const isSelected = selectedDay === day
+                const isToday = todayDay === day
+                return (
+                  <button key={day} onClick={() => selectDay(day)}
+                    className={`text-sm h-8 w-8 mx-auto rounded-full flex items-center justify-center font-medium transition-all
+                      ${isSelected
+                        ? 'bg-brand-600 text-white shadow-md shadow-brand-200'
+                        : isToday
+                          ? 'border-2 border-accent-400 text-accent-600 font-bold'
+                          : isSun
+                            ? 'text-accent-500 hover:bg-accent-50'
+                            : 'text-gray-700 hover:bg-brand-50 hover:text-brand-700'
+                      }`}>
+                    {day}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Today shortcut */}
+            <div className="mt-2 pt-2 border-t border-gray-100 flex justify-center">
+              <button onClick={() => { onChange(today); setOpen(false) }}
+                className="text-xs font-semibold text-brand-600 hover:text-brand-800 px-3 py-1 rounded-lg hover:bg-brand-50 transition-colors">
+                Hôm nay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
