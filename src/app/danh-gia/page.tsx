@@ -407,7 +407,7 @@ export default function DanhGiaPage() {
                   <BarChart data={poorData} layout="vertical" margin={{ left: 8, right: 32, top: 0, bottom: 0 }}>
                     <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
                     <YAxis type="category" dataKey="name" width={180} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v) => [`${v} lượt`, 'Đánh giá Kém']} />
+                    <Tooltip formatter={(v) => [`${v} lượt`, 'Đánh giá Kém']} offset={16} />
                     <Bar dataKey="count" radius={[0, 6, 6, 0]} cursor="pointer"
                       label={{ position: 'right', fontSize: 11, fill: '#6b7280' }}
                       onClick={(data: any) => handlePoorClick(data)}>
@@ -440,7 +440,7 @@ export default function DanhGiaPage() {
                   <BarChart data={destData} layout="vertical" margin={{ left: 8, right: 32, top: 0, bottom: 0 }}>
                     <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
                     <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v) => [`${v} khách`, 'Quan tâm']} />
+                    <Tooltip formatter={(v) => [`${v} khách`, 'Quan tâm']} offset={16} />
                     <Bar dataKey="count" radius={[0, 6, 6, 0]} cursor="pointer"
                       label={{ position: 'right', fontSize: 11, fill: '#6b7280' }}
                       onClick={(data: any) => handleDestClick(data)}>
