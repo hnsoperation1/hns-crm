@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -72,6 +72,8 @@ export default function OppDetailPage() {
   const [infoSaved, setInfoSaved] = useState(false)
   const [showQR, setShowQR] = useState(false)
   const [qrCopied, setQrCopied] = useState(false)
+  const [qrExporting, setQrExporting] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
   const [taskDone, setTaskDone] = useState<Record<string, boolean>>({})
   const [addedTasks, setAddedTasks] = useState<{ id: string; title: string; due_date: string; assigned_to: string }[]>([])
   const [showNewTask, setShowNewTask] = useState(false)
@@ -983,35 +985,82 @@ export default function OppDetailPage() {
       {showQR && (() => {
         const FORM_BASE = 'https://docs.google.com/forms/d/e/1FAIpQLSeUYq35cA5hKdlaVXfd-WtVsz6OFeuowhFooDpSFbz_9Eod6g/viewform'
         const prefillUrl = `${FORM_BASE}?usp=pp_url&entry.1268900434=${encodeURIComponent(opp.title)}&entry.892405342=${encodeURIComponent(opp.description ?? '')}`
-        const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=12&data=${encodeURIComponent(prefillUrl)}`
+        const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=0&data=${encodeURIComponent(prefillUrl)}`
+
+        async function handleExport() {
+          if (!cardRef.current) return
+          setQrExporting(true)
+          const html2canvas = (await import('html2canvas')).default
+          const canvas = await html2canvas(cardRef.current, { scale: 3, useCORS: true, backgroundColor: '#ffffff' })
+          const link = document.createElement('a')
+          link.download = `Phieu-danh-gia-${opp?.title ?? ''}.png`
+          link.href = canvas.toDataURL('image/png')
+          link.click()
+          setQrExporting(false)
+        }
+
         return (
           <>
-            <div className="fixed inset-0 bg-black/40 z-50" onClick={() => setShowQR(false)} />
+            <div className="fixed inset-0 bg-black/50 z-50" onClick={() => setShowQR(false)} />
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                {/* Modal header */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                  <div>
-                    <h2 className="font-bold text-gray-900">QR phản hồi khách hàng</h2>
-                    <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[260px]">{opp.title}</p>
-                  </div>
+                  <h2 className="font-bold text-gray-900">Phiếu đánh giá</h2>
                   <button onClick={() => setShowQR(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors">
                     <X size={16} />
                   </button>
                 </div>
-                <div className="px-5 py-6 flex flex-col items-center gap-4">
-                  <img src={qrImgUrl} alt="QR Code" className="rounded-xl border border-gray-100 shadow-sm" width={240} height={240} />
-                  <p className="text-xs text-gray-400 text-center">Khách scan QR → form tự điền sẵn tên đoàn & hành trình</p>
+
+                {/* Card preview — đây là phần sẽ được export */}
+                <div className="px-5 pt-5">
+                  <div ref={cardRef} className="bg-white rounded-xl border-2 border-gray-100 overflow-hidden" style={{ fontFamily: 'Arial, sans-serif' }}>
+                    {/* Logo */}
+                    <div className="flex justify-center pt-6 pb-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/logo.png" alt="Hanoi Sun Travel" className="h-16 object-contain" crossOrigin="anonymous" />
+                    </div>
+                    {/* Title */}
+                    <div className="text-center px-4 pb-4">
+                      <p className="font-black text-lg uppercase tracking-wide leading-tight" style={{ color: '#ef5e2f' }}>
+                        Phiếu đánh giá
+                      </p>
+                      <p className="font-black text-lg uppercase tracking-wide leading-tight" style={{ color: '#ef5e2f' }}>
+                        chất lượng dịch vụ
+                      </p>
+                    </div>
+                    {/* Tour name */}
+                    <div className="mx-4 mb-4 px-3 py-2 rounded-lg text-center" style={{ backgroundColor: '#f0f9ff' }}>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Đoàn</p>
+                      <p className="font-bold text-sm text-gray-800 leading-snug">{opp.title}</p>
+                    </div>
+                    {/* QR */}
+                    <div className="flex justify-center pb-6">
+                      <div className="border-4 border-gray-900 rounded-xl overflow-hidden">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={qrImgUrl} alt="QR Code" width={180} height={180} crossOrigin="anonymous" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="px-5 py-4 flex flex-col gap-2">
+                  <button
+                    onClick={handleExport}
+                    disabled={qrExporting}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white transition-colors"
+                  >
+                    {qrExporting ? <Loader2 size={14} className="animate-spin" /> : <QrCode size={14} />}
+                    {qrExporting ? 'Đang xuất...' : 'Tải phiếu PNG'}
+                  </button>
                   <button
                     onClick={() => { navigator.clipboard.writeText(prefillUrl); setQrCopied(true); setTimeout(() => setQrCopied(false), 2000) }}
-                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors border ${qrCopied ? 'border-emerald-300 bg-emerald-50 text-emerald-600' : 'border-gray-200 hover:bg-gray-50 text-gray-600'}`}
+                    className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-colors border ${qrCopied ? 'border-emerald-300 bg-emerald-50 text-emerald-600' : 'border-gray-200 hover:bg-gray-50 text-gray-600'}`}
                   >
                     {qrCopied ? <Check size={14} /> : <Copy size={14} />}
-                    {qrCopied ? 'Đã copy link!' : 'Copy link pre-filled'}
+                    {qrCopied ? 'Đã copy link!' : 'Copy link'}
                   </button>
-                  <a href={qrImgUrl} download={`QR-${opp.title}.png`} target="_blank" rel="noreferrer"
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-accent-500 hover:bg-accent-600 text-white transition-colors">
-                    <QrCode size={14} /> Tải ảnh QR
-                  </a>
                 </div>
               </div>
             </div>
