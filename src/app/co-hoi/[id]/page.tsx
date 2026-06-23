@@ -15,7 +15,8 @@ import {
   STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS,
   formatVND, formatDate, getInitials, daysSince, daysUntil,
 } from '@/lib/utils'
-import type { OppStage, LogType, Opportunity, Contact, ActivityLog } from '@/types'
+import { AlertCircle, Clock as ClockIcon, CheckCircle } from 'lucide-react'
+import type { OppStage, LogType, Opportunity, Contact, ActivityLog, IssueStatus } from '@/types'
 
 // ─── Local types for Supabase joins ──────────────────────────────────────────
 
@@ -55,6 +56,7 @@ export default function OppDetailPage() {
   const [tasks, setTasks] = useState<{ id: string; title: string; due_date?: string; assigned_to?: string; is_done: boolean; stage: number }[]>([])
   const [saleUsers, setSaleUsers] = useState<UserMin[]>([])
   const [allUsers, setAllUsers] = useState<UserMin[]>([])
+  const [issues, setIssues] = useState<{ id: string; description: string; status: IssueStatus; assigned_user: { full_name: string } | null; created_at: string }[]>([])
   const [loading, setLoading] = useState(true)
 
   const [logFilter, setLogFilter] = useState<LogFilter>('all')
@@ -72,7 +74,7 @@ export default function OppDetailPage() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: oppData }, { data: logsData }, { data: tasksData }, { data: usersData }] = await Promise.all([
+      const [{ data: oppData }, { data: logsData }, { data: tasksData }, { data: usersData }, { data: issuesData }] = await Promise.all([
         supabase.from('opportunities')
           .select('*, contact:contacts(id,name,phone,email,company,tax_code,organization_ids,source,lead_score,created_by,created_at), assigned_user:users!assigned_to(id,full_name), creator:users!created_by(id,full_name)')
           .eq('id', id)
@@ -88,6 +90,10 @@ export default function OppDetailPage() {
         supabase.from('users')
           .select('id, full_name, is_sale_tv, is_active')
           .eq('is_active', true),
+        supabase.from('issues')
+          .select('id, description, status, assigned_user:users!assigned_to(full_name), created_at')
+          .eq('opportunity_id', id)
+          .order('created_at', { ascending: false }),
       ])
       setOpp(oppData as OppDetail | null)
       setAllLogs((logsData ?? []) as LogDetail[])
@@ -95,6 +101,7 @@ export default function OppDetailPage() {
       const users = (usersData ?? []) as UserMin[]
       setAllUsers(users)
       setSaleUsers(users.filter(u => u.is_sale_tv))
+      setIssues((issuesData ?? []) as unknown as typeof issues)
       setLoading(false)
     }
     load()
@@ -759,6 +766,45 @@ export default function OppDetailPage() {
                 </div>
                 <span className="text-xs text-brand-500 font-semibold">Xem & giao việc →</span>
               </button>
+            )}
+
+            {/* Issues */}
+            {issues.length > 0 && (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-900 text-sm">Issues liên quan</h3>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">{issues.length}</span>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {issues.map(issue => {
+                    const cfg = issue.status === 'resolved'
+                      ? { icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-50', label: 'Đã giải quyết' }
+                      : issue.status === 'processing'
+                        ? { icon: ClockIcon, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Đang xử lý' }
+                        : { icon: AlertCircle, color: 'text-amber-500', bg: 'bg-amber-50', label: 'Mở' }
+                    const Icon = cfg.icon
+                    return (
+                      <div key={issue.id} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-start gap-2.5">
+                          <Icon size={14} className={`${cfg.color} flex-shrink-0 mt-0.5`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-700 leading-relaxed line-clamp-2">{issue.description}</p>
+                            <div className="flex items-center gap-2 mt-1.5">
+                              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>{cfg.label}</span>
+                              {issue.assigned_user && (
+                                <span className="text-[10px] text-gray-400">{issue.assigned_user.full_name}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="px-4 py-2.5 border-t border-gray-100">
+                  <Link href="/cskh" className="text-xs text-brand-600 hover:underline font-medium">Xem tất cả issues →</Link>
+                </div>
+              </div>
             )}
 
           </div>

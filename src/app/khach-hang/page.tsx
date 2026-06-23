@@ -615,6 +615,7 @@ function OrganizationsTab() {
             name: row.name.trim(),
             phone: row.phone.trim() || null,
             email: row.email.trim() || null,
+            company: editingOrg.name,
             source: 'test',
             organization_ids: [editingOrg.id],
             created_by: user!.id,
