@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import ChecklistTab from './ChecklistTab'
 import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2,
   MessageSquare, Plus, CheckSquare, Square,
@@ -71,7 +72,7 @@ export default function OppDetailPage() {
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
-  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'cskh' | 'info'>('info')
+  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'cskh' | 'info' | 'checklist'>('info')
   const [infoForm, setInfoForm] = useState({ title: '', description: '', tour_date: '', tour_end_date: '', estimated_value: '', actual_value: '', source: '' as string, lost_reason: '' })
   const [infoSaving, setInfoSaving] = useState(false)
   const [infoSaved, setInfoSaved] = useState(false)

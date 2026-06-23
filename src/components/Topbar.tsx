@@ -7,6 +7,15 @@ import { useAuth } from '@/contexts/auth'
 import { useTopbar } from '@/contexts/topbar'
 import { getInitials } from '@/lib/utils'
 
+const ROLE_LABELS: Record<string, string> = {
+  boss: 'Giám đốc',
+  admin: 'Quản trị viên',
+  sale_admin: 'Sale Admin',
+  mkt: 'Marketing',
+  cskh: 'Chăm sóc KH',
+  sale: 'Sale TV',
+}
+
 const PAGE_TITLES: Record<string, string> = {
   '/':             'Tổng quan',
   '/don-hang':     'Đơn hàng',
@@ -66,7 +75,10 @@ export default function Topbar() {
             >
               {getInitials(user.full_name)}
             </div>
-            <span className="text-sm font-semibold text-gray-800">{user.full_name}</span>
+            <div className="text-left">
+              <div className="text-sm font-semibold text-gray-800 leading-tight">{user.full_name}</div>
+              <div className="text-[11px] text-gray-400 leading-tight">{ROLE_LABELS[user.role] ?? user.role}</div>
+            </div>
             <ChevronDown size={13} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
           </button>
 
