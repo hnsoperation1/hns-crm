@@ -12,6 +12,7 @@ import {
   STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, formatVND, getInitials,
 } from '@/lib/utils'
 import type { OppStage, LeadSource } from '@/types'
+import DateInput from '@/components/DateInput'
 
 const SALE_TV = USERS.filter(u => u.is_sale_tv && u.is_active)
 const STAGES: OppStage[] = ['stage_1', 'stage_2', 'stage_3', 'stage_4', 'stage_5']
@@ -305,20 +306,10 @@ export default function NewOpportunityPage() {
                 )}
               </Field>
               <Field label="Ngày tour" icon={<CalendarDays size={13} />}>
-                <input
-                  type="date"
-                  value={form.tour_date}
-                  onChange={e => set('tour_date', e.target.value)}
-                  className={input(false)}
-                />
+                <DateInput value={form.tour_date} onChange={v => set('tour_date', v)} className="w-full" />
               </Field>
               <Field label="Deadline chốt đơn" icon={<CalendarDays size={13} />}>
-                <input
-                  type="date"
-                  value={form.deadline}
-                  onChange={e => set('deadline', e.target.value)}
-                  className={input(false)}
-                />
+                <DateInput value={form.deadline} onChange={v => set('deadline', v)} className="w-full" />
               </Field>
             </div>
           </Section>

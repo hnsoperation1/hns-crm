@@ -6,6 +6,7 @@ import { Star, ThumbsUp, ThumbsDown, Search, ChevronDown, ChevronUp, ExternalLin
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
+import DateInput from '@/components/DateInput'
 
 type FeedbackRow = {
   id: string
@@ -135,8 +136,8 @@ export default function DanhGiaPage() {
   const [list, setList] = useState<FeedbackRow[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'all' | 'poor' | 'destination'>('all')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  const [dateFrom, setDateFrom] = useState(() => `${new Date().getFullYear()}-01-01`)
+  const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10))
   const [search, setSearch] = useState('')
   const [filterSatisfied, setFilterSatisfied] = useState<'all' | 'satisfied' | 'unsatisfied' | 'return'>('all')
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -236,11 +237,9 @@ export default function DanhGiaPage() {
           {/* Date filter */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3 flex items-center gap-3">
             <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Từ ngày</span>
-            <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setSelected(null) }}
-              className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            <DateInput value={dateFrom} onChange={v => { setDateFrom(v); setSelected(null) }} />
             <span className="text-xs text-gray-400">đến</span>
-            <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setSelected(null) }}
-              className="text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400" />
+            <DateInput value={dateTo} onChange={v => { setDateTo(v); setSelected(null) }} />
             {(dateFrom || dateTo) && (
               <button onClick={() => { setDateFrom(''); setDateTo('') }} className="text-xs text-gray-400 hover:text-gray-600 font-medium">Xoá</button>
             )}

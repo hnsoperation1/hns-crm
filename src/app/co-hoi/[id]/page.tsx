@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import ChecklistTab from './ChecklistTab'
+import DateInput from '@/components/DateInput'
 import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2,
   MessageSquare, Plus, CheckSquare, Square,
@@ -490,12 +491,7 @@ export default function OppDetailPage() {
                     />
                     <div className="flex items-center justify-between mt-3 gap-2 flex-wrap">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <input
-                          type="date"
-                          value={logForm.log_date}
-                          onChange={e => setLogForm(f => ({ ...f, log_date: e.target.value }))}
-                          className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white shadow-sm"
-                        />
+                        <DateInput value={logForm.log_date} onChange={v => setLogForm(f => ({ ...f, log_date: v }))} />
                         <select
                           value={logForm.log_type}
                           onChange={e => setLogForm(f => ({ ...f, log_type: e.target.value as LogType }))}
@@ -506,13 +502,7 @@ export default function OppDetailPage() {
                           <option value="cskh_care">Chăm sóc KH</option>
                         </select>
                         {logForm.next_step && (
-                          <input
-                            type="date"
-                            value={logForm.next_step_due}
-                            onChange={e => setLogForm(f => ({ ...f, next_step_due: e.target.value }))}
-                            placeholder="Deadline bước tiếp"
-                            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white shadow-sm"
-                          />
+                          <DateInput value={logForm.next_step_due} onChange={v => setLogForm(f => ({ ...f, next_step_due: v }))} />
                         )}
                       </div>
                       <button
@@ -580,8 +570,7 @@ export default function OppDetailPage() {
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 mb-1">Deadline</label>
-                          <input type="date" value={newTask.due_date} onChange={e => setNewTask(t => ({ ...t, due_date: e.target.value }))}
-                            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white" />
+                          <DateInput value={newTask.due_date} onChange={v => setNewTask(t => ({ ...t, due_date: v }))} className="w-full" />
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 mb-1">Giao cho</label>
@@ -847,11 +836,11 @@ export default function OppDetailPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Ngày đi</label>
-                        <input type="date" value={infoForm.tour_date} onChange={e => setInfoForm(f => ({ ...f, tour_date: e.target.value }))} className={iField} />
+                        <DateInput value={infoForm.tour_date} onChange={v => setInfoForm(f => ({ ...f, tour_date: v }))} className="w-full" />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Ngày về</label>
-                        <input type="date" value={infoForm.tour_end_date} onChange={e => setInfoForm(f => ({ ...f, tour_end_date: e.target.value }))} className={iField} />
+                        <DateInput value={infoForm.tour_end_date} onChange={v => setInfoForm(f => ({ ...f, tour_end_date: v }))} className="w-full" />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">

@@ -13,6 +13,7 @@ import {
   formatVND, formatDate, getInitials, daysUntil,
 } from '@/lib/utils'
 import type { OppStage, LeadSource } from '@/types'
+import DateInput from '@/components/DateInput'
 
 const ACTIVE_STAGES: OppStage[] = ['stage_1', 'stage_2', 'stage_3', 'stage_4', 'stage_5']
 const SALE_TV = USERS.filter(u => u.is_sale_tv && u.is_active)
@@ -316,23 +317,13 @@ export default function AssignPage() {
                   </div>
                 </Field>
                 <Field label="Ngày tour">
-                  <input
-                    type="date"
-                    value={form.tour_date}
-                    onChange={e => set('tour_date', e.target.value)}
-                    className={inputCls(false)}
-                  />
+                  <DateInput value={form.tour_date} onChange={v => set('tour_date', v)} className="w-full" />
                 </Field>
               </div>
 
               {/* Deadline */}
               <Field label="Deadline chốt đơn">
-                <input
-                  type="date"
-                  value={form.deadline}
-                  onChange={e => set('deadline', e.target.value)}
-                  className={inputCls(false)}
-                />
+                <DateInput value={form.deadline} onChange={v => set('deadline', v)} className="w-full" />
               </Field>
 
               {/* Description */}
