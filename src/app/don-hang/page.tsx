@@ -27,7 +27,7 @@ const COLUMNS: { stage: OppStage; label: string }[] = [
 export default function PipelinePage() {
   const { user } = useAuth()
   const supabase = createClient()
-  const [view, setView] = useState<ViewMode>('kanban')
+  const [view, setView] = useState<ViewMode>('table')
   const [opps, setOpps] = useState<OppWithRelations[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -35,6 +35,7 @@ export default function PipelinePage() {
   const searchRef = useRef<HTMLDivElement>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverStage, setDragOverStage] = useState<OppStage | null>(null)
+  const [stageFilter, setStageFilter] = useState<OppStage | 'all'>('all')
 
   const canDrag = user?.is_super_admin === true
 
@@ -78,15 +79,15 @@ export default function PipelinePage() {
 
   const activeCount = opps.filter(o => !['lost', 'cancelled'].includes(o.stage)).length
 
-  const filtered = search.trim()
-    ? opps.filter(o => {
-        const q = search.toLowerCase()
-        return o.title.toLowerCase().includes(q)
-          || (o.contact?.name ?? '').toLowerCase().includes(q)
-          || (o.contact?.company ?? '').toLowerCase().includes(q)
-          || (o.assigned_user?.full_name ?? '').toLowerCase().includes(q)
-      })
-    : opps
+  const filtered = opps.filter(o => {
+    if (stageFilter !== 'all' && o.stage !== stageFilter) return false
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return o.title.toLowerCase().includes(q)
+      || (o.contact?.name ?? '').toLowerCase().includes(q)
+      || (o.contact?.company ?? '').toLowerCase().includes(q)
+      || (o.assigned_user?.full_name ?? '').toLowerCase().includes(q)
+  })
 
   if (loading) {
     return (
@@ -99,7 +100,8 @@ export default function PipelinePage() {
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 40px)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white flex-shrink-0">
+      <div className="flex flex-col gap-0 border-b border-gray-200 bg-white flex-shrink-0">
+        <div className="flex items-center justify-between px-6 pt-4 pb-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Đơn hàng</h1>
           <p className="text-sm text-gray-400 mt-0.5">{activeCount} đơn đang xử lý</p>
@@ -178,6 +180,28 @@ export default function PipelinePage() {
               Thêm đơn
             </Link>
           )}
+        </div>
+        </div>
+
+        {/* Stage filter tabs */}
+        <div className="flex items-center gap-1 px-6 pb-3 overflow-x-auto">
+          {([
+            { stage: 'all' as const, label: 'Tất cả', count: opps.length },
+            ...COLUMNS.map(c => ({ stage: c.stage, label: c.label, count: opps.filter(o => o.stage === c.stage).length }))
+          ]).map(({ stage, label, count }) => {
+            const active = stageFilter === stage
+            const sc = stage !== 'all' ? STAGE_COLORS[stage] : null
+            return (
+              <button key={stage} onClick={() => setStageFilter(stage)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
+                  active ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-300'
+                }`}>
+                {sc && <span className={`w-2 h-2 rounded-full flex-shrink-0 ${sc.dot}`} />}
+                {label}
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${active ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>{count}</span>
+              </button>
+            )
+          })}
         </div>
       </div>
 
