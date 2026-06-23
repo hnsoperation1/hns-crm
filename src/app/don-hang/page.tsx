@@ -42,10 +42,19 @@ export default function PipelinePage() {
     if (!draggingId || !canDrag) return
     const opp = opps.find(o => o.id === draggingId)
     if (!opp || opp.stage === targetStage) return
-    setOpps(prev => prev.map(o => o.id === draggingId ? { ...o, stage: targetStage } : o))
-    await supabase.from('opportunities').update({ stage: targetStage, stage_updated_at: new Date().toISOString() }).eq('id', draggingId)
+    const savedId = draggingId
+    setOpps(prev => prev.map(o => o.id === savedId ? { ...o, stage: targetStage } : o))
     setDraggingId(null)
     setDragOverStage(null)
+    const { error } = await supabase
+      .from('opportunities')
+      .update({ stage: targetStage, stage_updated_at: new Date().toISOString() })
+      .eq('id', savedId)
+    if (error) {
+      console.error('Drag update error:', error)
+      // rollback
+      setOpps(prev => prev.map(o => o.id === savedId ? { ...o, stage: opp.stage } : o))
+    }
   }
 
   useEffect(() => {
