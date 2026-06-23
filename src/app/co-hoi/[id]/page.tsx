@@ -7,7 +7,7 @@ import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2,
   MessageSquare, Plus, CheckSquare, Square,
   Clock, CalendarDays, DollarSign, User, Pencil, CheckCircle2, X,
-  ClipboardList, UserPlus, Loader2,
+  ClipboardList, UserPlus, Loader2, QrCode, Copy, Check,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useTopbar } from '@/contexts/topbar'
@@ -66,10 +66,12 @@ export default function OppDetailPage() {
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
-  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'cskh' | 'info'>('activity')
+  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'cskh' | 'info'>('info')
   const [infoForm, setInfoForm] = useState({ title: '', description: '', tour_date: '', tour_end_date: '', estimated_value: '', actual_value: '', source: '' as string, lost_reason: '' })
   const [infoSaving, setInfoSaving] = useState(false)
   const [infoSaved, setInfoSaved] = useState(false)
+  const [showQR, setShowQR] = useState(false)
+  const [qrCopied, setQrCopied] = useState(false)
   const [taskDone, setTaskDone] = useState<Record<string, boolean>>({})
   const [addedTasks, setAddedTasks] = useState<{ id: string; title: string; due_date: string; assigned_to: string }[]>([])
   const [showNewTask, setShowNewTask] = useState(false)
@@ -302,6 +304,14 @@ export default function OppDetailPage() {
 
             <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-2xl p-1 shadow-sm">
               <button
+                onClick={() => setMainTab('info')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  mainTab === 'info' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <DollarSign size={15} /> Thông tin đơn
+              </button>
+              <button
                 onClick={() => setMainTab('activity')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   mainTab === 'activity' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
@@ -333,14 +343,6 @@ export default function OppDetailPage() {
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${mainTab === 'cskh' ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
                   {issues.length}
                 </span>
-              </button>
-              <button
-                onClick={() => setMainTab('info')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                  mainTab === 'info' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <DollarSign size={15} /> Thông tin đơn
               </button>
             </div>
 
@@ -619,7 +621,15 @@ export default function OppDetailPage() {
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
                   <h3 className="font-semibold text-gray-900 text-sm">Issues CSKH</h3>
-                  <Link href="/cskh" className="text-xs text-brand-600 hover:underline font-medium">Xem tất cả →</Link>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setShowQR(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-brand-300 text-brand-600 hover:bg-brand-50 text-sm font-semibold transition-colors"
+                    >
+                      <QrCode size={13} /> QR phản hồi
+                    </button>
+                    <Link href="/cskh" className="text-xs text-brand-600 hover:underline font-medium">Xem tất cả →</Link>
+                  </div>
                 </div>
                 {issues.length === 0 ? (
                   <div className="py-12 text-center">
@@ -968,6 +978,47 @@ export default function OppDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ── QR Modal ────────────────────────────────── */}
+      {showQR && (() => {
+        const FORM_BASE = 'https://docs.google.com/forms/d/e/1FAIpQLSeUYq35cA5hKdlaVXfd-WtVsz6OFeuowhFooDpSFbz_9Eod6g/viewform'
+        const prefillUrl = `${FORM_BASE}?usp=pp_url&entry.1268900434=${encodeURIComponent(opp.title)}&entry.892405342=${encodeURIComponent(opp.description ?? '')}`
+        const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=12&data=${encodeURIComponent(prefillUrl)}`
+        return (
+          <>
+            <div className="fixed inset-0 bg-black/40 z-50" onClick={() => setShowQR(false)} />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                  <div>
+                    <h2 className="font-bold text-gray-900">QR phản hồi khách hàng</h2>
+                    <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[260px]">{opp.title}</p>
+                  </div>
+                  <button onClick={() => setShowQR(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors">
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="px-5 py-6 flex flex-col items-center gap-4">
+                  <img src={qrImgUrl} alt="QR Code" className="rounded-xl border border-gray-100 shadow-sm" width={240} height={240} />
+                  <p className="text-xs text-gray-400 text-center">Khách scan QR → form tự điền sẵn tên đoàn & hành trình</p>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(prefillUrl); setQrCopied(true); setTimeout(() => setQrCopied(false), 2000) }}
+                    className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors border ${qrCopied ? 'border-emerald-300 bg-emerald-50 text-emerald-600' : 'border-gray-200 hover:bg-gray-50 text-gray-600'}`}
+                  >
+                    {qrCopied ? <Check size={14} /> : <Copy size={14} />}
+                    {qrCopied ? 'Đã copy link!' : 'Copy link pre-filled'}
+                  </button>
+                  <a href={qrImgUrl} download={`QR-${opp.title}.png`} target="_blank" rel="noreferrer"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-accent-500 hover:bg-accent-600 text-white transition-colors">
+                    <QrCode size={14} /> Tải ảnh QR
+                  </a>
+                </div>
+              </div>
+            </div>
+          </>
+        )
+      })()}
+
     </div>
   )
 }

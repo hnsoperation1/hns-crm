@@ -328,7 +328,7 @@ function ContactsTab() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              {['Liên hệ', 'SĐT / Email', 'Nguồn', 'Lead Score', 'Phân hạng KH', 'Đơn đang xử lý', 'Ngày thêm'].map(h => (
+              {['Liên hệ', 'SĐT / Email', 'Nguồn', 'Phân hạng KH', 'Đơn đang xử lý', 'Ngày thêm'].map(h => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -357,11 +357,6 @@ function ContactsTab() {
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SOURCE_COLORS[contact.source]}`}>
                       {SOURCE_LABELS[contact.source]}
                     </span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    {contact.lead_score
-                      ? <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SCORE_COLORS[contact.lead_score as LeadScore]}`}>{SCORE_LABELS[contact.lead_score as LeadScore]}</span>
-                      : <span className="text-gray-300 text-xs">—</span>}
                   </td>
                   <td className="px-5 py-3.5">
                     {contact.customer_tier
@@ -482,18 +477,11 @@ function ContactsTab() {
                   onChange={e => setForm(f => ({ ...f, company_address: e.target.value }))} className={inputCls()} />
               </Field>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Nguồn">
-                  <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value as LeadSource }))} className={inputCls()}>
-                    {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                  </select>
-                </Field>
-                <Field label="Lead score">
-                  <select value={form.lead_score} onChange={e => setForm(f => ({ ...f, lead_score: e.target.value as LeadScore }))} className={inputCls()}>
-                    {SCORES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                  </select>
-                </Field>
-              </div>
+              <Field label="Nguồn">
+                <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value as LeadSource }))} className={inputCls()}>
+                  {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </Field>
 
               <div className="border-t border-gray-100 pt-4">
                 <SectionLabel>Cơ hội phát sinh</SectionLabel>
