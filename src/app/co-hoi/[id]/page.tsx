@@ -66,7 +66,7 @@ export default function OppDetailPage() {
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
-  const [mainTab, setMainTab] = useState<'activity' | 'tasks'>('activity')
+  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'cskh'>('activity')
   const [taskDone, setTaskDone] = useState<Record<string, boolean>>({})
   const [addedTasks, setAddedTasks] = useState<{ id: string; title: string; due_date: string; assigned_to: string }[]>([])
   const [showNewTask, setShowNewTask] = useState(false)
@@ -307,6 +307,17 @@ export default function OppDetailPage() {
                 <ClipboardList size={15} /> Công việc & Giao việc
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${mainTab === 'tasks' ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
                   {tasks.length + addedTasks.length}
+                </span>
+              </button>
+              <button
+                onClick={() => setMainTab('cskh')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  mainTab === 'cskh' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <AlertCircle size={15} /> CSKH
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${mainTab === 'cskh' ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                  {issues.length}
                 </span>
               </button>
             </div>
@@ -581,6 +592,50 @@ export default function OppDetailPage() {
               )
             })()}
 
+            {/* ══════════ CSKH TAB ══════════ */}
+            {mainTab === 'cskh' && (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-900 text-sm">Issues CSKH</h3>
+                  <Link href="/cskh" className="text-xs text-brand-600 hover:underline font-medium">Xem tất cả →</Link>
+                </div>
+                {issues.length === 0 ? (
+                  <div className="py-12 text-center">
+                    <AlertCircle size={32} className="text-gray-200 mx-auto mb-3" />
+                    <p className="text-sm text-gray-400">Chưa có issue nào cho đơn hàng này</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {issues.map(issue => {
+                      const cfg = issue.status === 'resolved'
+                        ? { icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Đã giải quyết' }
+                        : issue.status === 'processing'
+                          ? { icon: ClockIcon, color: 'text-blue-600', bg: 'bg-blue-50', label: 'Đang xử lý' }
+                          : { icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50', label: 'Mở' }
+                      const Icon = cfg.icon
+                      return (
+                        <div key={issue.id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-start gap-3">
+                            <Icon size={16} className={`${cfg.color} flex-shrink-0 mt-0.5`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-gray-800 leading-relaxed">{issue.description}</p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>{cfg.label}</span>
+                                {issue.assigned_user && (
+                                  <span className="text-xs text-gray-400">→ {issue.assigned_user.full_name}</span>
+                                )}
+                                <span className="text-xs text-gray-300">{formatDate(issue.created_at)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
           </div>
 
           {/* ── RIGHT: Info sidebar ────────────── */}
@@ -768,12 +823,12 @@ export default function OppDetailPage() {
               </button>
             )}
 
-            {/* Issues */}
+            {/* Issues liên quan */}
             {issues.length > 0 && (
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
                   <h3 className="font-semibold text-gray-900 text-sm">Issues liên quan</h3>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">{issues.length}</span>
+                  <button onClick={() => setMainTab('cskh')} className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">{issues.length}</button>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {issues.map(issue => {
@@ -800,9 +855,6 @@ export default function OppDetailPage() {
                       </div>
                     )
                   })}
-                </div>
-                <div className="px-4 py-2.5 border-t border-gray-100">
-                  <Link href="/cskh" className="text-xs text-brand-600 hover:underline font-medium">Xem tất cả issues →</Link>
                 </div>
               </div>
             )}
