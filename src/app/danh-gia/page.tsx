@@ -317,7 +317,7 @@ export default function DanhGiaPage() {
                       </div>
                       {expanded === f.id && (
                         <div className="px-5 pb-5 bg-gray-50/50 border-t border-gray-100">
-                          <div className="grid grid-cols-2 gap-4 pt-4">
+                          <div className="grid grid-cols-4 gap-4 pt-4">
                             {(f.rating_restaurant_space || f.rating_restaurant_food || f.rating_restaurant_service || f.rating_restaurant_price) && (
                               <div className="bg-white rounded-xl border border-gray-100 p-4">
                                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nhà hàng</p>

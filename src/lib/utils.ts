@@ -12,7 +12,8 @@ export function getInitials(name: string): string {
   return (parts[parts.length - 2][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-export function formatDate(d: string): string {
+export function formatDate(d: string | null | undefined): string {
+  if (!d) return '—'
   const [y, m, day] = d.split('T')[0].split('-')
   return `${day}/${m}/${y}`
 }
