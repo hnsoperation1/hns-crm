@@ -15,7 +15,7 @@ import {
   STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS,
   formatVND, formatDate, getInitials, daysSince, daysUntil,
 } from '@/lib/utils'
-import { AlertCircle, Clock as ClockIcon, CheckCircle } from 'lucide-react'
+import { AlertCircle, Clock as ClockIcon, CheckCircle, PlusCircle } from 'lucide-react'
 import type { OppStage, LogType, Opportunity, Contact, ActivityLog, IssueStatus } from '@/types'
 
 // ─── Local types for Supabase joins ──────────────────────────────────────────
@@ -57,6 +57,9 @@ export default function OppDetailPage() {
   const [saleUsers, setSaleUsers] = useState<UserMin[]>([])
   const [allUsers, setAllUsers] = useState<UserMin[]>([])
   const [issues, setIssues] = useState<{ id: string; description: string; status: IssueStatus; assigned_user: { full_name: string } | null; created_at: string }[]>([])
+  const [showIssueForm, setShowIssueForm] = useState(false)
+  const [issueDesc, setIssueDesc] = useState('')
+  const [issueSaving, setIssueSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
   const [logFilter, setLogFilter] = useState<LogFilter>('all')
@@ -619,56 +622,104 @@ export default function OppDetailPage() {
             })()}
 
             {/* ══════════ CSKH TAB ══════════ */}
-            {mainTab === 'cskh' && (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-900 text-sm">Issues CSKH</h3>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setShowQR(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-brand-300 text-brand-600 hover:bg-brand-50 text-sm font-semibold transition-colors"
-                    >
-                      <QrCode size={13} /> QR phản hồi
-                    </button>
-                    <Link href="/cskh" className="text-xs text-brand-600 hover:underline font-medium">Xem tất cả →</Link>
+            {mainTab === 'cskh' && (() => {
+              async function handleCreateIssue() {
+                if (!issueDesc.trim()) return
+                setIssueSaving(true)
+                const { data: { user: authUser } } = await supabase.auth.getUser()
+                if (!authUser) { setIssueSaving(false); return }
+                const { data } = await supabase.from('issues').insert({
+                  opportunity_id: id,
+                  description: issueDesc.trim(),
+                  status: 'open',
+                  created_by: authUser.id,
+                }).select('id, description, status, assigned_user:users!assigned_to(full_name), created_at').single()
+                setIssueSaving(false)
+                if (data) {
+                  setIssues(prev => [data as any, ...prev])
+                  setIssueDesc('')
+                  setShowIssueForm(false)
+                }
+              }
+              return (
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900 text-sm">Issues CSKH</h3>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => { setShowIssueForm(v => !v); setIssueDesc('') }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-semibold transition-colors"
+                      >
+                        <PlusCircle size={13} /> Tạo issue
+                      </button>
+                      <button
+                        onClick={() => setShowQR(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-brand-300 text-brand-600 hover:bg-brand-50 text-sm font-semibold transition-colors"
+                      >
+                        <QrCode size={13} /> QR phản hồi
+                      </button>
+                      <Link href="/cskh" className="text-xs text-brand-600 hover:underline font-medium">Xem tất cả →</Link>
+                    </div>
                   </div>
-                </div>
-                {issues.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <AlertCircle size={32} className="text-gray-200 mx-auto mb-3" />
-                    <p className="text-sm text-gray-400">Chưa có issue nào cho đơn hàng này</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-gray-100">
-                    {issues.map(issue => {
-                      const cfg = issue.status === 'resolved'
-                        ? { icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Đã giải quyết' }
-                        : issue.status === 'processing'
-                          ? { icon: ClockIcon, color: 'text-blue-600', bg: 'bg-blue-50', label: 'Đang xử lý' }
-                          : { icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50', label: 'Mở' }
-                      const Icon = cfg.icon
-                      return (
-                        <div key={issue.id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex items-start gap-3">
-                            <Icon size={16} className={`${cfg.color} flex-shrink-0 mt-0.5`} />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-gray-800 leading-relaxed">{issue.description}</p>
-                              <div className="flex items-center gap-2 mt-2">
-                                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>{cfg.label}</span>
-                                {issue.assigned_user && (
-                                  <span className="text-xs text-gray-400">→ {issue.assigned_user.full_name}</span>
-                                )}
-                                <span className="text-xs text-gray-300">{formatDate(issue.created_at)}</span>
+
+                  {showIssueForm && (
+                    <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/60">
+                      <textarea
+                        value={issueDesc}
+                        onChange={e => setIssueDesc(e.target.value)}
+                        placeholder="Mô tả issue..."
+                        rows={3}
+                        autoFocus
+                        className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none bg-white"
+                      />
+                      <div className="flex justify-end gap-2 mt-2">
+                        <button onClick={() => { setShowIssueForm(false); setIssueDesc('') }}
+                          className="px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">Huỷ</button>
+                        <button onClick={handleCreateIssue} disabled={!issueDesc.trim() || issueSaving}
+                          className="px-4 py-1.5 text-sm font-semibold bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                          {issueSaving ? 'Đang lưu...' : 'Tạo issue'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {issues.length === 0 && !showIssueForm ? (
+                    <div className="py-12 text-center">
+                      <AlertCircle size={32} className="text-gray-200 mx-auto mb-3" />
+                      <p className="text-sm text-gray-400">Chưa có issue nào cho đơn hàng này</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-gray-100">
+                      {issues.map(issue => {
+                        const cfg = issue.status === 'resolved'
+                          ? { icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Đã giải quyết' }
+                          : issue.status === 'processing'
+                            ? { icon: ClockIcon, color: 'text-blue-600', bg: 'bg-blue-50', label: 'Đang xử lý' }
+                            : { icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50', label: 'Mở' }
+                        const Icon = cfg.icon
+                        return (
+                          <div key={issue.id} className="px-5 py-4 hover:bg-gray-50 transition-colors">
+                            <div className="flex items-start gap-3">
+                              <Icon size={16} className={`${cfg.color} flex-shrink-0 mt-0.5`} />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-gray-800 leading-relaxed">{issue.description}</p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>{cfg.label}</span>
+                                  {issue.assigned_user && (
+                                    <span className="text-xs text-gray-400">→ {issue.assigned_user.full_name}</span>
+                                  )}
+                                  <span className="text-xs text-gray-300">{formatDate(issue.created_at)}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* ══════════ THÔNG TIN ĐƠN TAB ══════════ */}
             {mainTab === 'info' && (() => {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Plus, Kanban, List, ChevronRight, Loader2 } from 'lucide-react'
+import { Plus, Kanban, List, ChevronRight, Loader2, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS, formatVND, formatDate, daysUntil, getInitials } from '@/lib/utils'
 import type { Opportunity, OppStage } from '@/types'
@@ -30,6 +30,7 @@ export default function PipelinePage() {
   const [view, setView] = useState<ViewMode>('kanban')
   const [opps, setOpps] = useState<OppWithRelations[]>([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     supabase
@@ -43,6 +44,16 @@ export default function PipelinePage() {
   }, [])
 
   const activeCount = opps.filter(o => !['lost', 'cancelled'].includes(o.stage)).length
+
+  const filtered = search.trim()
+    ? opps.filter(o => {
+        const q = search.toLowerCase()
+        return o.title.toLowerCase().includes(q)
+          || (o.contact?.name ?? '').toLowerCase().includes(q)
+          || (o.contact?.company ?? '').toLowerCase().includes(q)
+          || (o.assigned_user?.full_name ?? '').toLowerCase().includes(q)
+      })
+    : opps
 
   if (loading) {
     return (
@@ -61,6 +72,15 @@ export default function PipelinePage() {
           <p className="text-sm text-gray-400 mt-0.5">{activeCount} đơn đang xử lý</p>
         </div>
         <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Tìm đơn, khách hàng, sale..."
+              className="pl-9 pr-4 py-2 w-64 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white shadow-sm"
+            />
+          </div>
           <div className="flex items-center bg-gray-100 rounded-xl p-1 gap-0.5">
             <button
               onClick={() => setView('kanban')}
@@ -96,7 +116,7 @@ export default function PipelinePage() {
         <div className="flex-1 overflow-x-auto overflow-y-hidden kanban-scroll">
           <div className="flex h-full" style={{ minWidth: `${COLUMNS.length * 290}px` }}>
             {COLUMNS.map(({ stage, label }) => {
-              const cards = opps.filter(o => o.stage === stage)
+              const cards = filtered.filter(o => o.stage === stage)
               const totalValue = cards.reduce((s, o) => s + (o.estimated_value ?? 0), 0)
               const sc = STAGE_COLORS[stage]
               return (
@@ -197,10 +217,10 @@ export default function PipelinePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {opps.length === 0 && (
-                  <tr><td colSpan={8} className="px-5 py-12 text-center text-gray-400">Chưa có đơn hàng nào</td></tr>
+                {filtered.length === 0 && (
+                  <tr><td colSpan={8} className="px-5 py-12 text-center text-gray-400">{search ? 'Không tìm thấy đơn nào' : 'Chưa có đơn hàng nào'}</td></tr>
                 )}
-                {opps.map(opp => {
+                {filtered.map(opp => {
                   const sc = STAGE_COLORS[opp.stage]
                   const deadline = opp.deadline ? daysUntil(opp.deadline) : null
                   return (
