@@ -1022,10 +1022,10 @@ export default function OppDetailPage() {
                     </div>
                     {/* Title */}
                     <div className="text-center px-4 pb-4">
-                      <p className="font-black text-lg uppercase tracking-wide leading-tight" style={{ color: '#ef5e2f' }}>
+                      <p className="font-bold text-base leading-tight" style={{ color: '#ef5e2f' }}>
                         Phiếu đánh giá
                       </p>
-                      <p className="font-black text-lg uppercase tracking-wide leading-tight" style={{ color: '#ef5e2f' }}>
+                      <p className="font-bold text-base leading-tight" style={{ color: '#ef5e2f' }}>
                         chất lượng dịch vụ
                       </p>
                     </div>
@@ -1036,7 +1036,7 @@ export default function OppDetailPage() {
                     </div>
                     {/* QR */}
                     <div className="flex justify-center pb-6">
-                      <div className="border-4 border-gray-900 rounded-xl overflow-hidden">
+                      <div className="overflow-hidden">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={qrImgUrl} alt="QR Code" width={180} height={180} crossOrigin="anonymous" />
                       </div>
