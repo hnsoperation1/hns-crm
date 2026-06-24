@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import { Star, ThumbsUp, ThumbsDown, Search, ChevronDown, ChevronUp, ExternalLink, X, MapPin, Users } from 'lucide-react'
+import { Star, ThumbsUp, ThumbsDown, Search, ChevronDown, ChevronUp, ExternalLink, X, MapPin, Users, Link2, CheckSquare } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
@@ -147,6 +147,14 @@ export default function DanhGiaPage() {
   const [selected, setSelected] = useState<SelectedList>(null)
   const [filterHasOpp, setFilterHasOpp] = useState(false)
   const [filterNoOpp, setFilterNoOpp] = useState(true)
+  // multi-select + link to opportunity
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
+  const [linkModal, setLinkModal] = useState(false)
+  const [oppSearch, setOppSearch] = useState('')
+  const [oppResults, setOppResults] = useState<{ id: string; title: string; tour_date: string | null }[]>([])
+  const [oppSearching, setOppSearching] = useState(false)
+  const [linking, setLinking] = useState(false)
+  const oppSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const loadData = useCallback(() => {
     setLoading(true)
@@ -161,6 +169,59 @@ export default function DanhGiaPage() {
     return () => setOnRefresh(null)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Debounce search opportunities
+  useEffect(() => {
+    if (!linkModal) return
+    if (oppSearchRef.current) clearTimeout(oppSearchRef.current)
+    if (!oppSearch.trim()) { setOppResults([]); return }
+    oppSearchRef.current = setTimeout(async () => {
+      setOppSearching(true)
+      const { data } = await supabase.from('opportunities').select('id, title, tour_date')
+        .ilike('title', `%${oppSearch.trim()}%`).order('created_at', { ascending: false }).limit(20)
+      setOppResults((data ?? []) as { id: string; title: string; tour_date: string | null }[])
+      setOppSearching(false)
+    }, 300)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [oppSearch, linkModal])
+
+  async function handleLinkOpp(oppId: string) {
+    setLinking(true)
+    const ids = Array.from(checkedIds)
+    const res = await fetch('/api/feedback/link-opportunity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feedbackIds: ids, opportunityId: oppId }),
+    })
+    setLinking(false)
+    if (!res.ok) {
+      const { error } = await res.json()
+      alert('Lỗi: ' + error)
+      return
+    }
+    setLinkModal(false)
+    setOppSearch('')
+    setOppResults([])
+    setCheckedIds(new Set())
+    loadData()
+  }
+
+  function toggleCheck(id: string, e: React.MouseEvent) {
+    e.stopPropagation()
+    setCheckedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleCheckAll() {
+    if (checkedIds.size === listFiltered.length) {
+      setCheckedIds(new Set())
+    } else {
+      setCheckedIds(new Set(listFiltered.map(f => f.id)))
+    }
+  }
 
   // Apply date filter
   const dateFiltered = list.filter(f => {
@@ -347,7 +408,7 @@ export default function DanhGiaPage() {
                   {f === 'all' ? 'Tất cả' : f === 'satisfied' ? '😊 Hài lòng' : f === 'unsatisfied' ? '😞 Không hài lòng' : '🔁 Sẽ quay lại'}
                 </button>
               ))}
-              <div className="ml-auto flex items-center gap-3">
+              <div className="ml-auto flex items-center gap-4">
                 {([
                   { label: 'Đã có đơn', value: filterHasOpp, set: setFilterHasOpp },
                   { label: 'Chưa có đơn', value: filterNoOpp, set: setFilterNoOpp },
@@ -358,6 +419,13 @@ export default function DanhGiaPage() {
                     <span className="text-xs font-medium text-gray-600">{label}</span>
                   </label>
                 ))}
+                {!loading && listFiltered.length > 0 && (
+                  <button onClick={toggleCheckAll}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${checkedIds.size > 0 ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                    <CheckSquare size={13} />
+                    {checkedIds.size > 0 ? `Đã chọn ${checkedIds.size}` : 'Chọn nhiều'}
+                  </button>
+                )}
               </div>
             </div>
             <div className="flex-1 overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
@@ -380,9 +448,14 @@ export default function DanhGiaPage() {
               ) : (
                 <div className="divide-y divide-gray-100">
                   {listFiltered.map(f => (
-                    <div key={f.id}>
+                    <div key={f.id} className={checkedIds.has(f.id) ? 'bg-brand-50/40' : ''}>
                       <div className="px-5 py-4 hover:bg-gray-50/70 transition-colors cursor-pointer" onClick={() => setExpanded(expanded === f.id ? null : f.id)}>
                         <div className="flex items-start gap-4">
+                          <div className="pt-0.5 flex-shrink-0" onClick={e => toggleCheck(f.id, e)}>
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${checkedIds.has(f.id) ? 'bg-brand-600 border-brand-600' : 'border-gray-300 hover:border-brand-400'}`}>
+                              {checkedIds.has(f.id) && <svg viewBox="0 0 10 8" className="w-2.5 h-2 fill-white"><path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
+                            </div>
+                          </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-semibold text-gray-900 text-sm">{f.respondent_name ?? '—'}</span>
@@ -682,6 +755,65 @@ export default function DanhGiaPage() {
 
       </div>
 
+      {/* Floating action bar */}
+      {checkedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-white border border-gray-200 rounded-2xl shadow-xl px-5 py-3 flex items-center gap-4 min-w-[420px]">
+          <span className="text-sm font-semibold text-gray-700">Đã chọn <span className="text-brand-600">{checkedIds.size}</span> đánh giá</span>
+          <div className="flex-1" />
+          <button onClick={() => setCheckedIds(new Set())} className="px-3.5 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 transition-colors font-medium">
+            Bỏ chọn
+          </button>
+          <button onClick={() => { setLinkModal(true); setOppSearch('') }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition-colors shadow-sm">
+            <Link2 size={14} /> Gắn vào đơn hàng
+          </button>
+        </div>
+      )}
+
+      {/* Modal gắn đơn hàng */}
+      {linkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={() => setLinkModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <p className="font-bold text-gray-900 text-sm">Gắn vào đơn hàng</p>
+                <p className="text-xs text-gray-400 mt-0.5">{checkedIds.size} đánh giá sẽ được liên kết</p>
+              </div>
+              <button onClick={() => setLinkModal(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"><X size={16} /></button>
+            </div>
+            <div className="p-4">
+              <div className="relative">
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input autoFocus value={oppSearch} onChange={e => setOppSearch(e.target.value)}
+                  placeholder="Tìm tên đơn hàng..."
+                  className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-gray-50" />
+              </div>
+            </div>
+            <div className="max-h-72 overflow-y-auto border-t border-gray-100">
+              {oppSearching && <div className="py-8 text-center text-sm text-gray-400">Đang tìm...</div>}
+              {!oppSearching && oppSearch.trim() && oppResults.length === 0 && (
+                <div className="py-8 text-center text-sm text-gray-400">Không tìm thấy đơn hàng nào</div>
+              )}
+              {!oppSearch.trim() && <div className="py-8 text-center text-sm text-gray-300">Nhập tên đơn hàng để tìm kiếm</div>}
+              {oppResults.map(opp => (
+                <button key={opp.id} onClick={() => handleLinkOpp(opp.id)} disabled={linking}
+                  className="w-full text-left px-5 py-3.5 hover:bg-brand-50 border-b border-gray-50 last:border-0 transition-colors group disabled:opacity-60">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-brand-700">{opp.title}</p>
+                      {opp.tour_date && <p className="text-xs text-gray-400 mt-0.5">Tour: {formatDate(opp.tour_date)}</p>}
+                    </div>
+                    <Link2 size={14} className="text-gray-300 group-hover:text-brand-500 flex-shrink-0 transition-colors" />
+                  </div>
+                </button>
+              ))}
+            </div>
+            {linking && (
+              <div className="px-5 py-3 bg-brand-50 border-t border-brand-100 text-xs text-brand-700 font-medium text-center">Đang lưu...</div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
