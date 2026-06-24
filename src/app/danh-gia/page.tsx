@@ -353,8 +353,8 @@ export default function DanhGiaPage() {
 
         {/* ── Tab: Tất cả đánh giá ── */}
         {tab === 'all' && (
-          <div className="h-full flex flex-col gap-3 overflow-y-auto">
-            <div className="flex items-center gap-3">
+          <div className="h-full flex flex-col gap-3 overflow-hidden">
+            <div className="flex items-center gap-3 flex-shrink-0">
               <div className="relative flex-1 max-w-xs">
                 <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm theo tên đoàn, hành trình..."
@@ -375,7 +375,7 @@ export default function DanhGiaPage() {
                 </button>
               )}
             </div>
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="flex-1 overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               {loading ? (
                 <div className="divide-y divide-gray-100">
                   {Array.from({ length: 6 }).map((_, i) => (
@@ -505,9 +505,9 @@ export default function DanhGiaPage() {
               )}
             </div>
 
-            {/* Floating action bar */}
+            {/* Action bar — nằm ngoài scroll, luôn hiện ở dưới */}
             {checkedIds.size > 0 && (
-              <div className="sticky bottom-0 left-0 right-0 bg-white border border-gray-200 rounded-2xl shadow-lg px-5 py-3 flex items-center gap-3">
+              <div className="flex-shrink-0 bg-white border border-gray-200 rounded-2xl shadow-lg px-5 py-3 flex items-center gap-3">
                 <span className="text-sm font-semibold text-gray-700">Đã chọn <span className="text-brand-600">{checkedIds.size}</span> đánh giá</span>
                 <div className="flex-1" />
                 <button onClick={() => setCheckedIds(new Set())} className="px-3.5 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 transition-colors font-medium">
