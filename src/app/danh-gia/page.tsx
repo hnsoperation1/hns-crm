@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import { Star, ThumbsUp, ThumbsDown, Search, ChevronDown, ChevronUp, ExternalLink, X, MapPin, Users, Link2, CheckSquare } from 'lucide-react'
+import { Star, ThumbsUp, ThumbsDown, Search, ChevronDown, ChevronUp, ExternalLink, X, MapPin, Users, Link2, CheckSquare, LayoutGrid, BarChart2 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
@@ -140,6 +140,7 @@ export default function DanhGiaPage() {
   const [tab, setTab] = useState<'all' | 'poor' | 'destination' | 'summary'>('all')
   const [selectedOppSummary, setSelectedOppSummary] = useState<string | null>(null)
   const [summarySearch, setSummarySearch] = useState('')
+  const [destView, setDestView] = useState<'chart' | 'grid'>('chart')
   const [dateFrom, setDateFrom] = useState(() => `${new Date().getFullYear()}-01-01`)
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10))
   const [search, setSearch] = useState('')
@@ -602,29 +603,77 @@ export default function DanhGiaPage() {
         {/* ── Tab: Địa điểm quan tâm ── */}
         {tab === 'destination' && (
           <div className="h-full grid grid-cols-2 gap-4">
-            {/* Chart */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 overflow-y-auto">
-              <h3 className="font-bold text-gray-900 text-sm mb-1">Địa điểm quan tâm tiếp theo</h3>
-              <p className="text-xs text-gray-400 mb-4">Bấm vào địa điểm để xem danh sách khách</p>
+            {/* Left panel */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
+              {/* Header + view toggle */}
+              <div className="px-5 pt-5 pb-3 flex-shrink-0">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-sm">Địa điểm quan tâm tiếp theo</h3>
+                    <p className="text-xs text-gray-400 mt-0.5">Bấm vào địa điểm để xem danh sách khách</p>
+                  </div>
+                  <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 flex-shrink-0">
+                    <button onClick={() => setDestView('chart')}
+                      className={`p-1.5 rounded-md transition-colors ${destView === 'chart' ? 'bg-white shadow-sm text-brand-600' : 'text-gray-400 hover:text-gray-600'}`}>
+                      <BarChart2 size={14} />
+                    </button>
+                    <button onClick={() => setDestView('grid')}
+                      className={`p-1.5 rounded-md transition-colors ${destView === 'grid' ? 'bg-white shadow-sm text-brand-600' : 'text-gray-400 hover:text-gray-600'}`}>
+                      <LayoutGrid size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {destData.length === 0 ? (
-                <div className="py-16 text-center"><MapPin size={32} className="text-gray-200 mx-auto mb-3" /><p className="text-sm text-gray-300">Chưa có dữ liệu</p></div>
+                <div className="flex-1 flex flex-col items-center justify-center">
+                  <MapPin size={32} className="text-gray-200 mb-3" />
+                  <p className="text-sm text-gray-300">Chưa có dữ liệu</p>
+                </div>
+              ) : destView === 'chart' ? (
+                <div className="flex-1 overflow-y-auto px-5 pb-5">
+                  <ResponsiveContainer width="100%" height={Math.max(destData.length * 38, 120)}>
+                    <BarChart data={destData} layout="vertical" margin={{ left: 8, right: 32, top: 0, bottom: 0 }}>
+                      <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                      <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
+                      <Tooltip formatter={(v) => [`${v} khách`, 'Quan tâm']} offset={16} />
+                      <Bar dataKey="count" radius={[0, 6, 6, 0]} cursor="pointer"
+                        label={{ position: 'right', fontSize: 11, fill: '#6b7280' }}
+                        onClick={(data: any) => handleDestClick(data)}>
+                        {destData.map((entry, i) => (
+                          <Cell key={i} fill={selected?.title.includes(entry.name) ? '#0ea5e9' : '#7dd3fc'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               ) : (
-                <ResponsiveContainer width="100%" height={Math.max(destData.length * 38, 120)}>
-                  <BarChart data={destData} layout="vertical" margin={{ left: 8, right: 32, top: 0, bottom: 0 }}>
-                    <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-                    <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v) => [`${v} khách`, 'Quan tâm']} offset={16} />
-                    <Bar dataKey="count" radius={[0, 6, 6, 0]} cursor="pointer"
-                      label={{ position: 'right', fontSize: 11, fill: '#6b7280' }}
-                      onClick={(data: any) => handleDestClick(data)}>
-                      {destData.map((entry, i) => (
-                        <Cell key={i} fill={selected?.title.includes(entry.name) ? '#0ea5e9' : '#7dd3fc'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="flex-1 overflow-y-auto px-5 pb-5">
+                  <div className="grid grid-cols-3 gap-2">
+                    {destData.map((entry, i) => {
+                      const isSelected = selected?.title.includes(entry.name)
+                      const maxCount = destData[0]?.count ?? 1
+                      const pct = Math.round((entry.count / maxCount) * 100)
+                      return (
+                        <button key={i} onClick={() => handleDestClick(entry)}
+                          className={`text-left p-3 rounded-xl border transition-all hover:shadow-md ${isSelected ? 'border-sky-400 bg-sky-50' : 'border-gray-100 bg-gray-50 hover:bg-white hover:border-gray-200'}`}>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <MapPin size={12} className={isSelected ? 'text-sky-500' : 'text-gray-400'} />
+                            <span className={`text-xs font-bold ${isSelected ? 'text-sky-600' : 'text-gray-700'}`}>{entry.count}</span>
+                          </div>
+                          <p className={`text-xs font-semibold leading-tight truncate ${isSelected ? 'text-sky-700' : 'text-gray-700'}`}>{entry.name}</p>
+                          {/* Mini progress bar */}
+                          <div className="mt-2 h-1 rounded-full bg-gray-200 overflow-hidden">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: isSelected ? '#0ea5e9' : '#7dd3fc' }} />
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               )}
             </div>
+
             {/* List panel */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
               <CustomerList data={selected} onClose={() => setSelected(null)} />

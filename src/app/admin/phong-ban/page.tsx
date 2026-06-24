@@ -43,13 +43,13 @@ export default function PhongBanPage() {
     const allUsers = (u ?? []) as User[]
     const allDepts = (d ?? []) as Department[]
 
-    // Load members per dept
-    const { data: members } = await supabase.from('users').select('*, department_id').eq('is_active', true)
-    const membersList = (members ?? []) as (User & { department_id: string | null })[]
+    // Load members per dept (select * includes department_id if column exists)
+    const { data: members } = await supabase.from('users').select('*').eq('is_active', true)
+    const membersList = (members ?? []) as (User & { department_id?: string | null })[]
 
     const withMembers: DeptWithMembers[] = allDepts.map(dept => ({
       ...dept,
-      members: membersList.filter(m => m.department_id === dept.id),
+      members: membersList.filter(m => (m as any).department_id === dept.id),
       manager: membersList.find(m => m.id === dept.manager_id) ?? null,
     }))
 
