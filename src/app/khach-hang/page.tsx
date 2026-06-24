@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Search, Plus, X, Loader2, Building2, Users, Globe, Phone, Mail, MapPin, Trash2, Pencil } from 'lucide-react'
+import { Search, Plus, X, Loader2, Building2, Users, Globe, Phone, Mail, MapPin, Trash2, Pencil, RotateCcw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import DatePickerVN from '@/components/DatePickerVN'
 import { useAuth } from '@/contexts/auth'
@@ -98,6 +98,7 @@ function ContactsTab() {
   const [lookupError, setLookupError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [showCompanyDrop, setShowCompanyDrop] = useState(false)
+  const [orgsRefreshing, setOrgsRefreshing] = useState(false)
   const companyRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -120,6 +121,13 @@ function ContactsTab() {
     setOpps((o ?? []) as Opportunity[])
     setOrgs((og ?? []) as Organization[])
     setDataLoading(false)
+  }
+
+  async function refreshOrgs() {
+    setOrgsRefreshing(true)
+    const { data } = await supabase.from('organizations').select('*').order('name')
+    setOrgs((data ?? []) as Organization[])
+    setOrgsRefreshing(false)
   }
 
   function autoOppTitle(company: string, name: string, destination: string, date: string) {
@@ -412,7 +420,15 @@ function ContactsTab() {
                 </Field>
               </div>
 
-              <Field label="Công ty">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-gray-500">Công ty</label>
+                  <button type="button" onClick={refreshOrgs} disabled={orgsRefreshing}
+                    className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-brand-600 transition-colors disabled:opacity-50">
+                    <RotateCcw size={11} className={orgsRefreshing ? 'animate-spin' : ''} />
+                    {orgsRefreshing ? 'Đang tải...' : 'Tải lại'}
+                  </button>
+                </div>
                 <div ref={companyRef} className="relative">
                   <input
                     type="text"
@@ -453,7 +469,7 @@ function ContactsTab() {
                     ) : null
                   })()}
                 </div>
-              </Field>
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Mã số thuế">
