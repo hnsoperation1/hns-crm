@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Star, ThumbsUp, ThumbsDown, Search, ChevronDown, ChevronUp, ExternalLink, X, MapPin, Users } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
 import DateInput from '@/components/DateInput'
+import { useTopbar } from '@/contexts/topbar'
 
 type FeedbackRow = {
   id: string
@@ -133,6 +134,7 @@ function CustomerList({ data, onClose }: { data: SelectedList; onClose: () => vo
 
 export default function DanhGiaPage() {
   const supabase = createClient()
+  const { setOnRefresh } = useTopbar()
   const [list, setList] = useState<FeedbackRow[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'all' | 'poor' | 'destination'>('all')
@@ -143,9 +145,18 @@ export default function DanhGiaPage() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedList>(null)
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
+    setLoading(true)
     supabase.from('feedback').select('*, opportunity:opportunities(title)').order('submitted_at', { ascending: false })
       .then(({ data }) => { setList((data ?? []) as FeedbackRow[]); setLoading(false) })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    loadData()
+    setOnRefresh(loadData)
+    return () => setOnRefresh(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Apply date filter

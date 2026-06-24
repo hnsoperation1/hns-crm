@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { Plus, Kanban, List, ChevronRight, Loader2, Search, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS, formatVND, formatDate, daysUntil, getInitials } from '@/lib/utils'
 import type { Opportunity, OppStage } from '@/types'
 import { useAuth } from '@/contexts/auth'
+import { useTopbar } from '@/contexts/topbar'
 
 type ViewMode = 'kanban' | 'table'
 
@@ -26,6 +27,7 @@ const COLUMNS: { stage: OppStage; label: string }[] = [
 
 export default function PipelinePage() {
   const { user } = useAuth()
+  const { setOnRefresh } = useTopbar()
   const supabase = createClient()
   const [view, setView] = useState<ViewMode>('table')
   const [opps, setOpps] = useState<OppWithRelations[]>([])
@@ -66,7 +68,8 @@ export default function PipelinePage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
+    setLoading(true)
     supabase
       .from('opportunities')
       .select('*, contact:contacts(name, company), assigned_user:users!assigned_to(full_name)')
@@ -75,6 +78,14 @@ export default function PipelinePage() {
         setOpps((data ?? []) as OppWithRelations[])
         setLoading(false)
       })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    loadData()
+    setOnRefresh(loadData)
+    return () => setOnRefresh(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const activeCount = opps.filter(o => !['lost', 'cancelled'].includes(o.stage)).length

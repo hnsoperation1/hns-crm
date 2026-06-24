@@ -85,22 +85,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="flex border-b border-gray-200 px-2">
-          {TABS.map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`px-5 py-4 text-sm font-medium transition-colors border-b-2 ${
-                tab === t ? 'text-accent-500 border-blue-600' : 'text-gray-500 border-transparent hover:text-gray-800'
-              }`}>
-              {t}
-            </button>
-          ))}
-        </div>
-        {tab === 'Tất cả đơn' && <AllOppsTab />}
-        {tab === 'Hôm nay theo NV' && <TodayByStaffTab />}
-        {tab === 'Nguồn đơn' && <SourceTab />}
-      </div>
     </div>
   )
 }

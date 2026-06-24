@@ -30,10 +30,11 @@ const PAGE_TITLES: Record<string, string> = {
 
 export default function Topbar() {
   const { user, logout } = useAuth()
-  const { breadcrumb } = useTopbar()
+  const { breadcrumb, onRefresh } = useTopbar()
   const pathname = usePathname()
   function handleRefresh() {
-    window.location.reload()
+    if (onRefresh) onRefresh()
+    else window.location.reload()
   }
 
   const pageTitle = PAGE_TITLES[pathname]
