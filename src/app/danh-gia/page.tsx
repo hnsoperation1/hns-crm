@@ -173,6 +173,14 @@ export default function DanhGiaPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Auto-select first opportunity when entering summary tab
+  useEffect(() => {
+    if (tab === 'summary' && oppGroups.length > 0 && !selectedOppSummary) {
+      setSelectedOppSummary(oppGroups[0].id)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, oppGroups.length])
+
   // Debounce search opportunities
   useEffect(() => {
     if (!linkModal) return
@@ -719,7 +727,7 @@ export default function DanhGiaPage() {
                   {oppGroups
                     .filter(g => !summarySearch.trim() || g.title.toLowerCase().includes(summarySearch.toLowerCase()))
                     .map(g => (
-                      <button key={g.id} onClick={() => setSelectedOppSummary(g.id === selectedOppSummary ? null : g.id)}
+                      <button key={g.id} onClick={() => setSelectedOppSummary(g.id)}
                         className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${selectedOppSummary === g.id ? 'bg-brand-50 border-l-2 border-brand-600' : ''}`}>
                         <p className={`text-sm font-semibold truncate ${selectedOppSummary === g.id ? 'text-brand-700' : 'text-gray-800'}`}>{g.title}</p>
                         <div className="flex items-center gap-2 mt-0.5">
