@@ -141,6 +141,7 @@ export default function DanhGiaPage() {
   const [selectedOppSummary, setSelectedOppSummary] = useState<string | null>(null)
   const [summarySearch, setSummarySearch] = useState('')
   const [destView, setDestView] = useState<'chart' | 'grid'>('chart')
+  const [destSearch, setDestSearch] = useState('')
   const [dateFrom, setDateFrom] = useState(() => `${new Date().getFullYear()}-01-01`)
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10))
   const [search, setSearch] = useState('')
@@ -608,11 +609,18 @@ export default function DanhGiaPage() {
               {/* Header + view toggle */}
               <div className="px-5 pt-5 pb-3 flex-shrink-0">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-gray-900 text-sm">Địa điểm quan tâm tiếp theo</h3>
                     <p className="text-xs text-gray-400 mt-0.5">Bấm vào địa điểm để xem danh sách khách</p>
                   </div>
-                  <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="relative">
+                      <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input value={destSearch} onChange={e => setDestSearch(e.target.value)}
+                        placeholder="Tìm địa điểm..."
+                        className="pl-7 pr-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-400 bg-gray-50 w-36" />
+                    </div>
+                  <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
                     <button onClick={() => setDestView('chart')}
                       className={`p-1.5 rounded-md transition-colors ${destView === 'chart' ? 'bg-white shadow-sm text-brand-600' : 'text-gray-400 hover:text-gray-600'}`}>
                       <BarChart2 size={14} />
@@ -621,6 +629,7 @@ export default function DanhGiaPage() {
                       className={`p-1.5 rounded-md transition-colors ${destView === 'grid' ? 'bg-white shadow-sm text-brand-600' : 'text-gray-400 hover:text-gray-600'}`}>
                       <LayoutGrid size={14} />
                     </button>
+                  </div>
                   </div>
                 </div>
               </div>
@@ -632,25 +641,27 @@ export default function DanhGiaPage() {
                 </div>
               ) : destView === 'chart' ? (
                 <div className="flex-1 overflow-y-auto px-5 pb-5">
-                  <ResponsiveContainer width="100%" height={Math.max(destData.length * 38, 120)}>
-                    <BarChart data={destData} layout="vertical" margin={{ left: 8, right: 32, top: 0, bottom: 0 }}>
+                  {(() => { const filtered = destData.filter(d => !destSearch.trim() || d.name.toLowerCase().includes(destSearch.toLowerCase())); return (
+                  <ResponsiveContainer width="100%" height={Math.max(filtered.length * 38, 120)}>
+                    <BarChart data={filtered} layout="vertical" margin={{ left: 8, right: 32, top: 0, bottom: 0 }}>
                       <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
                       <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
                       <Tooltip formatter={(v) => [`${v} khách`, 'Quan tâm']} offset={16} />
                       <Bar dataKey="count" radius={[0, 6, 6, 0]} cursor="pointer"
                         label={{ position: 'right', fontSize: 11, fill: '#6b7280' }}
                         onClick={(data: any) => handleDestClick(data)}>
-                        {destData.map((entry, i) => (
+                        {filtered.map((entry, i) => (
                           <Cell key={i} fill={selected?.title.includes(entry.name) ? '#0ea5e9' : '#7dd3fc'} />
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
+                  )})()}
                 </div>
               ) : (
                 <div className="flex-1 overflow-y-auto px-5 pb-5">
                   <div className="grid grid-cols-3 gap-2">
-                    {destData.map((entry, i) => {
+                    {destData.filter(d => !destSearch.trim() || d.name.toLowerCase().includes(destSearch.toLowerCase())).map((entry, i) => {
                       const isSelected = selected?.title.includes(entry.name)
                       const maxCount = destData[0]?.count ?? 1
                       const pct = Math.round((entry.count / maxCount) * 100)
