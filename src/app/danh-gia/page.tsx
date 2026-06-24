@@ -186,8 +186,17 @@ export default function DanhGiaPage() {
   async function handleLinkOpp(oppId: string, oppTitle: string) {
     setLinking(true)
     const ids = Array.from(checkedIds)
-    await Promise.all(ids.map(id => supabase.from('feedback').update({ opportunity_id: oppId }).eq('id', id)))
+    const res = await fetch('/api/feedback/link-opportunity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feedbackIds: ids, opportunityId: oppId }),
+    })
     setLinking(false)
+    if (!res.ok) {
+      const { error } = await res.json()
+      alert('Lỗi: ' + error)
+      return
+    }
     setLinkModal(false)
     setOppSearch('')
     setOppResults([])
