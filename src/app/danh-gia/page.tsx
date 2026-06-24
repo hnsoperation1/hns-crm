@@ -173,14 +173,6 @@ export default function DanhGiaPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Auto-select first opportunity when entering summary tab
-  useEffect(() => {
-    if (tab === 'summary' && oppGroups.length > 0 && !selectedOppSummary) {
-      setSelectedOppSummary(oppGroups[0].id)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, oppGroups.length])
-
   // Debounce search opportunities
   useEffect(() => {
     if (!linkModal) return
@@ -287,6 +279,14 @@ export default function DanhGiaPage() {
     })
     return Object.values(map).sort((a, b) => (b.tour_date ?? '').localeCompare(a.tour_date ?? ''))
   }, [dateFiltered])
+
+  // Auto-select first opportunity when entering summary tab
+  useEffect(() => {
+    if (tab === 'summary' && oppGroups.length > 0 && !selectedOppSummary) {
+      setSelectedOppSummary(oppGroups[0].id)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, oppGroups.length])
 
   const RATING_VALUES = ['Kém', 'Trung bình', 'Tốt', 'Rất tốt'] as const
   const RATING_COLORS: Record<string, string> = { 'Kém': '#ef4444', 'Trung bình': '#f59e0b', 'Tốt': '#3b82f6', 'Rất tốt': '#10b981' }
