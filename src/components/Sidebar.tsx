@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/auth'
 import { getInitials } from '@/lib/utils'
 
 const navItems = [
-  { href: '/', label: 'Tổng quan', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
   { href: '/don-hang', label: 'Đơn hàng', icon: Kanban },
   { href: '/cong-viec', label: 'Công việc', icon: ClipboardList },
   { href: '/giao-viec', label: 'Giao việc', icon: UserPlus },

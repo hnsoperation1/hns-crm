@@ -1,5 +1,5 @@
 import { PipelineView } from '@/components/PipelineView'
 
-export default function PipelinePage() {
+export default function DashboardPage() {
   return <PipelineView />
 }

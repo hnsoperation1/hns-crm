@@ -16,29 +16,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return
     if (!user && !isLoginPage) {
-      // Dùng hard navigation thay router.replace để tránh Next.js router bug
       window.location.replace('/login')
     }
     if (user && isLoginPage) router.replace('/')
   }, [user, loading, isLoginPage, router])
 
-  // Hiện spinner khi: đang load, HOẶC chưa có user và đang chờ redirect về /login
-  // → không bao giờ blank page
   if (loading || (!user && !isLoginPage)) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-4">
           <div className="font-black text-2xl tracking-wide">
             <span style={{ color: '#ef5e2f' }}>HNS</span>
             <span style={{ color: '#2a9ac4' }}> CRM</span>
           </div>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-white transition-opacity hover:opacity-90"
-            style={{ background: '#ef5e2f' }}
-          >
-            Tải lại
-          </button>
+          <p className="text-sm text-gray-400">Hệ thống quản lý bán hàng nội bộ</p>
+          <div className="flex items-center gap-1.5">
+            {[0, 1, 2].map(i => (
+              <div key={i} className="w-2 h-2 rounded-full"
+                style={{
+                  background: '#2a9ac4',
+                  animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite`,
+                }} />
+            ))}
+          </div>
         </div>
       </div>
     )

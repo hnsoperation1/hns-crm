@@ -17,7 +17,7 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 const PAGE_TITLES: Record<string, string> = {
-  '/':             'Tổng quan',
+  '/dashboard':    'Tổng quan',
   '/don-hang':     'Đơn hàng',
   '/cong-viec':    'Công việc',
   '/giao-viec':    'Giao việc',
