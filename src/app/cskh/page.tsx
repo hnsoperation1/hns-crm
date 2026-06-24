@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Plus, X, Search, Loader2, CheckCircle2, Circle, Clock, AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth'
+import { useTopbar } from '@/contexts/topbar'
 import { formatDate, getInitials } from '@/lib/utils'
 import type { Issue, IssueStatus, User, Opportunity } from '@/types'
 
@@ -33,6 +34,7 @@ type IssueRow = Issue & {
 export default function CSKHPage() {
   const supabase = createClient()
   const { user } = useAuth()
+  const { setOnRefresh } = useTopbar()
 
   const [issues, setIssues] = useState<IssueRow[]>([])
   const [opps, setOpps] = useState<Pick<Opportunity, 'id' | 'title'>[]>([])
@@ -74,9 +76,7 @@ export default function CSKHPage() {
     setOpenStatusId(id)
   }
 
-  useEffect(() => { loadAll() }, [])
-
-  async function loadAll() {
+  const loadAll = useCallback(async () => {
     const [{ data: i }, { data: o }, { data: u }] = await Promise.all([
       supabase
         .from('issues')
@@ -89,7 +89,15 @@ export default function CSKHPage() {
     setOpps((o ?? []) as Pick<Opportunity, 'id' | 'title'>[])
     setUsers((u ?? []) as Pick<User, 'id' | 'full_name'>[])
     setLoading(false)
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    loadAll()
+    setOnRefresh(loadAll)
+    return () => setOnRefresh(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleSubmit() {
     if (!form.description.trim() || submitting) return

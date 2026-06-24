@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Plus, Pencil, Trash2, Users, X, ChevronRight, Building } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getInitials } from '@/lib/utils'
+import { useTopbar } from '@/contexts/topbar'
 import type { User } from '@/types'
 
 type Department = {
@@ -23,6 +24,7 @@ const EMPTY_FORM = { name: '', description: '', color: '#0e6a95', manager_id: ''
 
 export default function PhongBanPage() {
   const supabase = createClient()
+  const { setOnRefresh } = useTopbar()
   const [depts, setDepts] = useState<DeptWithMembers[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
@@ -33,9 +35,7 @@ export default function PhongBanPage() {
   const [submitting, setSubmitting] = useState(false)
   const [showAddMember, setShowAddMember] = useState(false)
 
-  useEffect(() => { loadData() }, [])
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     const [{ data: d }, { data: u }] = await Promise.all([
       supabase.from('departments').select('*').order('name'),
       supabase.from('users').select('*').eq('is_active', true).order('full_name'),
@@ -61,7 +61,15 @@ export default function PhongBanPage() {
       const updated = withMembers.find(d => d.id === selected.id)
       if (updated) setSelected(updated)
     }
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    loadData()
+    setOnRefresh(loadData)
+    return () => setOnRefresh(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleSubmit() {
     if (!form.name.trim()) return

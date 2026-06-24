@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Plus, X, Search, ShieldCheck, Pencil, Trash2, ChevronDown } from 'lucide-react'
 import type { User, Role } from '@/types'
 import { getInitials } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth'
+import { useTopbar } from '@/contexts/topbar'
 import { createClient } from '@/lib/supabase/client'
 
 const SUPER_ADMIN_EMAIL = 'operation1@hanoisuntravel.com'
@@ -66,12 +67,21 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [fetchLoading, setFetchLoading] = useState(true)
   const supabase = createClient()
+  const { setOnRefresh } = useTopbar()
 
-  useEffect(() => {
+  const loadUsers = useCallback(() => {
+    setFetchLoading(true)
     supabase.from('users').select('*').order('created_at').then(({ data }) => {
       if (data) setUsers(data as User[])
       setFetchLoading(false)
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    loadUsers()
+    setOnRefresh(loadUsers)
+    return () => setOnRefresh(null)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const [search, setSearch] = useState('')

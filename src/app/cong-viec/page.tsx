@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
   ChevronRight, Clock, CalendarDays,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth'
+import { useTopbar } from '@/contexts/topbar'
 import {
   STAGE_LABELS, STAGE_COLORS, SOURCE_COLORS, SOURCE_LABELS,
   formatVND, formatDate, daysSince, daysUntil,
@@ -19,6 +20,7 @@ const ACTIVE_STAGES: OppStage[] = ['stage_1', 'stage_2', 'stage_3', 'stage_4', '
 
 export default function TasksPage() {
   const { user: currentUser } = useAuth()
+  const { setOnRefresh } = useTopbar()
   const supabase = createClient()
 
   const [opps, setOpps] = useState<Opportunity[]>([])
@@ -28,9 +30,9 @@ export default function TasksPage() {
 
   const today = new Date().toISOString().split('T')[0]
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
     if (!currentUser?.id) { setLoading(false); return }
-
+    setLoading(true)
     Promise.all([
       supabase.from('opportunities').select('*').eq('assigned_to', currentUser.id).in('stage', ACTIVE_STAGES),
       supabase.from('activity_logs').select('*').order('log_date', { ascending: false }),
@@ -43,6 +45,13 @@ export default function TasksPage() {
       setTasks(((tasksRes.data ?? []) as Task[]).filter(t => oppIds.includes(t.opportunity_id)))
       setLoading(false)
     })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id])
+
+  useEffect(() => {
+    loadData()
+    setOnRefresh(loadData)
+    return () => setOnRefresh(null)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id])
 

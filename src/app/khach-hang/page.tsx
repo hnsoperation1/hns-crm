@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Search, Plus, X, Loader2, Building2, Users, Globe, Phone, Mail, MapPin, Trash2, Pencil, RotateCcw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import DatePickerVN from '@/components/DatePickerVN'
 import { useAuth } from '@/contexts/auth'
+import { useTopbar } from '@/contexts/topbar'
 import {
   SOURCE_LABELS, SOURCE_COLORS, SCORE_LABELS, SCORE_COLORS,
   TIER_LABELS, TIER_COLORS, formatDate, getInitials,
@@ -85,6 +86,7 @@ export default function CustomersPage() {
 
 function ContactsTab() {
   const { user } = useAuth()
+  const { setOnRefresh } = useTopbar()
   const supabase = createClient()
   const [contacts, setContacts] = useState<Contact[]>([])
   const [opps, setOpps] = useState<Opportunity[]>([])
@@ -109,9 +111,7 @@ function ContactsTab() {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [])
 
-  useEffect(() => { loadData() }, [])
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     const [{ data: c }, { data: o }, { data: og }] = await Promise.all([
       supabase.from('contacts').select('*').order('created_at', { ascending: false }),
       supabase.from('opportunities').select('id, title, contact_id, stage'),
@@ -121,7 +121,15 @@ function ContactsTab() {
     setOpps((o ?? []) as Opportunity[])
     setOrgs((og ?? []) as Organization[])
     setDataLoading(false)
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    loadData()
+    setOnRefresh(loadData)
+    return () => setOnRefresh(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function refreshOrgs() {
     setOrgsRefreshing(true)
