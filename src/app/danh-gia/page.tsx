@@ -280,7 +280,17 @@ export default function DanhGiaPage() {
     return Object.values(map).sort((a, b) => (b.tour_date ?? '').localeCompare(a.tour_date ?? ''))
   }, [dateFiltered])
 
-  // Auto-select first opportunity when entering summary tab
+  // Auto-select first item when switching tabs (tab button already clears selected via onClick)
+  useEffect(() => {
+    if (tab === 'poor' && poorData.length > 0) handlePoorClick(poorData[0])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, poorData.length])
+
+  useEffect(() => {
+    if (tab === 'destination' && destData.length > 0) handleDestClick(destData[0])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, destData.length])
+
   useEffect(() => {
     if (tab === 'summary' && oppGroups.length > 0 && !selectedOppSummary) {
       setSelectedOppSummary(oppGroups[0].id)
