@@ -272,6 +272,14 @@ export default function DanhGiaPage() {
 
   const RATING_VALUES = ['Kém', 'Trung bình', 'Tốt', 'Rất tốt'] as const
   const RATING_COLORS: Record<string, string> = { 'Kém': '#ef4444', 'Trung bình': '#f59e0b', 'Tốt': '#3b82f6', 'Rất tốt': '#10b981' }
+  const RATING_SCORE: Record<string, number> = { 'Kém': 1, 'Trung bình': 2, 'Tốt': 3, 'Rất tốt': 4 }
+
+  function scoreToLabel(avg: number): string {
+    if (avg < 1.5) return 'Kém'
+    if (avg < 2.5) return 'Trung bình'
+    if (avg < 3.5) return 'Tốt'
+    return 'Rất tốt'
+  }
 
   const summaryChartData = useMemo(() => {
     const group = oppGroups.find(g => g.id === selectedOppSummary)
@@ -285,6 +293,24 @@ export default function DanhGiaPage() {
         return { name: f.label, ...counts, total }
       })
       .filter(Boolean) as ({ name: string; total: number } & Record<string, number>)[]
+  }, [selectedOppSummary, oppGroups])
+
+  const avgChartData = useMemo(() => {
+    const group = oppGroups.find(g => g.id === selectedOppSummary)
+    if (!group) return []
+    return RATING_FIELDS
+      .map(f => {
+        const scores: number[] = []
+        group.feedbacks.forEach(fb => {
+          const v = fb[f.key] as string | null
+          if (v && v in RATING_SCORE) scores.push(RATING_SCORE[v])
+        })
+        if (scores.length === 0) return null
+        const avg = scores.reduce((a, b) => a + b, 0) / scores.length
+        return { name: f.label, avg: Math.round(avg * 10) / 10, label: scoreToLabel(avg), color: RATING_COLORS[scoreToLabel(avg)] }
+      })
+      .filter(Boolean) as { name: string; avg: number; label: string; color: string }[]
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOppSummary, oppGroups])
 
   function handlePoorClick(entry: { key: string; name: string }) {
@@ -676,6 +702,29 @@ export default function DanhGiaPage() {
                                 radius={i === 0 ? [4, 0, 0, 4] : i === 3 ? [0, 4, 4, 0] : undefined}
                               />
                             ))}
+                          </BarChart>
+                        </ResponsiveContainer>
+
+                        {/* Chart 2: điểm trung bình */}
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mt-8 mb-3">Điểm trung bình</p>
+                        <ResponsiveContainer width="100%" height={Math.max(avgChartData.length * 38, 160)}>
+                          <BarChart data={avgChartData} layout="vertical" margin={{ left: 0, right: 80, top: 0, bottom: 0 }} barSize={16}>
+                            <XAxis type="number" domain={[0, 4]} ticks={[1, 2, 3, 4]}
+                              tickFormatter={v => ['', 'Kém', 'TB', 'Tốt', 'Rất tốt'][v] ?? ''}
+                              tick={{ fontSize: 10 }} />
+                            <YAxis type="category" dataKey="name" width={200} tick={{ fontSize: 11 }} />
+                            <Tooltip
+                              formatter={(value) => [`${value} điểm`, 'Trung bình']}
+                              contentStyle={{ fontSize: 12, borderRadius: 10 }}
+                              offset={12}
+                            />
+                            <Bar dataKey="avg" radius={[4, 4, 4, 4]}
+                              label={{ position: 'right', fontSize: 11, fill: '#6b7280',
+                                formatter: (v: unknown) => `${v} · ${scoreToLabel(Number(v))}` }}>
+                              {avgChartData.map((entry, i) => (
+                                <Cell key={i} fill={entry.color} />
+                              ))}
+                            </Bar>
                           </BarChart>
                         </ResponsiveContainer>
                       </>
