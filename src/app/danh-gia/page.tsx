@@ -505,20 +505,6 @@ export default function DanhGiaPage() {
               )}
             </div>
 
-            {/* Action bar — nằm ngoài scroll, luôn hiện ở dưới */}
-            {checkedIds.size > 0 && (
-              <div className="flex-shrink-0 bg-white border border-gray-200 rounded-2xl shadow-lg px-5 py-3 flex items-center gap-3">
-                <span className="text-sm font-semibold text-gray-700">Đã chọn <span className="text-brand-600">{checkedIds.size}</span> đánh giá</span>
-                <div className="flex-1" />
-                <button onClick={() => setCheckedIds(new Set())} className="px-3.5 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 transition-colors font-medium">
-                  Bỏ chọn
-                </button>
-                <button onClick={() => { setLinkModal(true); setOppSearch('') }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition-colors shadow-sm">
-                  <Link2 size={14} /> Gắn vào đơn hàng
-                </button>
-              </div>
-            )}
           </div>
         )}
 
@@ -693,6 +679,21 @@ export default function DanhGiaPage() {
         )}
 
       </div>
+
+      {/* Action bar cố định khi có chọn */}
+      {checkedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-white border border-gray-200 rounded-2xl shadow-xl px-5 py-3 flex items-center gap-4 min-w-[420px]">
+          <span className="text-sm font-semibold text-gray-700">Đã chọn <span className="text-brand-600">{checkedIds.size}</span> đánh giá</span>
+          <div className="flex-1" />
+          <button onClick={() => setCheckedIds(new Set())} className="px-3.5 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 transition-colors font-medium">
+            Bỏ chọn
+          </button>
+          <button onClick={() => { setLinkModal(true); setOppSearch('') }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition-colors shadow-sm">
+            <Link2 size={14} /> Gắn vào đơn hàng
+          </button>
+        </div>
+      )}
 
       {/* Modal gắn đơn hàng */}
       {linkModal && (
