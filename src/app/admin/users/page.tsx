@@ -223,9 +223,8 @@ export default function AdminUsersPage() {
         <div>
           <div className="flex items-center gap-2.5 mb-0.5">
             <h1 className="text-2xl font-bold text-gray-900">Người dùng</h1>
-            <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-              <ShieldCheck size={12} />
-              Super Admin
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-600">
+              <ShieldCheck size={13} />
             </span>
           </div>
           <p className="text-sm text-gray-400">{activeCount}/{users.length} tài khoản đang hoạt động</p>
