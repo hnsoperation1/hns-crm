@@ -46,7 +46,7 @@ export default function AssignPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    await mockFetch(null)
+    await mockFetch(null, 2000)
     setLoading(false)
   }, [])
 
