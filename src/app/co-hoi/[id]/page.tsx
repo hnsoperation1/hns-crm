@@ -148,8 +148,28 @@ export default function OppDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="animate-spin text-gray-300" size={28} />
+      <div className="p-5 grid grid-cols-3 gap-5 max-w-[1400px] mx-auto animate-pulse">
+        <div className="col-span-2 space-y-4">
+          <div className="h-12 bg-white rounded-2xl border border-gray-200" />
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-4 bg-gray-100 rounded" style={{ width: `${75 - i * 8}%` }} />
+            ))}
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
+            <div className="h-4 bg-gray-100 rounded w-1/2" />
+            <div className="h-10 bg-gray-100 rounded-xl" />
+            <div className="h-10 bg-gray-100 rounded-xl" />
+            <div className="h-10 bg-gray-100 rounded-xl" />
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-4 bg-gray-100 rounded" style={{ width: `${80 - i * 10}%` }} />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }

@@ -89,14 +89,6 @@ export default function PipelinePage() {
       || (o.assigned_user?.full_name ?? '').toLowerCase().includes(q)
   })
 
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="animate-spin text-gray-300" size={28} />
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 40px)' }}>
       {/* Header */}
@@ -331,6 +323,18 @@ export default function PipelinePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
+                {loading ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      {[40, 20, 24, 20, 16, 16, 14].map((w, j) => (
+                        <td key={j} className="px-5 py-4">
+                          <div className="h-3 bg-gray-100 rounded" style={{ width: `${w + (i % 3) * 5}%` }} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : (
+                  <>
                 {filtered.length === 0 && (
                   <tr><td colSpan={8} className="px-5 py-12 text-center text-gray-400">{search ? 'Không tìm thấy đơn nào' : 'Chưa có đơn hàng nào'}</td></tr>
                 )}
@@ -388,6 +392,8 @@ export default function PipelinePage() {
                     </tr>
                   )
                 })}
+                  </>
+                )}
               </tbody>
             </table>
           </div>

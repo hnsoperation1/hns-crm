@@ -209,12 +209,6 @@ export default function DanhGiaPage() {
     return matchSearch && matchFilter
   })
 
-  if (loading) return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="w-6 h-6 border-2 border-brand-400 border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
-
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-gray-50/80">
       {/* Top bar: stats + date filter */}
@@ -281,7 +275,21 @@ export default function DanhGiaPage() {
               ))}
             </div>
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              {listFiltered.length === 0 ? (
+              {loading ? (
+                <div className="divide-y divide-gray-100">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="px-5 py-4 animate-pulse space-y-2">
+                      <div className="flex items-center gap-3">
+                        <div className="h-3.5 bg-gray-100 rounded w-32" />
+                        <div className="h-3 bg-gray-100 rounded w-20" />
+                        <div className="h-5 bg-gray-100 rounded-full w-16" />
+                      </div>
+                      <div className="h-3 bg-gray-100 rounded w-48" />
+                      <div className="h-3 bg-gray-100 rounded w-64" />
+                    </div>
+                  ))}
+                </div>
+              ) : listFiltered.length === 0 ? (
                 <div className="py-16 text-center"><Star size={36} className="text-gray-200 mx-auto mb-3" /><p className="text-sm text-gray-400">Chưa có đánh giá nào</p></div>
               ) : (
                 <div className="divide-y divide-gray-100">

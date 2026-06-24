@@ -41,8 +41,9 @@ const EMPTY_FORM = { title: '', contact_id: '', source: 'mkt' as LeadSource }
 const ALL_PENDING_TASKS = TASKS.filter(t => !t.is_done)
 
 export default function StaffPage() {
-  const saleTVUsers = USERS.filter(u => u.is_sale_tv && u.is_active)
-  const otherUsers = USERS.filter(u => !u.is_sale_tv && u.is_active)
+  const allUsers = USERS.filter(u => u.is_active)
+  const saleTVUsers = allUsers.filter(u => u.is_sale_tv)
+  const otherUsers = allUsers.filter(u => !u.is_sale_tv)
 
   // "Giao đơn" panel state
   const [openDealCard, setOpenDealCard] = useState<string | null>(null)
@@ -97,17 +98,10 @@ export default function StaffPage() {
     <div className="p-6 max-w-[1400px] mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Nhân viên</h1>
-        <p className="text-sm text-gray-400 mt-0.5">{USERS.filter(u => u.is_active).length} thành viên đang hoạt động</p>
+        <p className="text-sm text-gray-400 mt-0.5">{allUsers.length} thành viên đang hoạt động</p>
       </div>
 
-      {/* ─── Sale TV ─── */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Nhân viên Sale TV</h2>
-          <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-xs text-gray-400">{saleTVUsers.length} người</span>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4">
           {saleTVUsers.map((user, idx) => {
             const openOpps = OPPORTUNITIES.filter(o =>
               o.assigned_to === user.id && ACTIVE_STAGES.includes(o.stage as OppStage)
@@ -375,59 +369,6 @@ export default function StaffPage() {
             )
           })}
         </div>
-      </div>
-
-      {/* ─── Support staff ─── */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Nhân viên hỗ trợ</h2>
-          <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-xs text-gray-400">{otherUsers.length} người</span>
-        </div>
-        <div className="grid grid-cols-4 gap-4">
-          {otherUsers.map(user => {
-            const caps = [
-              user.can_manage_campaign && 'Quản lý chiến dịch MKT',
-              user.can_qualify_lead && 'Qualify lead đầu vào',
-              user.can_cskh_post && 'CSKH sau tour',
-            ].filter(Boolean) as string[]
-            const myTasks = ALL_PENDING_TASKS.filter(t => getEffectiveAssignee(t.id) === user.id)
-
-            return (
-              <div key={user.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-slate-400 to-slate-600 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                    {getInitials(user.full_name)}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-semibold text-gray-900 text-sm truncate">{user.full_name}</div>
-                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${ROLE_COLORS[user.role]}`}>
-                      {ROLE_LABELS[user.role]}
-                    </span>
-                  </div>
-                </div>
-                {caps.length > 0 && (
-                  <div className="space-y-1.5 mb-2">
-                    {caps.map(cap => (
-                      <div key={cap} className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <span className="w-1.5 h-1.5 rounded-full bg-teal-400 flex-shrink-0" />
-                        {cap}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {myTasks.length > 0 && (
-                  <div className="flex items-center gap-1.5 pt-2 border-t border-gray-100">
-                    <ClipboardList size={11} className="text-brand-400" />
-                    <span className="text-[11px] text-accent-500 font-semibold">{myTasks.length} việc được giao</span>
-                  </div>
-                )}
-                <div className="mt-1 text-[11px] text-gray-300 truncate">{user.email}</div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
     </div>
   )
 }
