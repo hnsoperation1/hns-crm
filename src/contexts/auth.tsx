@@ -21,24 +21,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true
 
-    // getSession() đọc từ localStorage — không cần network, resolve ngay
-    supabase.auth.getSession()
-      .then(async ({ data: { session } }) => {
+    // Fallback cứng: nếu sau 8 giây vẫn loading thì buộc tắt
+    const fallback = setTimeout(() => {
+      if (mounted) setLoading(false)
+    }, 8000)
+
+    async function init() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
         if (!mounted) return
         if (session?.user) {
-          const profile = await fetchProfile(session.user.id)
-          if (mounted) setUser(profile)
+          try {
+            const profile = await fetchProfile(session.user.id)
+            if (mounted) setUser(profile)
+          } catch {
+            // profile fetch thất bại — vẫn tiếp tục, redirect về login
+          }
         }
+      } catch {
+        // getSession thất bại
+      } finally {
+        clearTimeout(fallback)
         if (mounted) setLoading(false)
-      })
-      .catch(() => { if (mounted) setLoading(false) })
+      }
+    }
+
+    init()
 
     // Chỉ lắng nghe login/logout/token refresh — bỏ qua INITIAL_SESSION vì đã xử lý trên
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted || event === 'INITIAL_SESSION') return
       if (session?.user) {
-        const profile = await fetchProfile(session.user.id)
-        if (mounted) setUser(profile)
+        try {
+          const profile = await fetchProfile(session.user.id)
+          if (mounted) setUser(profile)
+        } catch {
+          if (mounted) setUser(null)
+        }
       } else {
         if (mounted) setUser(null)
       }
@@ -46,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false
+      clearTimeout(fallback)
       subscription.unsubscribe()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
