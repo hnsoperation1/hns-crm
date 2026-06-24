@@ -611,7 +611,7 @@ export default function DanhGiaPage() {
 
         {/* ── Tab: Theo đơn hàng ── */}
         {tab === 'summary' && (
-          <div className="h-full grid grid-cols-[280px_1fr] gap-4 overflow-hidden">
+          <div className="h-full grid grid-cols-2 gap-4 overflow-hidden">
             {/* Left: danh sách đơn */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100 flex-shrink-0">
