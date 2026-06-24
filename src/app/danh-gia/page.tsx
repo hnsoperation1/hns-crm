@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import { Star, ThumbsUp, ThumbsDown, Search, ChevronDown, ChevronUp, ExternalLink, X, MapPin, Users, Link2, CheckSquare, LayoutGrid, BarChart2 } from 'lucide-react'
+import { Star, ThumbsUp, ThumbsDown, Search, ExternalLink, X, MapPin, Users, Link2, CheckSquare, LayoutGrid, BarChart2 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
@@ -422,6 +422,7 @@ export default function DanhGiaPage() {
         {/* ── Tab: Tất cả đánh giá ── */}
         {tab === 'all' && (
           <div className="h-full flex flex-col gap-3 overflow-hidden">
+            {/* Filter bar */}
             <div className="flex items-center gap-3 flex-shrink-0">
               <div className="relative flex-1 max-w-xs">
                 <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -454,135 +455,162 @@ export default function DanhGiaPage() {
                 )}
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              {loading ? (
-                <div className="divide-y divide-gray-100">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="px-5 py-4 animate-pulse space-y-2">
-                      <div className="flex items-center gap-3">
-                        <div className="h-3.5 bg-gray-100 rounded w-32" />
-                        <div className="h-3 bg-gray-100 rounded w-20" />
-                        <div className="h-5 bg-gray-100 rounded-full w-16" />
-                      </div>
-                      <div className="h-3 bg-gray-100 rounded w-48" />
-                      <div className="h-3 bg-gray-100 rounded w-64" />
-                    </div>
-                  ))}
-                </div>
-              ) : listFiltered.length === 0 ? (
-                <div className="py-16 text-center"><Star size={36} className="text-gray-200 mx-auto mb-3" /><p className="text-sm text-gray-400">Chưa có đánh giá nào</p></div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {listFiltered.map(f => (
-                    <div key={f.id} className={checkedIds.has(f.id) ? 'bg-brand-50/40' : ''}>
-                      <div className="px-5 py-4 hover:bg-gray-50/70 transition-colors cursor-pointer" onClick={() => setExpanded(expanded === f.id ? null : f.id)}>
-                        <div className="flex items-start gap-4">
-                          <div className="pt-0.5 flex-shrink-0" onClick={e => toggleCheck(f.id, e)}>
-                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${checkedIds.has(f.id) ? 'bg-brand-600 border-brand-600' : 'border-gray-300 hover:border-brand-400'}`}>
-                              {checkedIds.has(f.id) && <svg viewBox="0 0 10 8" className="w-2.5 h-2 fill-white"><path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-semibold text-gray-900 text-sm">{f.respondent_name ?? '—'}</span>
-                              {f.phone && <span className="text-xs text-gray-400">{f.phone}</span>}
-                              {f.is_satisfied === true && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">Hài lòng</span>}
-                              {f.is_satisfied === false && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-500">Không hài lòng</span>}
-                              {f.will_return === true && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">Sẽ quay lại</span>}
-                            </div>
-                            <div className="flex items-center gap-3 mt-1 flex-wrap">
-                              {f.group_name && <span className="text-xs text-gray-500">Đoàn: <span className="font-medium text-gray-700">{f.group_name}</span></span>}
-                              {f.opportunity_id && (
-                                <Link href={`/co-hoi/${f.opportunity_id}`} onClick={e => e.stopPropagation()} className="text-xs text-brand-600 hover:underline flex items-center gap-0.5">
-                                  <ExternalLink size={10} /> Xem đơn
-                                </Link>
-                              )}
-                              {f.itinerary && <span className="text-xs text-gray-400 truncate max-w-[200px]">{f.itinerary}</span>}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 flex-shrink-0">
-                            <span className="text-xs text-gray-400">{formatDate(f.submitted_at)}</span>
-                            {expanded === f.id ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
-                          </div>
-                        </div>
-                        {f.overall_comment && <p className="text-xs text-gray-500 mt-2 italic line-clamp-1">"{f.overall_comment}"</p>}
-                      </div>
-                      {expanded === f.id && (
-                        <div className="px-5 pb-5 bg-gray-50/50 border-t border-gray-100">
-                          <div className="grid grid-cols-4 gap-4 pt-4">
-                            {(f.rating_restaurant_space || f.rating_restaurant_food || f.rating_restaurant_service || f.rating_restaurant_price) && (
-                              <div className="bg-white rounded-xl border border-gray-100 p-4">
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nhà hàng</p>
-                                <StarRow label="Không gian" value={f.rating_restaurant_space} />
-                                <StarRow label="Ẩm thực" value={f.rating_restaurant_food} />
-                                <StarRow label="Thái độ phục vụ" value={f.rating_restaurant_service} />
-                                <StarRow label="Giá cả" value={f.rating_restaurant_price} />
-                              </div>
-                            )}
-                            {(f.rating_guide_attitude || f.rating_guide_skill || f.rating_guide_knowledge) && (
-                              <div className="bg-white rounded-xl border border-gray-100 p-4">
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Hướng dẫn viên</p>
-                                <StarRow label="Thái độ" value={f.rating_guide_attitude} />
-                                <StarRow label="Nghiệp vụ" value={f.rating_guide_skill} />
-                                <StarRow label="Kiến thức" value={f.rating_guide_knowledge} />
-                              </div>
-                            )}
-                            {(f.rating_transport_quality || f.rating_transport_safety || f.rating_transport_driver) && (
-                              <div className="bg-white rounded-xl border border-gray-100 p-4">
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Phương tiện</p>
-                                <StarRow label="Chất lượng xe" value={f.rating_transport_quality} />
-                                <StarRow label="An toàn" value={f.rating_transport_safety} />
-                                <StarRow label="Thái độ tài xế" value={f.rating_transport_driver} />
-                              </div>
-                            )}
-                            {(f.rating_staff_attitude || f.rating_staff_skill || f.rating_staff_knowledge) && (
-                              <div className="bg-white rounded-xl border border-gray-100 p-4">
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nhân viên tư vấn</p>
-                                <StarRow label="Thái độ" value={f.rating_staff_attitude} />
-                                <StarRow label="Nghiệp vụ" value={f.rating_staff_skill} />
-                                <StarRow label="Kiến thức" value={f.rating_staff_knowledge} />
-                              </div>
-                            )}
-                            {f.rating_hotel && (
-                              <div className="bg-white rounded-xl border border-gray-100 p-4">
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Khách sạn</p>
-                                <StarRow label="Đánh giá" value={f.rating_hotel} />
-                              </div>
-                            )}
-                            {(f.rating_flight_support || f.rating_flight_attitude || f.rating_flight_handling) && (
-                              <div className="bg-white rounded-xl border border-gray-100 p-4">
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Vé máy bay</p>
-                                <StarRow label="Hỗ trợ chuyên môn" value={f.rating_flight_support} />
-                                <StarRow label="Thái độ tư vấn" value={f.rating_flight_attitude} />
-                                <StarRow label="Xử lý tình huống" value={f.rating_flight_handling} />
-                              </div>
-                            )}
-                          </div>
-                          <div className="mt-4 bg-white rounded-xl border border-gray-100 p-4 space-y-2">
-                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Tổng kết</p>
-                            {f.overall_comment && <p className="text-sm text-gray-700 italic">"{f.overall_comment}"</p>}
-                            <div className="flex items-center gap-4 pt-1">
-                              <div className="flex items-center gap-1.5">
-                                {f.is_satisfied ? <ThumbsUp size={14} className="text-emerald-500" /> : <ThumbsDown size={14} className="text-red-400" />}
-                                <span className="text-xs text-gray-600">{f.is_satisfied ? 'Hài lòng' : 'Không hài lòng'}</span>
-                              </div>
-                              {f.will_return !== null && (
-                                <div className="flex items-center gap-1.5">
-                                  {f.will_return ? <ThumbsUp size={14} className="text-blue-500" /> : <ThumbsDown size={14} className="text-gray-400" />}
-                                  <span className="text-xs text-gray-600">{f.will_return ? 'Sẽ quay lại' : 'Không quay lại'}</span>
-                                </div>
-                              )}
-                              {f.next_destination && <span className="text-xs text-gray-500">Quan tâm: <span className="font-medium text-brand-600">{f.next_destination}</span></span>}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
+            {/* 2-column layout */}
+            <div className="flex-1 overflow-hidden grid grid-cols-2 gap-4">
+              {/* Left: danh sách */}
+              <div className="overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm">
+                {loading ? (
+                  <div className="divide-y divide-gray-100">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="px-4 py-3 animate-pulse space-y-2">
+                        <div className="flex items-center gap-3">
+                          <div className="h-3.5 bg-gray-100 rounded w-32" />
+                          <div className="h-3 bg-gray-100 rounded w-20" />
+                          <div className="h-5 bg-gray-100 rounded-full w-16" />
+                        </div>
+                        <div className="h-3 bg-gray-100 rounded w-48" />
+                      </div>
+                    ))}
+                  </div>
+                ) : listFiltered.length === 0 ? (
+                  <div className="py-16 text-center"><Star size={36} className="text-gray-200 mx-auto mb-3" /><p className="text-sm text-gray-400">Chưa có đánh giá nào</p></div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {listFiltered.map(f => (
+                      <div key={f.id} className={expanded === f.id ? 'bg-brand-50/40' : checkedIds.has(f.id) ? 'bg-amber-50/30' : ''}>
+                        <div className="px-4 py-3 hover:bg-gray-50/70 transition-colors cursor-pointer" onClick={() => setExpanded(f.id)}>
+                          <div className="flex items-start gap-3">
+                            <div className="pt-0.5 flex-shrink-0" onClick={e => toggleCheck(f.id, e)}>
+                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${checkedIds.has(f.id) ? 'bg-brand-600 border-brand-600' : 'border-gray-300 hover:border-brand-400'}`}>
+                                {checkedIds.has(f.id) && <svg viewBox="0 0 10 8" className="w-2.5 h-2 fill-white"><path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`font-semibold text-sm ${expanded === f.id ? 'text-brand-700' : 'text-gray-900'}`}>{f.respondent_name ?? '—'}</span>
+                                {f.phone && <span className="text-xs text-gray-400">{f.phone}</span>}
+                                {f.is_satisfied === true && <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">Hài lòng</span>}
+                                {f.is_satisfied === false && <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-red-50 text-red-500">Không hài lòng</span>}
+                                {f.will_return === true && <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">Sẽ quay lại</span>}
+                              </div>
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                {f.group_name && <span className="text-xs text-gray-500 truncate">Đoàn: <span className="font-medium text-gray-700">{f.group_name}</span></span>}
+                                {f.itinerary && <span className="text-xs text-gray-400 truncate max-w-[160px]">{f.itinerary}</span>}
+                              </div>
+                              {f.overall_comment && <p className="text-xs text-gray-400 mt-0.5 italic line-clamp-1">"{f.overall_comment}"</p>}
+                            </div>
+                            <span className="text-xs text-gray-400 flex-shrink-0">{formatDate(f.submitted_at)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Right: chi tiết */}
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
+                {!expanded || !listFiltered.find(x => x.id === expanded) ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-gray-300">
+                    <Star size={36} className="mb-3" />
+                    <p className="text-sm">Bấm vào một đánh giá để xem chi tiết</p>
+                  </div>
+                ) : (() => {
+                  const f = listFiltered.find(x => x.id === expanded)!
+                  return (
+                    <>
+                      <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between flex-shrink-0">
+                        <div>
+                          <p className="font-semibold text-gray-900">{f.respondent_name ?? '—'}</p>
+                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                            {f.phone && <span className="text-xs text-gray-500">{f.phone}</span>}
+                            {f.group_name && <span className="text-xs text-gray-400">Đoàn: {f.group_name}</span>}
+                            <span className="text-xs text-gray-400">{formatDate(f.submitted_at)}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {f.opportunity_id && (
+                            <Link href={`/co-hoi/${f.opportunity_id}`} className="text-xs text-brand-600 hover:underline flex items-center gap-0.5 font-medium">
+                              <ExternalLink size={11} /> Đơn
+                            </Link>
+                          )}
+                          <button onClick={() => setExpanded(null)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"><X size={14} /></button>
+                        </div>
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          {(f.rating_restaurant_space || f.rating_restaurant_food || f.rating_restaurant_service || f.rating_restaurant_price) && (
+                            <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Nhà hàng</p>
+                              <StarRow label="Không gian" value={f.rating_restaurant_space} />
+                              <StarRow label="Ẩm thực" value={f.rating_restaurant_food} />
+                              <StarRow label="Thái độ phục vụ" value={f.rating_restaurant_service} />
+                              <StarRow label="Giá cả" value={f.rating_restaurant_price} />
+                            </div>
+                          )}
+                          {(f.rating_guide_attitude || f.rating_guide_skill || f.rating_guide_knowledge) && (
+                            <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Hướng dẫn viên</p>
+                              <StarRow label="Thái độ" value={f.rating_guide_attitude} />
+                              <StarRow label="Nghiệp vụ" value={f.rating_guide_skill} />
+                              <StarRow label="Kiến thức" value={f.rating_guide_knowledge} />
+                            </div>
+                          )}
+                          {(f.rating_transport_quality || f.rating_transport_safety || f.rating_transport_driver) && (
+                            <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Phương tiện</p>
+                              <StarRow label="Chất lượng xe" value={f.rating_transport_quality} />
+                              <StarRow label="An toàn" value={f.rating_transport_safety} />
+                              <StarRow label="Thái độ tài xế" value={f.rating_transport_driver} />
+                            </div>
+                          )}
+                          {(f.rating_staff_attitude || f.rating_staff_skill || f.rating_staff_knowledge) && (
+                            <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Nhân viên tư vấn</p>
+                              <StarRow label="Thái độ" value={f.rating_staff_attitude} />
+                              <StarRow label="Nghiệp vụ" value={f.rating_staff_skill} />
+                              <StarRow label="Kiến thức" value={f.rating_staff_knowledge} />
+                            </div>
+                          )}
+                          {f.rating_hotel && (
+                            <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Khách sạn</p>
+                              <StarRow label="Đánh giá" value={f.rating_hotel} />
+                            </div>
+                          )}
+                          {(f.rating_flight_support || f.rating_flight_attitude || f.rating_flight_handling) && (
+                            <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Vé máy bay</p>
+                              <StarRow label="Hỗ trợ chuyên môn" value={f.rating_flight_support} />
+                              <StarRow label="Thái độ tư vấn" value={f.rating_flight_attitude} />
+                              <StarRow label="Xử lý tình huống" value={f.rating_flight_handling} />
+                            </div>
+                          )}
+                        </div>
+                        <div className="bg-gray-50 rounded-xl border border-gray-100 p-3 space-y-2">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tổng kết</p>
+                          {f.overall_comment && <p className="text-sm text-gray-700 italic">"{f.overall_comment}"</p>}
+                          <div className="flex items-center gap-4 pt-1 flex-wrap">
+                            <div className="flex items-center gap-1.5">
+                              {f.is_satisfied ? <ThumbsUp size={13} className="text-emerald-500" /> : <ThumbsDown size={13} className="text-red-400" />}
+                              <span className="text-xs text-gray-600">{f.is_satisfied ? 'Hài lòng' : 'Không hài lòng'}</span>
+                            </div>
+                            {f.will_return !== null && (
+                              <div className="flex items-center gap-1.5">
+                                {f.will_return ? <ThumbsUp size={13} className="text-blue-500" /> : <ThumbsDown size={13} className="text-gray-400" />}
+                                <span className="text-xs text-gray-600">{f.will_return ? 'Sẽ quay lại' : 'Không quay lại'}</span>
+                              </div>
+                            )}
+                            {f.next_destination && <span className="text-xs text-gray-500">Quan tâm: <span className="font-medium text-brand-600">{f.next_destination}</span></span>}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+            </div>
           </div>
         )}
 
