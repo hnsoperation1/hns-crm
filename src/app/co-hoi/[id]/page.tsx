@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import ChecklistTab from './ChecklistTab'
@@ -51,7 +51,7 @@ export default function OppDetailPage() {
   const { id } = useParams<{ id: string }>()
   const supabase = createClient()
 
-  const { setBreadcrumb } = useTopbar()
+  const { setBreadcrumb, setOnRefresh } = useTopbar()
 
   const [opp, setOpp] = useState<OppDetail | null>(null)
   const [allLogs, setAllLogs] = useState<LogDetail[]>([])
@@ -86,51 +86,57 @@ export default function OppDetailPage() {
   const [showNewTask, setShowNewTask] = useState(false)
   const [newTask, setNewTask] = useState({ title: '', due_date: '', assigned_to: '' })
 
-  useEffect(() => {
-    async function load() {
-      const [{ data: oppData }, { data: logsData }, { data: tasksData }, { data: usersData }, { data: issuesData }] = await Promise.all([
-        supabase.from('opportunities')
-          .select('*, contact:contacts(id,name,phone,email,company,tax_code,organization_ids,source,lead_score,created_by,created_at), assigned_user:users!assigned_to(id,full_name), creator:users!created_by(id,full_name)')
-          .eq('id', id)
-          .single(),
-        supabase.from('activity_logs')
-          .select('*, user:users(id,full_name)')
-          .eq('opportunity_id', id)
-          .order('log_date', { ascending: false }),
-        supabase.from('tasks')
-          .select('*')
-          .eq('opportunity_id', id)
-          .order('created_at', { ascending: true }),
-        supabase.from('users')
-          .select('id, full_name, is_sale_tv, is_active')
-          .eq('is_active', true),
-        supabase.from('issues')
-          .select('id, description, status, assigned_user:users!assigned_to(full_name), created_at')
-          .eq('opportunity_id', id)
-          .order('created_at', { ascending: false }),
-      ])
-      const o = oppData as OppDetail | null
-      setOpp(o)
-      if (o) setInfoForm({
-        title: o.title ?? '',
-        description: o.description ?? '',
-        tour_date: o.tour_date ?? '',
-        tour_end_date: (o as any).tour_end_date ?? '',
-        estimated_value: o.estimated_value ? String(o.estimated_value) : '',
-        actual_value: o.actual_value ? String(o.actual_value) : '',
-        source: o.source ?? '',
-        lost_reason: o.lost_reason ?? '',
-      })
-      setAllLogs((logsData ?? []) as LogDetail[])
-      setTasks(tasksData ?? [])
-      const users = (usersData ?? []) as UserMin[]
-      setAllUsers(users)
-      setSaleUsers(users.filter(u => u.is_sale_tv))
-      setIssues((issuesData ?? []) as unknown as typeof issues)
-      setLoading(false)
-    }
-    load()
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    const [{ data: oppData }, { data: logsData }, { data: tasksData }, { data: usersData }, { data: issuesData }] = await Promise.all([
+      supabase.from('opportunities')
+        .select('*, contact:contacts(id,name,phone,email,company,tax_code,organization_ids,source,lead_score,created_by,created_at), assigned_user:users!assigned_to(id,full_name), creator:users!created_by(id,full_name)')
+        .eq('id', id)
+        .single(),
+      supabase.from('activity_logs')
+        .select('*, user:users(id,full_name)')
+        .eq('opportunity_id', id)
+        .order('log_date', { ascending: false }),
+      supabase.from('tasks')
+        .select('*')
+        .eq('opportunity_id', id)
+        .order('created_at', { ascending: true }),
+      supabase.from('users')
+        .select('id, full_name, is_sale_tv, is_active')
+        .eq('is_active', true),
+      supabase.from('issues')
+        .select('id, description, status, assigned_user:users!assigned_to(full_name), created_at')
+        .eq('opportunity_id', id)
+        .order('created_at', { ascending: false }),
+    ])
+    const o = oppData as OppDetail | null
+    setOpp(o)
+    if (o) setInfoForm({
+      title: o.title ?? '',
+      description: o.description ?? '',
+      tour_date: o.tour_date ?? '',
+      tour_end_date: (o as any).tour_end_date ?? '',
+      estimated_value: o.estimated_value ? String(o.estimated_value) : '',
+      actual_value: o.actual_value ? String(o.actual_value) : '',
+      source: o.source ?? '',
+      lost_reason: o.lost_reason ?? '',
+    })
+    setAllLogs((logsData ?? []) as LogDetail[])
+    setTasks(tasksData ?? [])
+    const users = (usersData ?? []) as UserMin[]
+    setAllUsers(users)
+    setSaleUsers(users.filter(u => u.is_sale_tv))
+    setIssues((issuesData ?? []) as unknown as typeof issues)
+    setLoading(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  useEffect(() => {
+    loadData()
+    setOnRefresh(loadData)
+    return () => setOnRefresh(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadData])
 
   useEffect(() => {
     if (!opp) return
