@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
   CheckCircle2, ChevronRight, AlertTriangle, Zap,
   User, DollarSign, CalendarDays, Clock, FileText,
   Building2, TrendingUp, ArrowRight,
 } from 'lucide-react'
-import { USERS, OPPORTUNITIES, CONTACTS, getContactById, getUserById } from '@/lib/mock-data'
+import { USERS, OPPORTUNITIES, CONTACTS, getContactById, getUserById, mockFetch } from '@/lib/mock-data'
+import { useTopbar } from '@/contexts/topbar'
 import {
   STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS,
   formatVND, formatDate, getInitials, daysUntil,
@@ -37,9 +38,24 @@ const EMPTY: {
 }
 
 export default function AssignPage() {
+  const { setOnRefresh } = useTopbar()
+  const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ ...EMPTY })
   const [submitted, setSubmitted] = useState<{ title: string; userName: string } | null>(null)
   const [errors, setErrors] = useState<Partial<typeof EMPTY>>({})
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    await mockFetch(null)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    loadData()
+    setOnRefresh(loadData)
+    return () => setOnRefresh(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Compute workload for each sale TV person
   const workload = SALE_TV.map(u => {
@@ -79,6 +95,19 @@ export default function AssignPage() {
     setErrors({})
     setTimeout(() => setSubmitted(null), 6000)
   }
+
+  if (loading) return (
+    <div className="p-6 max-w-[1400px] mx-auto space-y-6 animate-pulse">
+      <div className="h-8 bg-gray-100 rounded w-32" />
+      <div className="grid grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => <div key={i} className="h-36 bg-gray-100 rounded-2xl" />)}
+      </div>
+      <div className="grid grid-cols-5 gap-5">
+        <div className="col-span-2 h-[480px] bg-gray-100 rounded-2xl" />
+        <div className="col-span-3 h-[480px] bg-gray-100 rounded-2xl" />
+      </div>
+    </div>
+  )
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto space-y-6">

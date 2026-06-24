@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { CheckCircle2, X, UserPlus, ClipboardList, ChevronDown, ChevronUp, ClipboardCheck } from 'lucide-react'
 import Link from 'next/link'
-import { USERS, OPPORTUNITIES, CONTACTS, TASKS, getOppById } from '@/lib/mock-data'
+import { USERS, OPPORTUNITIES, CONTACTS, TASKS, getOppById, mockFetch } from '@/lib/mock-data'
+import { useTopbar } from '@/contexts/topbar'
 import { STAGE_COLORS, STAGE_SHORT, formatVND, getInitials, formatDate } from '@/lib/utils'
 import type { OppStage, LeadSource } from '@/types'
 
@@ -41,6 +42,22 @@ const EMPTY_FORM = { title: '', contact_id: '', source: 'mkt' as LeadSource }
 const ALL_PENDING_TASKS = TASKS.filter(t => !t.is_done)
 
 export default function StaffPage() {
+  const { setOnRefresh } = useTopbar()
+  const [loading, setLoading] = useState(true)
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    await mockFetch(null)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    loadData()
+    setOnRefresh(loadData)
+    return () => setOnRefresh(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const allUsers = USERS.filter(u => u.is_active)
   const saleTVUsers = allUsers.filter(u => u.is_sale_tv)
   const otherUsers = allUsers.filter(u => !u.is_sale_tv)
@@ -93,6 +110,15 @@ export default function StaffPage() {
     setDealSuccessFor(userId)
     setTimeout(() => setDealSuccessFor(null), 4000)
   }
+
+  if (loading) return (
+    <div className="p-6 max-w-[1400px] mx-auto animate-pulse space-y-4">
+      <div className="h-8 bg-gray-100 rounded w-32" />
+      <div className="grid grid-cols-2 gap-4">
+        {[...Array(4)].map((_, i) => <div key={i} className="h-64 bg-gray-100 rounded-2xl" />)}
+      </div>
+    </div>
+  )
 
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
