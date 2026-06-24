@@ -15,11 +15,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return
-    if (!user && !isLoginPage) router.replace('/login')
+    if (!user && !isLoginPage) {
+      // Dùng hard navigation thay router.replace để tránh Next.js router bug
+      window.location.replace('/login')
+    }
     if (user && isLoginPage) router.replace('/')
   }, [user, loading, isLoginPage, router])
 
-  if (loading) {
+  // Hiện spinner khi: đang load, HOẶC chưa có user và đang chờ redirect về /login
+  // → không bao giờ blank page
+  if (loading || (!user && !isLoginPage)) {
     return (
       <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
@@ -40,9 +45,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   if (isLoginPage) return <>{children}</>
-
-  // Chưa đăng nhập — không render gì, useEffect sẽ redirect
-  if (!user) return null
 
   return (
     <TopbarProvider>
