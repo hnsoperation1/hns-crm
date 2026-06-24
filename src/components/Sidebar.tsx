@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones, Star } from 'lucide-react'
+import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones, Star, Building } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/contexts/auth'
 import { getInitials } from '@/lib/utils'
@@ -18,6 +18,7 @@ const navItems = [
 
 const adminItems = [
   { href: '/admin/users', label: 'Người dùng', icon: UserCog },
+  { href: '/admin/phong-ban', label: 'Phòng ban', icon: Building },
 ]
 
 const ROLE_LABELS: Record<string, string> = {

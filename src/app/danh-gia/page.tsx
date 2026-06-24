@@ -41,7 +41,7 @@ type FeedbackRow = {
   is_satisfied: boolean | null
   will_return: boolean | null
   next_destination: string | null
-  opportunity?: { title: string } | null
+  opportunity?: { title: string; tour_date: string | null } | null
 }
 
 const RATING_FIELDS: { key: keyof FeedbackRow; label: string }[] = [
@@ -139,6 +139,7 @@ export default function DanhGiaPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'all' | 'poor' | 'destination' | 'summary'>('all')
   const [selectedOppSummary, setSelectedOppSummary] = useState<string | null>(null)
+  const [summarySearch, setSummarySearch] = useState('')
   const [dateFrom, setDateFrom] = useState(() => `${new Date().getFullYear()}-01-01`)
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10))
   const [search, setSearch] = useState('')
@@ -158,7 +159,7 @@ export default function DanhGiaPage() {
 
   const loadData = useCallback(() => {
     setLoading(true)
-    supabase.from('feedback').select('*, opportunity:opportunities(title)').order('submitted_at', { ascending: false })
+    supabase.from('feedback').select('*, opportunity:opportunities(title, tour_date)').order('submitted_at', { ascending: false })
       .then(({ data }) => { setList((data ?? []) as FeedbackRow[]); setLoading(false) })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -263,13 +264,18 @@ export default function DanhGiaPage() {
 
   // Tab "Theo đơn hàng" — group feedbacks by opportunity
   const oppGroups = useMemo(() => {
-    const map: Record<string, { id: string; title: string; feedbacks: FeedbackRow[] }> = {}
+    const map: Record<string, { id: string; title: string; tour_date: string | null; feedbacks: FeedbackRow[] }> = {}
     dateFiltered.forEach(f => {
       if (!f.opportunity_id) return
-      if (!map[f.opportunity_id]) map[f.opportunity_id] = { id: f.opportunity_id, title: f.opportunity?.title ?? f.opportunity_id, feedbacks: [] }
+      if (!map[f.opportunity_id]) map[f.opportunity_id] = {
+        id: f.opportunity_id,
+        title: f.opportunity?.title ?? f.opportunity_id,
+        tour_date: f.opportunity?.tour_date ?? null,
+        feedbacks: [],
+      }
       map[f.opportunity_id].feedbacks.push(f)
     })
-    return Object.values(map).sort((a, b) => b.feedbacks.length - a.feedbacks.length)
+    return Object.values(map).sort((a, b) => (b.tour_date ?? '').localeCompare(a.tour_date ?? ''))
   }, [dateFiltered])
 
   const RATING_VALUES = ['Kém', 'Trung bình', 'Tốt', 'Rất tốt'] as const
@@ -631,9 +637,17 @@ export default function DanhGiaPage() {
           <div className="h-full grid grid-cols-2 gap-4 overflow-hidden">
             {/* Left: danh sách đơn */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex-shrink-0">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Đơn hàng có đánh giá</p>
-                <p className="text-[11px] text-gray-400 mt-0.5">{oppGroups.length} đơn · {dateFiltered.filter(f => f.opportunity_id).length} phản hồi</p>
+              <div className="px-4 py-3 border-b border-gray-100 flex-shrink-0 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Đơn hàng có đánh giá</p>
+                  <p className="text-[11px] text-gray-400">{oppGroups.length} đơn · {dateFiltered.filter(f => f.opportunity_id).length} phản hồi</p>
+                </div>
+                <div className="relative">
+                  <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input value={summarySearch} onChange={e => setSummarySearch(e.target.value)}
+                    placeholder="Tìm tên đơn hàng..."
+                    className="w-full pl-7 pr-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-400 bg-gray-50" />
+                </div>
               </div>
               {oppGroups.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center py-16 text-gray-300">
@@ -642,21 +656,24 @@ export default function DanhGiaPage() {
                 </div>
               ) : (
                 <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
-                  {oppGroups.map(g => (
-                    <button key={g.id} onClick={() => setSelectedOppSummary(g.id === selectedOppSummary ? null : g.id)}
-                      className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${selectedOppSummary === g.id ? 'bg-brand-50 border-l-2 border-brand-600' : ''}`}>
-                      <p className={`text-sm font-semibold truncate ${selectedOppSummary === g.id ? 'text-brand-700' : 'text-gray-800'}`}>{g.title}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[11px] text-gray-400">{g.feedbacks.length} phản hồi</span>
-                        {g.feedbacks.some(f => f.is_satisfied === false) && (
-                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-red-50 text-red-500">Có phàn nàn</span>
-                        )}
-                        {g.feedbacks.every(f => f.is_satisfied === true) && (
-                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">Hài lòng</span>
-                        )}
-                      </div>
-                    </button>
-                  ))}
+                  {oppGroups
+                    .filter(g => !summarySearch.trim() || g.title.toLowerCase().includes(summarySearch.toLowerCase()))
+                    .map(g => (
+                      <button key={g.id} onClick={() => setSelectedOppSummary(g.id === selectedOppSummary ? null : g.id)}
+                        className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${selectedOppSummary === g.id ? 'bg-brand-50 border-l-2 border-brand-600' : ''}`}>
+                        <p className={`text-sm font-semibold truncate ${selectedOppSummary === g.id ? 'text-brand-700' : 'text-gray-800'}`}>{g.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[11px] text-gray-400">{g.feedbacks.length} phản hồi</span>
+                          {g.tour_date && <span className="text-[11px] text-gray-400">{formatDate(g.tour_date)}</span>}
+                          {g.feedbacks.some(f => f.is_satisfied === false) && (
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-red-50 text-red-500">Có phàn nàn</span>
+                          )}
+                          {g.feedbacks.every(f => f.is_satisfied === true) && (
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">Hài lòng</span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
                 </div>
               )}
             </div>

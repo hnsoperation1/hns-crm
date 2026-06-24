@@ -23,7 +23,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/giao-viec':    'Giao việc',
   '/khach-hang':   'Khách hàng',
   '/nhan-vien':    'Nhân viên',
-  '/admin/users':  'Người dùng',
+  '/admin/users':     'Người dùng',
+  '/admin/phong-ban': 'Phòng ban',
   '/cskh':         'CSKH · Issues',
   '/danh-gia':     'CSKH · Đánh giá khách hàng',
 }
