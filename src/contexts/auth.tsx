@@ -21,21 +21,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true
 
-    // Lấy session hiện tại khi app load
-    supabase.auth.getUser()
-      .then(async ({ data: { user: authUser } }) => {
+    // getSession() đọc từ localStorage — không cần network, resolve ngay
+    supabase.auth.getSession()
+      .then(async ({ data: { session } }) => {
         if (!mounted) return
-        if (authUser) {
-          const profile = await fetchProfile(authUser.id)
+        if (session?.user) {
+          const profile = await fetchProfile(session.user.id)
           if (mounted) setUser(profile)
         }
+        if (mounted) setLoading(false)
       })
-      .catch(() => {}) // swallow network/config errors
-      .finally(() => { if (mounted) setLoading(false) })
+      .catch(() => { if (mounted) setLoading(false) })
 
-    // Lắng nghe thay đổi auth state (login/logout, session hết hạn...)
+    // Chỉ lắng nghe login/logout/token refresh — bỏ qua INITIAL_SESSION vì đã xử lý trên
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return
+      if (!mounted || event === 'INITIAL_SESSION') return
       if (session?.user) {
         const profile = await fetchProfile(session.user.id)
         if (mounted) setUser(profile)
