@@ -33,9 +33,9 @@ const SCORES: { value: LeadScore; label: string }[] = [
 ]
 
 const ORG_TYPE_LABELS: Record<OrgType, string> = {
-  company: 'Doanh nghiệp',
-  government: 'Cơ quan nhà nước',
-  ngo: 'Tổ chức xã hội',
+  company: 'Công ty',
+  government: 'Công ty',
+  ngo: 'Công ty',
 }
 
 const EMPTY_CONTACT_FORM = {
@@ -62,7 +62,7 @@ export default function CustomersPage() {
       <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-xl w-fit">
         {([
           { key: 'contacts', label: 'Liên hệ', icon: Users },
-          { key: 'organizations', label: 'Công ty / Tổ chức', icon: Building2 },
+          { key: 'organizations', label: 'Công ty', icon: Building2 },
         ] as { key: Tab; label: string; icon: React.ElementType }[]).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -717,8 +717,8 @@ function OrganizationsTab() {
         <div className="flex gap-3">
           {[
             { label: 'Tổng', value: orgs.length },
-            { label: 'Doanh nghiệp', value: orgs.filter(o => o.type === 'company').length },
-            { label: 'Cơ quan / Tổ chức', value: orgs.filter(o => o.type !== 'company').length },
+            { label: 'Công ty', value: orgs.filter(o => o.type === 'company').length },
+            { label: 'Loại khác', value: orgs.filter(o => o.type !== 'company').length },
           ].map(({ label, value }) => (
             <div key={label} className="bg-white rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm text-center min-w-[80px]">
               <div className="text-xs text-gray-400">{label}</div>
@@ -729,7 +729,7 @@ function OrganizationsTab() {
         <button onClick={openAdd}
           className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm">
           <Plus size={16} strokeWidth={2.5} />
-          Thêm tổ chức
+          Thêm công ty
         </button>
       </div>
 
@@ -746,7 +746,7 @@ function OrganizationsTab() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              {['Tổ chức', 'MST', 'Liên hệ', 'Email / Website', 'Số liên hệ', 'Ngày thêm', ''].map(h => (
+              {['Công ty', 'MST', 'Liên hệ', 'Email / Website', 'Số liên hệ', 'Ngày thêm', ''].map(h => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -807,7 +807,7 @@ function OrganizationsTab() {
             })}
             {filtered.length === 0 && (
               <tr><td colSpan={7} className="px-5 py-14 text-center text-gray-400">
-                {orgs.length === 0 ? 'Chưa có tổ chức nào. Nhấn "Thêm tổ chức" để bắt đầu.' : 'Không tìm thấy kết quả'}
+                {orgs.length === 0 ? 'Chưa có công ty nào. Nhấn "Thêm công ty" để bắt đầu.' : 'Không tìm thấy kết quả'}
               </td></tr>
             )}
           </tbody>
@@ -820,14 +820,14 @@ function OrganizationsTab() {
           <div className="fixed inset-0 bg-black/30 z-40" onClick={closePanel} />
           <div className="fixed top-0 right-0 h-full w-[90vw] max-w-[1200px] bg-white shadow-2xl z-50 flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-              <h2 className="text-lg font-bold text-gray-900">{editingOrg ? 'Chỉnh sửa tổ chức' : 'Thêm tổ chức mới'}</h2>
+              <h2 className="text-lg font-bold text-gray-900">{editingOrg ? 'Chỉnh sửa công ty' : 'Thêm công ty mới'}</h2>
               <button onClick={closePanel} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400"><X size={18} /></button>
             </div>
 
             <div className="flex-1 overflow-hidden flex">
-              {/* Cột trái: thông tin tổ chức */}
+              {/* Cột trái: thông tin công ty */}
               <div className="w-[560px] flex-shrink-0 overflow-y-auto px-6 py-5 space-y-4 border-r border-gray-100">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Thông tin tổ chức</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Thông tin công ty</p>
 
                 <Field label="Mã số thuế">
                   <div className="flex gap-2">
@@ -840,7 +840,7 @@ function OrganizationsTab() {
                   {lookupError && <p className="text-xs text-red-500 mt-1">{lookupError}</p>}
                 </Field>
 
-                <Field label="Tên tổ chức" required error={errors.name}>
+                <Field label="Tên công ty" required error={errors.name}>
                   <input type="text" placeholder="Công ty TNHH ABC" value={form.name}
                     onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputCls(errors.name)} />
                 </Field>
@@ -998,7 +998,7 @@ function OrganizationsTab() {
               <button onClick={handleSubmit} disabled={submitting}
                 className="flex-1 flex items-center justify-center gap-2 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-bold transition-colors">
                 {submitting && <Loader2 size={14} className="animate-spin" />}
-                {editingOrg ? 'Lưu thay đổi' : 'Thêm CTY / Tổ chức'}
+                {editingOrg ? 'Lưu thay đổi' : 'Thêm Công ty'}
               </button>
               <button onClick={closePanel}
                 className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition-colors">
@@ -1018,7 +1018,7 @@ function OrganizationsTab() {
               <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={22} className="text-red-500" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 text-center mb-1">Xóa tổ chức?</h3>
+              <h3 className="text-lg font-bold text-gray-900 text-center mb-1">Xóa công ty?</h3>
               <p className="text-sm text-gray-500 text-center mb-6">
                 <strong>{pendingDelete.name}</strong> sẽ bị xóa. Hành động này không thể hoàn tác.
               </p>
