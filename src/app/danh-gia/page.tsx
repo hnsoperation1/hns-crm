@@ -430,17 +430,19 @@ export default function DanhGiaPage() {
           <div className="h-full flex flex-col gap-3 overflow-hidden">
             {/* Filter bar */}
             <div className="flex items-center gap-3 flex-shrink-0">
-              <div className="relative flex-1 max-w-xs">
+              <div className="relative w-72 flex-shrink-0">
                 <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm theo tên đoàn, hành trình..."
-                  className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white shadow-sm" />
+                  className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white shadow-sm" />
               </div>
-              {(['all', 'satisfied', 'unsatisfied', 'return'] as const).map(f => (
-                <button key={f} onClick={() => setFilterSatisfied(f)}
-                  className={`px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors border ${filterSatisfied === f ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'}`}>
-                  {f === 'all' ? 'Tất cả' : f === 'satisfied' ? '😊 Hài lòng' : f === 'unsatisfied' ? '😞 Không hài lòng' : '🔁 Sẽ quay lại'}
-                </button>
-              ))}
+              <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
+                {(['all', 'satisfied', 'unsatisfied', 'return'] as const).map(f => (
+                  <button key={f} onClick={() => setFilterSatisfied(f)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${filterSatisfied === f ? 'bg-brand-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>
+                    {f === 'all' ? 'Tất cả' : f === 'satisfied' ? '😊 Hài lòng' : f === 'unsatisfied' ? '😞 Không hài lòng' : '🔁 Sẽ quay lại'}
+                  </button>
+                ))}
+              </div>
               {isSuperAdmin && (
                 <div className="ml-auto flex items-center gap-4">
                   {([
