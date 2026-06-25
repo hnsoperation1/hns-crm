@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import { Star, ThumbsUp, ThumbsDown, Search, ExternalLink, X, MapPin, Users, Link2, CheckSquare, LayoutGrid, BarChart2, List, Table2 } from 'lucide-react'
+import { Star, ThumbsUp, ThumbsDown, Search, ExternalLink, X, MapPin, Users, Link2, CheckSquare, LayoutGrid, BarChart2, List, Table2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
@@ -151,7 +151,9 @@ export default function DanhGiaPage() {
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10))
   const [search, setSearch] = useState('')
   const [filterSatisfied, setFilterSatisfied] = useState<'all' | 'satisfied' | 'unsatisfied' | 'return'>('all')
-  const [allView, setAllView] = useState<'list' | 'table'>('list')
+  const [allView, setAllView] = useState<'list' | 'table'>('table')
+  const [tableSort, setTableSort] = useState<{ col: string; dir: 'asc' | 'desc' } | null>(null)
+  const [tableFilters, setTableFilters] = useState<Record<string, string>>({})
   const [expanded, setExpanded] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedList>(null)
   const [filterHasOpp, setFilterHasOpp] = useState(false)
@@ -376,27 +378,69 @@ export default function DanhGiaPage() {
     return matchSearch && matchFilter && matchLinked
   })
 
+  const TABLE_COLS: { key: string; label: string; filter?: boolean }[] = [
+    { key: 'respondent_name', label: 'Họ tên / SĐT', filter: true },
+    { key: 'group_name',      label: 'Đoàn',         filter: true },
+    { key: 'itinerary',       label: 'Hành trình',   filter: true },
+    { key: 'overall_comment', label: 'Đánh giá chung', filter: true },
+    { key: 'is_satisfied',    label: 'Hài lòng' },
+    { key: 'will_return',     label: 'Sẽ quay lại' },
+    { key: 'next_destination',label: 'Địa điểm quan tâm', filter: true },
+    { key: 'submitted_at',    label: 'Ngày' },
+  ]
+
+  const tableData = useMemo(() => {
+    let data = [...listFiltered]
+    Object.entries(tableFilters).forEach(([col, q]) => {
+      if (!q.trim()) return
+      const qLow = q.toLowerCase()
+      data = data.filter(f => String((f as any)[col] ?? '').toLowerCase().includes(qLow))
+    })
+    if (tableSort) {
+      data.sort((a, b) => {
+        const av = (a as any)[tableSort.col] ?? ''
+        const bv = (b as any)[tableSort.col] ?? ''
+        let cmp = 0
+        if (typeof av === 'boolean' || typeof bv === 'boolean') {
+          cmp = (av === true ? 0 : av === false ? 1 : 2) - (bv === true ? 0 : bv === false ? 1 : 2)
+        } else {
+          cmp = String(av).localeCompare(String(bv), 'vi')
+        }
+        return tableSort.dir === 'asc' ? cmp : -cmp
+      })
+    }
+    return data
+  }, [listFiltered, tableSort, tableFilters])
+
+  function toggleTableSort(col: string) {
+    setTableSort(prev =>
+      prev?.col === col
+        ? prev.dir === 'asc' ? { col, dir: 'desc' } : null
+        : { col, dir: 'asc' }
+    )
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-gray-50/80">
-      {/* Top bar: stats + date filter */}
+      {/* Top bar */}
       <div className="flex-shrink-0 px-5 pt-5 pb-3 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="grid grid-cols-3 gap-3 flex-1">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-3.5">
-              <p className="text-xs text-gray-400 font-medium mb-0.5">Tổng đánh giá</p>
-              <p className="text-2xl font-black text-gray-900">{total}</p>
-            </div>
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-3.5">
-              <p className="text-xs text-gray-400 font-medium mb-0.5">Hài lòng</p>
-              <p className="text-2xl font-black text-emerald-600">{satisfied}<span className="text-sm font-semibold text-gray-400 ml-1">/ {total}</span></p>
-            </div>
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-3.5">
-              <p className="text-xs text-gray-400 font-medium mb-0.5">Sẽ quay lại</p>
-              <p className="text-2xl font-black text-brand-600">{willReturn}<span className="text-sm font-semibold text-gray-400 ml-1">/ {total}</span></p>
-            </div>
+        {/* Tab bar + date filter */}
+        <div className="flex items-stretch gap-3">
+          <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-2xl p-1 shadow-sm">
+            {([
+              { key: 'all', label: 'Tất cả đánh giá' },
+              { key: 'poor', label: 'Đánh giá kém' },
+              { key: 'destination', label: 'Địa điểm quan tâm' },
+              { key: 'summary', label: 'Theo đơn hàng' },
+            ] as const).map(t => (
+              <button key={t.key} onClick={() => { setTab(t.key); setSelected(null) }}
+                className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${tab === t.key ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>
+                {t.label}
+              </button>
+            ))}
           </div>
           {/* Date filter */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3 flex items-center gap-3">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 flex items-center gap-3 ml-auto">
             <span className="text-xs text-gray-400 font-medium whitespace-nowrap">Từ ngày</span>
             <DateInput value={dateFrom} onChange={v => { setDateFrom(v); setSelected(null) }} />
             <span className="text-xs text-gray-400">đến</span>
@@ -405,21 +449,6 @@ export default function DanhGiaPage() {
               <button onClick={() => { setDateFrom(''); setDateTo('') }} className="text-xs text-gray-400 hover:text-gray-600 font-medium">Xoá</button>
             )}
           </div>
-        </div>
-
-        {/* Tab bar */}
-        <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-2xl p-1 shadow-sm w-fit">
-          {([
-            { key: 'all', label: 'Tất cả đánh giá' },
-            { key: 'poor', label: 'Đánh giá kém' },
-            { key: 'destination', label: 'Địa điểm quan tâm' },
-            { key: 'summary', label: 'Theo đơn hàng' },
-          ] as const).map(t => (
-            <button key={t.key} onClick={() => { setTab(t.key); setSelected(null) }}
-              className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${tab === t.key ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>
-              {t.label}
-            </button>
-          ))}
         </div>
       </div>
 
@@ -499,22 +528,49 @@ export default function DanhGiaPage() {
                   <div className="py-16 text-center"><Star size={36} className="text-gray-200 mx-auto mb-3" /><p className="text-sm text-gray-400">Chưa có đánh giá nào</p></div>
                 ) : allView === 'table' ? (
                   <table className="w-full text-sm border-collapse">
-                    <thead className="sticky top-0 bg-gray-50 z-10">
-                      <tr>
-                        {['Họ tên', 'SĐT', 'Đoàn', 'Hành trình', 'Đánh giá chung', 'Hài lòng', 'Sẽ quay lại', 'Quan tâm', 'Ngày'].map(h => (
-                          <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 border-b border-gray-200 whitespace-nowrap">{h}</th>
+                    <thead className="sticky top-0 z-10">
+                      {/* Header row with sort */}
+                      <tr className="bg-brand-50/60 border-b border-brand-100">
+                        {TABLE_COLS.map(({ key, label }) => {
+                          const isActive = tableSort?.col === key
+                          return (
+                            <th key={key} onClick={() => toggleTableSort(key)}
+                              className="text-left px-4 py-2.5 whitespace-nowrap cursor-pointer select-none group">
+                              <div className="flex items-center gap-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                {label}
+                                <span className={`transition-colors ${isActive ? 'text-brand-500' : 'text-gray-300 group-hover:text-gray-400'}`}>
+                                  {isActive ? (tableSort!.dir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />) : <ChevronsUpDown size={12} />}
+                                </span>
+                              </div>
+                            </th>
+                          )
+                        })}
+                      </tr>
+                      {/* Filter row */}
+                      <tr className="bg-brand-50/60 border-b border-brand-100">
+                        {TABLE_COLS.map(({ key, filter }) => (
+                          <td key={key} className="px-2 py-1.5">
+                            {filter ? (
+                              <input value={tableFilters[key] ?? ''}
+                                onChange={e => setTableFilters(p => ({ ...p, [key]: e.target.value }))}
+                                placeholder="Lọc..."
+                                className="w-full text-xs px-2 py-1 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-400 bg-gray-50 placeholder:text-gray-300" />
+                            ) : <div className="h-6" />}
+                          </td>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {listFiltered.map(f => (
+                      {tableData.map(f => (
                         <tr key={f.id} onClick={() => setExpanded(f.id)}
                           className={`cursor-pointer transition-colors hover:bg-gray-50 ${expanded === f.id ? 'bg-brand-50/40' : ''}`}>
-                          <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{f.respondent_name ?? '—'}</td>
-                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{f.phone ?? '—'}</td>
-                          <td className="px-4 py-3 text-gray-700 min-w-[140px]">{f.group_name ?? '—'}</td>
-                          <td className="px-4 py-3 text-gray-600 min-w-[140px]">{f.itinerary ?? '—'}</td>
-                          <td className="px-4 py-3 text-gray-500 italic min-w-[200px] max-w-[280px]">{f.overall_comment ? `"${f.overall_comment}"` : '—'}</td>
+                          <td className="px-4 py-3 w-40">
+                            <div className="font-semibold text-gray-900 text-sm">{f.respondent_name ?? '—'}</div>
+                            {f.phone && <div className="text-xs text-gray-400 mt-0.5">{f.phone}</div>}
+                          </td>
+                          <td className="px-4 py-3 text-gray-700 min-w-[130px]">{f.group_name ?? '—'}</td>
+                          <td className="px-4 py-3 text-gray-600 min-w-[120px]">{f.itinerary ?? '—'}</td>
+                          <td className="px-4 py-3 text-gray-500 italic min-w-[180px] max-w-[260px]">{f.overall_comment ? `"${f.overall_comment}"` : '—'}</td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             {f.is_satisfied === true && <span className="text-xs font-semibold text-emerald-600">Hài lòng</span>}
                             {f.is_satisfied === false && <span className="text-xs font-semibold text-red-500">Không hài lòng</span>}
@@ -525,7 +581,7 @@ export default function DanhGiaPage() {
                             {f.will_return === false && <span className="text-xs font-semibold text-gray-400">Không</span>}
                             {f.will_return === null && <span className="text-gray-300">—</span>}
                           </td>
-                          <td className="px-4 py-3 text-brand-600 font-medium whitespace-nowrap">{f.next_destination ?? '—'}</td>
+                          <td className="px-4 py-3 w-32 max-w-[128px]"><span className="text-brand-600 font-medium text-xs truncate block">{f.next_destination ?? '—'}</span></td>
                           <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{formatDate(f.submitted_at)}</td>
                         </tr>
                       ))}
