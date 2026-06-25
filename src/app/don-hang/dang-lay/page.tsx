@@ -49,6 +49,9 @@ export default function DangLayPage() {
   const [errors, setErrors] = useState<Partial<typeof EMPTY_FORM>>({})
   const [saving, setSaving] = useState(false)
   const [contactSearch, setContactSearch] = useState('')
+  const [showNewContact, setShowNewContact] = useState(false)
+  const [newContact, setNewContact] = useState({ name: '', phone: '', company: '' })
+  const [savingContact, setSavingContact] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -107,6 +110,26 @@ export default function DangLayPage() {
     if (!error) {
       setShowModal(false)
       loadData()
+    }
+  }
+
+  async function handleSaveContact() {
+    if (!newContact.name.trim()) return
+    setSavingContact(true)
+    const { data, error } = await supabase.from('contacts').insert({
+      name: newContact.name.trim(),
+      phone: newContact.phone.trim() || null,
+      company: newContact.company.trim() || null,
+      source: form.source,
+    }).select('id, name, company').single()
+    setSavingContact(false)
+    if (!error && data) {
+      const c = data as ContactOpt
+      setContacts(prev => [c, ...prev])
+      setForm(f => ({ ...f, contact_id: c.id }))
+      setContactSearch(c.name)
+      setShowNewContact(false)
+      setNewContact({ name: '', phone: '', company: '' })
     }
   }
 
@@ -190,7 +213,7 @@ export default function DangLayPage() {
       {/* Modal thêm đơn */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <h3 className="font-bold text-gray-900">Thêm đơn hàng mới</h3>
               <button onClick={() => setShowModal(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400"><X size={16} /></button>
@@ -210,25 +233,66 @@ export default function DangLayPage() {
 
               {/* Khách hàng */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                  Khách hàng <span className="text-red-500">*</span>
-                </label>
-                <input value={contactSearch} onChange={e => setContactSearch(e.target.value)}
-                  placeholder="Tìm theo tên hoặc công ty..."
-                  className={`${iField} mb-2 ${errors.contact_id ? 'border-red-300 bg-red-50' : ''}`} />
-                <div className="border border-gray-200 rounded-xl overflow-hidden max-h-36 overflow-y-auto">
-                  {filteredContacts.slice(0, 30).map(c => (
-                    <div key={c.id} onClick={() => { setForm(f => ({ ...f, contact_id: c.id })); setErrors(er => ({ ...er, contact_id: '' })) }}
-                      className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm transition-colors ${form.contact_id === c.id ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
-                      <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600 flex-shrink-0">{getInitials(c.name)}</div>
-                      <div>
-                        <div className="font-medium">{c.name}</div>
-                        {c.company && <div className="text-xs text-gray-400">{c.company}</div>}
-                      </div>
-                    </div>
-                  ))}
-                  {filteredContacts.length === 0 && <div className="px-3 py-4 text-sm text-gray-400 text-center">Không tìm thấy</div>}
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Khách hàng <span className="text-red-500">*</span>
+                  </label>
+                  <button type="button" onClick={() => { setShowNewContact(v => !v); setNewContact({ name: contactSearch, phone: '', company: '' }) }}
+                    className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${showNewContact ? 'bg-brand-100 text-brand-700' : 'text-brand-600 hover:bg-brand-50'}`}>
+                    <Plus size={12} strokeWidth={2.5} /> Tạo mới
+                  </button>
                 </div>
+
+                {/* Sub-form tạo khách hàng mới */}
+                {showNewContact && (
+                  <div className="mb-3 p-3 bg-brand-50 border border-brand-100 rounded-xl space-y-2">
+                    <p className="text-xs font-semibold text-brand-700 mb-2">Thông tin khách hàng mới</p>
+                    <input value={newContact.name} onChange={e => setNewContact(v => ({ ...v, name: e.target.value }))}
+                      placeholder="Tên khách hàng *" className={`${iField} text-sm py-2`} autoFocus />
+                    <input value={newContact.phone} onChange={e => setNewContact(v => ({ ...v, phone: e.target.value }))}
+                      placeholder="Số điện thoại" className={`${iField} text-sm py-2`} />
+                    <input value={newContact.company} onChange={e => setNewContact(v => ({ ...v, company: e.target.value }))}
+                      placeholder="Công ty" className={`${iField} text-sm py-2`} />
+                    <div className="flex gap-2 pt-1">
+                      <button type="button" onClick={handleSaveContact} disabled={savingContact || !newContact.name.trim()}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors">
+                        {savingContact ? <Loader2 size={11} className="animate-spin" /> : null}
+                        Lưu & chọn
+                      </button>
+                      <button type="button" onClick={() => setShowNewContact(false)}
+                        className="px-3 py-1.5 text-xs text-gray-500 hover:bg-white rounded-lg transition-colors font-medium">
+                        Huỷ
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!showNewContact && (
+                  <>
+                    <input value={contactSearch} onChange={e => { setContactSearch(e.target.value); setForm(f => ({ ...f, contact_id: '' })) }}
+                      placeholder="Tìm theo tên hoặc công ty..."
+                      className={`${iField} mb-2 ${errors.contact_id ? 'border-red-300 bg-red-50' : ''}`} />
+                    <div className="border border-gray-200 rounded-xl overflow-hidden max-h-36 overflow-y-auto">
+                      {filteredContacts.slice(0, 30).map(c => (
+                        <div key={c.id} onClick={() => { setForm(f => ({ ...f, contact_id: c.id })); setContactSearch(c.name); setErrors(er => ({ ...er, contact_id: '' })) }}
+                          className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm transition-colors ${form.contact_id === c.id ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
+                          <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600 flex-shrink-0">{getInitials(c.name)}</div>
+                          <div>
+                            <div className="font-medium">{c.name}</div>
+                            {c.company && <div className="text-xs text-gray-400">{c.company}</div>}
+                          </div>
+                        </div>
+                      ))}
+                      {filteredContacts.length === 0 && (
+                        <div className="px-3 py-4 text-sm text-gray-400 text-center">
+                          Không tìm thấy —{' '}
+                          <button type="button" onClick={() => { setShowNewContact(true); setNewContact({ name: contactSearch, phone: '', company: '' }) }}
+                            className="text-brand-600 font-semibold hover:underline">tạo mới</button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
                 {errors.contact_id && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {errors.contact_id}</p>}
               </div>
 
