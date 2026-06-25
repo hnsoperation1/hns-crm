@@ -7,7 +7,6 @@ import { useTopbar } from '@/contexts/topbar'
 import { SOURCE_LABELS, SOURCE_COLORS, STAGE_LABELS, STAGE_COLORS, formatDate, formatVND, getInitials } from '@/lib/utils'
 import type { OppStage, LeadSource } from '@/types'
 import { Plus, X, Loader2, AlertTriangle } from 'lucide-react'
-import DateInput from '@/components/DateInput'
 
 type Row = {
   id: string
@@ -32,8 +31,7 @@ const SOURCES: { value: LeadSource; label: string }[] = [
 ]
 
 const EMPTY_FORM = {
-  title: '', description: '', contact_id: '', source: 'mkt' as LeadSource,
-  assigned_to: '', estimated_value: '', tour_date: '', deadline: '',
+  title: '', description: '', contact_id: '', source: 'mkt' as LeadSource, assigned_to: '',
 }
 
 export default function DangLayPage() {
@@ -90,20 +88,18 @@ export default function DangLayPage() {
     if (!form.title.trim()) e.title = 'Bắt buộc'
     if (!form.contact_id) e.contact_id = 'Bắt buộc'
     if (!form.assigned_to) e.assigned_to = 'Bắt buộc'
+    if (!form.description.trim()) e.description = 'Bắt buộc'
     setErrors(e)
     if (Object.keys(e).length) return
 
     setSaving(true)
     const { error } = await supabase.from('opportunities').insert({
       title: form.title.trim(),
-      description: form.description.trim() || null,
+      description: form.description.trim(),
       contact_id: form.contact_id,
       source: form.source,
       assigned_to: form.assigned_to || null,
       stage: 'stage_1' as OppStage,
-      estimated_value: form.estimated_value ? Number(form.estimated_value) : null,
-      tour_date: form.tour_date || null,
-      deadline: form.deadline || null,
       stage_updated_at: new Date().toISOString(),
     })
     setSaving(false)
@@ -220,7 +216,7 @@ export default function DangLayPage() {
             </div>
 
             <div className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
-              {/* Tên đơn */}
+              {/* Tên đơn hàng */}
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
                   Tên đơn hàng <span className="text-red-500">*</span>
@@ -231,11 +227,11 @@ export default function DangLayPage() {
                 {errors.title && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {errors.title}</p>}
               </div>
 
-              {/* Khách hàng */}
+              {/* Liên hệ */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Khách hàng <span className="text-red-500">*</span>
+                    Liên hệ <span className="text-red-500">*</span>
                   </label>
                   <button type="button" onClick={() => { setShowNewContact(v => !v); setNewContact({ name: contactSearch, phone: '', company: '' }) }}
                     className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${showNewContact ? 'bg-brand-100 text-brand-700' : 'text-brand-600 hover:bg-brand-50'}`}>
@@ -317,25 +313,19 @@ export default function DangLayPage() {
                 </select>
               </div>
 
-              {/* Điểm đến */}
+              {/* Mô tả sơ lược */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Điểm đến</label>
-                <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  placeholder="VD: Đà Nẵng, Nhật Bản..." className={iField} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {/* Giá trị */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Giá trị ước tính (VNĐ)</label>
-                  <input type="number" value={form.estimated_value} onChange={e => setForm(f => ({ ...f, estimated_value: e.target.value }))}
-                    placeholder="0" className={iField} />
-                </div>
-                {/* Ngày tour */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Ngày tour</label>
-                  <DateInput value={form.tour_date} onChange={v => setForm(f => ({ ...f, tour_date: v }))} className="w-full" />
-                </div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  Mô tả sơ lược <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={form.description}
+                  onChange={e => { setForm(f => ({ ...f, description: e.target.value })); setErrors(er => ({ ...er, description: '' })) }}
+                  rows={4}
+                  placeholder="Dịch vụ mong muốn, điểm đến dự kiến, số lượng hành khách, ngày dự kiến, yêu cầu đặc biệt..."
+                  className={`${iField} resize-none ${errors.description ? 'border-red-300 bg-red-50' : ''}`}
+                />
+                {errors.description && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {errors.description}</p>}
               </div>
             </div>
 
