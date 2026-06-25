@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import { Star, ThumbsUp, ThumbsDown, Search, ExternalLink, X, MapPin, Users, Link2, CheckSquare, LayoutGrid, BarChart2 } from 'lucide-react'
+import { Star, ThumbsUp, ThumbsDown, Search, ExternalLink, X, MapPin, Users, Link2, CheckSquare, LayoutGrid, BarChart2, List, Table2 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
@@ -151,6 +151,7 @@ export default function DanhGiaPage() {
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10))
   const [search, setSearch] = useState('')
   const [filterSatisfied, setFilterSatisfied] = useState<'all' | 'satisfied' | 'unsatisfied' | 'return'>('all')
+  const [allView, setAllView] = useState<'list' | 'table'>('list')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedList>(null)
   const [filterHasOpp, setFilterHasOpp] = useState(false)
@@ -429,7 +430,7 @@ export default function DanhGiaPage() {
         {tab === 'all' && (
           <div className="h-full flex flex-col gap-3 overflow-hidden">
             {/* Filter bar */}
-            <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-3 flex-shrink-0 px-0.5 pt-0.5">
               <div className="relative w-72 flex-shrink-0">
                 <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm theo tên đoàn, hành trình..."
@@ -443,8 +444,19 @@ export default function DanhGiaPage() {
                   </button>
                 ))}
               </div>
+              <div className="ml-auto flex items-center gap-3">
+                <div className="flex items-center bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
+                  <button onClick={() => setAllView('list')} title="Dạng danh sách"
+                    className={`p-1.5 rounded-lg transition-colors ${allView === 'list' ? 'bg-brand-600 text-white' : 'text-gray-400 hover:bg-gray-100'}`}>
+                    <List size={15} />
+                  </button>
+                  <button onClick={() => setAllView('table')} title="Dạng bảng"
+                    className={`p-1.5 rounded-lg transition-colors ${allView === 'table' ? 'bg-brand-600 text-white' : 'text-gray-400 hover:bg-gray-100'}`}>
+                    <Table2 size={15} />
+                  </button>
+                </div>
               {isSuperAdmin && (
-                <div className="ml-auto flex items-center gap-4">
+                <div className="flex items-center gap-4">
                   {([
                     { label: 'Đã có đơn', value: filterHasOpp, set: setFilterHasOpp },
                     { label: 'Chưa có đơn', value: filterNoOpp, set: setFilterNoOpp },
@@ -464,11 +476,12 @@ export default function DanhGiaPage() {
                   )}
                 </div>
               )}
+              </div>
             </div>
 
-            {/* List full width */}
+            {/* List / Table */}
             <div className="flex-1 min-h-0">
-              <div className="h-full overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm">
+              <div className={`h-full overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm ${allView === 'table' ? 'overflow-x-auto' : ''}`}>
                 {loading ? (
                   <div className="divide-y divide-gray-100">
                     {Array.from({ length: 6 }).map((_, i) => (
@@ -484,6 +497,40 @@ export default function DanhGiaPage() {
                   </div>
                 ) : listFiltered.length === 0 ? (
                   <div className="py-16 text-center"><Star size={36} className="text-gray-200 mx-auto mb-3" /><p className="text-sm text-gray-400">Chưa có đánh giá nào</p></div>
+                ) : allView === 'table' ? (
+                  <table className="w-full text-sm border-collapse">
+                    <thead className="sticky top-0 bg-gray-50 z-10">
+                      <tr>
+                        {['Họ tên', 'SĐT', 'Đoàn', 'Hành trình', 'Đánh giá chung', 'Hài lòng', 'Sẽ quay lại', 'Quan tâm', 'Ngày'].map(h => (
+                          <th key={h} className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 border-b border-gray-200 whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {listFiltered.map(f => (
+                        <tr key={f.id} onClick={() => setExpanded(f.id)}
+                          className={`cursor-pointer transition-colors hover:bg-gray-50 ${expanded === f.id ? 'bg-brand-50/40' : ''}`}>
+                          <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{f.respondent_name ?? '—'}</td>
+                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{f.phone ?? '—'}</td>
+                          <td className="px-4 py-3 text-gray-700 min-w-[140px]">{f.group_name ?? '—'}</td>
+                          <td className="px-4 py-3 text-gray-600 min-w-[140px]">{f.itinerary ?? '—'}</td>
+                          <td className="px-4 py-3 text-gray-500 italic min-w-[200px] max-w-[280px]">{f.overall_comment ? `"${f.overall_comment}"` : '—'}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {f.is_satisfied === true && <span className="text-xs font-semibold text-emerald-600">Hài lòng</span>}
+                            {f.is_satisfied === false && <span className="text-xs font-semibold text-red-500">Không hài lòng</span>}
+                            {f.is_satisfied === null && <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {f.will_return === true && <span className="text-xs font-semibold text-blue-600">Có</span>}
+                            {f.will_return === false && <span className="text-xs font-semibold text-gray-400">Không</span>}
+                            {f.will_return === null && <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-brand-600 font-medium whitespace-nowrap">{f.next_destination ?? '—'}</td>
+                          <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{formatDate(f.submitted_at)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 ) : (
                   <div className="divide-y divide-gray-100">
                     {listFiltered.map(f => (
