@@ -456,10 +456,10 @@ export default function DanhGiaPage() {
               </div>
             </div>
 
-            {/* 2-column layout */}
-            <div className="flex-1 min-h-0 flex gap-4">
-              {/* Left: danh sách */}
-              <div className="flex-1 min-w-0 overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm">
+            {/* List + floating detail */}
+            <div className="flex-1 min-h-0 relative">
+              {/* List: full width, scrolls independently */}
+              <div className="h-full overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm">
                 {loading ? (
                   <div className="divide-y divide-gray-100">
                     {Array.from({ length: 6 }).map((_, i) => (
@@ -509,16 +509,11 @@ export default function DanhGiaPage() {
                 )}
               </div>
 
-              {/* Right: chi tiết */}
-              <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-                {!expanded || !listFiltered.find(x => x.id === expanded) ? (
-                  <div className="flex-1 flex flex-col items-center justify-center text-gray-300">
-                    <Star size={36} className="mb-3" />
-                    <p className="text-sm">Bấm vào một đánh giá để xem chi tiết</p>
-                  </div>
-                ) : (() => {
+              {/* Floating detail panel */}
+              {expanded && listFiltered.find(x => x.id === expanded) && (() => {
                   const f = listFiltered.find(x => x.id === expanded)!
                   return (
+                    <div className="absolute right-0 top-0 h-full w-[440px] bg-white rounded-2xl border border-gray-200 shadow-2xl flex flex-col overflow-hidden z-10">
                     <>
                       <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between flex-shrink-0">
                         <div>
@@ -607,9 +602,9 @@ export default function DanhGiaPage() {
                         </div>
                       </div>
                     </>
+                    </div>
                   )
                 })()}
-              </div>
             </div>
           </div>
         )}
