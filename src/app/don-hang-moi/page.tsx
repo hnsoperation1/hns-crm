@@ -202,7 +202,7 @@ export default function DangLayPage() {
             ) : rows.map(r => {
               const sc = STAGE_COLORS[r.stage]
               return (
-                <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/don-hang/${r.id}`)}>
+                <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/don-hang-moi/${r.id}`)}>
                   <td className="px-5 py-3.5">
                     <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{r.title}</div>
                     <div className="text-xs text-gray-400 mt-0.5">{r.contact?.company ?? r.contact?.name}</div>
