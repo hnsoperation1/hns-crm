@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import { Star, ThumbsUp, ThumbsDown, Search, ExternalLink, X, MapPin, Users, Link2, CheckSquare, LayoutGrid, BarChart2, List, Table2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react'
+import { Star, ThumbsUp, ThumbsDown, Search, ExternalLink, X, MapPin, Users, Link2, CheckSquare, LayoutGrid, BarChart2, List, Table2, ChevronUp, ChevronDown, ChevronsUpDown, Maximize2, Minimize2 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
@@ -155,6 +155,7 @@ export default function DanhGiaPage() {
   const [tableSort, setTableSort] = useState<{ col: string; dir: 'asc' | 'desc' } | null>(null)
   const [tableFilters, setTableFilters] = useState<Record<string, string>>({})
   const [commentModal, setCommentModal] = useState<{ name: string; comment: string } | null>(null)
+  const [tableFullscreen, setTableFullscreen] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedList>(null)
   const [filterHasOpp, setFilterHasOpp] = useState(false)
@@ -485,6 +486,12 @@ export default function DanhGiaPage() {
                     <Table2 size={15} />
                   </button>
                 </div>
+                {allView === 'table' && (
+                  <button onClick={() => setTableFullscreen(f => !f)} title={tableFullscreen ? 'Thu nhỏ' : 'Phóng to'}
+                    className="p-1.5 rounded-lg border border-gray-200 bg-white shadow-sm text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
+                    {tableFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                  </button>
+                )}
               {isSuperAdmin && (
                 <div className="flex items-center gap-4">
                   {([
@@ -510,7 +517,7 @@ export default function DanhGiaPage() {
             </div>
 
             {/* List / Table */}
-            <div className="flex-1 min-h-0">
+            <div className={`flex-1 min-h-0 ${tableFullscreen && allView === 'table' ? 'fixed top-10 left-52 right-0 bottom-0 z-30 bg-white p-3 flex flex-col' : ''}`}>
               <div className={`h-full overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm ${allView === 'table' ? 'overflow-x-auto' : ''}`}>
                 {loading ? (
                   <div className="divide-y divide-gray-100">
