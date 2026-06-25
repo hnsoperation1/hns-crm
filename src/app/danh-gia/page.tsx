@@ -1029,6 +1029,15 @@ export default function DanhGiaPage() {
         </div>
       )}
 
+      {/* Nút thu nhỏ fullscreen */}
+      {tableFullscreen && (
+        <button onClick={() => setTableFullscreen(false)}
+          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2 bg-gray-900/80 hover:bg-gray-900 text-white text-xs font-semibold rounded-full shadow-lg backdrop-blur-sm transition-colors">
+          <Minimize2 size={13} />
+          Thu nhỏ
+        </button>
+      )}
+
       {/* Modal xem đánh giá chung đầy đủ */}
       {commentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={() => setCommentModal(null)}>
