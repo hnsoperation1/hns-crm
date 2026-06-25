@@ -456,9 +456,8 @@ export default function DanhGiaPage() {
               </div>
             </div>
 
-            {/* List + floating detail */}
-            <div className="flex-1 min-h-0 relative">
-              {/* List: full width, scrolls independently */}
+            {/* List full width */}
+            <div className="flex-1 min-h-0">
               <div className="h-full overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm">
                 {loading ? (
                   <div className="divide-y divide-gray-100">
@@ -509,11 +508,11 @@ export default function DanhGiaPage() {
                 )}
               </div>
 
-              {/* Floating detail panel */}
+              {/* Right drawer */}
               {expanded && listFiltered.find(x => x.id === expanded) && (() => {
                   const f = listFiltered.find(x => x.id === expanded)!
                   return (
-                    <div className="absolute right-0 top-0 h-full w-[440px] bg-white rounded-2xl border border-gray-200 shadow-2xl flex flex-col overflow-hidden z-10">
+                    <div className="fixed right-0 top-10 bottom-0 w-[460px] bg-white border-l border-gray-200 shadow-2xl flex flex-col overflow-hidden z-40">
                     <>
                       <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between flex-shrink-0">
                         <div>
