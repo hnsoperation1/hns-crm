@@ -457,9 +457,9 @@ export default function DanhGiaPage() {
             </div>
 
             {/* 2-column layout */}
-            <div className="flex-1 overflow-hidden grid grid-cols-2 gap-4">
+            <div className="flex-1 min-h-0 flex gap-4">
               {/* Left: danh sách */}
-              <div className="min-h-0 overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm">
+              <div className="flex-1 min-w-0 overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm">
                 {loading ? (
                   <div className="divide-y divide-gray-100">
                     {Array.from({ length: 6 }).map((_, i) => (
@@ -510,7 +510,7 @@ export default function DanhGiaPage() {
               </div>
 
               {/* Right: chi tiết */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
+              <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
                 {!expanded || !listFiltered.find(x => x.id === expanded) ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-gray-300">
                     <Star size={36} className="mb-3" />
