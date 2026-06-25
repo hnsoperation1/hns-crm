@@ -157,6 +157,14 @@ export default function DanhGiaPage() {
   const [commentModal, setCommentModal] = useState<{ name: string; comment: string } | null>(null)
   const [tableFullscreen, setTableFullscreen] = useState(false)
   const [tableScrolled, setTableScrolled] = useState(false)
+  const tableScrollCleanup = useRef<(() => void) | null>(null)
+  const tableScrollRef = useCallback((node: HTMLDivElement | null) => {
+    if (tableScrollCleanup.current) { tableScrollCleanup.current(); tableScrollCleanup.current = null }
+    if (!node) return
+    const handler = () => setTableScrolled(node.scrollTop > 30)
+    node.addEventListener('scroll', handler, { passive: true })
+    tableScrollCleanup.current = () => node.removeEventListener('scroll', handler)
+  }, [])
   const [expanded, setExpanded] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedList>(null)
   const [filterHasOpp, setFilterHasOpp] = useState(false)
@@ -511,7 +519,7 @@ export default function DanhGiaPage() {
 
             {/* List / Table */}
             <div
-              onScroll={e => { if (allView === 'table') setTableScrolled((e.currentTarget as HTMLDivElement).scrollTop > 30) }}
+              ref={allView === 'table' && !tableFullscreen ? tableScrollRef : undefined}
               className={`overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm ${allView === 'table' ? 'overflow-x-auto' : ''} ${tableFullscreen && allView === 'table' ? 'fixed top-10 left-52 right-0 bottom-0 z-30 rounded-none' : 'flex-1 min-h-0'}`}>
                 {loading ? (
                   <div className="divide-y divide-gray-100">
