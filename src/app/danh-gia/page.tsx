@@ -459,7 +459,7 @@ export default function DanhGiaPage() {
             {/* 2-column layout */}
             <div className="flex-1 overflow-hidden grid grid-cols-2 gap-4">
               {/* Left: danh sách */}
-              <div className="overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm">
+              <div className="min-h-0 overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm">
                 {loading ? (
                   <div className="divide-y divide-gray-100">
                     {Array.from({ length: 6 }).map((_, i) => (
