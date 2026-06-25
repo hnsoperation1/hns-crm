@@ -489,15 +489,19 @@ export default function DanhGiaPage() {
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className={`font-semibold text-sm ${expanded === f.id ? 'text-brand-700' : 'text-gray-900'}`}>{f.respondent_name ?? '—'}</span>
                                 {f.phone && <span className="text-xs text-gray-400">{f.phone}</span>}
-                                {f.is_satisfied === true && <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">Hài lòng</span>}
-                                {f.is_satisfied === false && <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-red-50 text-red-500">Không hài lòng</span>}
-                                {f.will_return === true && <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">Sẽ quay lại</span>}
                               </div>
-                              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                {f.group_name && <span className="text-xs text-gray-500 truncate">Đoàn: <span className="font-medium text-gray-700">{f.group_name}</span></span>}
-                                {f.itinerary && <span className="text-xs text-gray-400 truncate max-w-[160px]">{f.itinerary}</span>}
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap text-xs text-gray-500">
+                                {f.group_name && <span>Đoàn: <span className="font-medium text-gray-700">{f.group_name}</span></span>}
+                                {f.itinerary && <><span className="text-gray-300">·</span><span>Hành trình: <span className="text-gray-600">{f.itinerary}</span></span></>}
                               </div>
-                              {f.overall_comment && <p className="text-xs text-gray-400 mt-0.5 italic line-clamp-1">"{f.overall_comment}"</p>}
+                              {f.overall_comment && <p className="text-xs text-gray-400 mt-0.5 italic line-clamp-1">Đánh giá chung: "{f.overall_comment}"</p>}
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                {f.is_satisfied === true && <span className="text-[11px] font-semibold text-emerald-600">Hài lòng</span>}
+                                {f.is_satisfied === false && <span className="text-[11px] font-semibold text-red-500">Không hài lòng</span>}
+                                {f.will_return === true && <span className="text-[11px] font-semibold text-blue-600">· Sẽ quay lại</span>}
+                                {f.will_return === false && <span className="text-[11px] font-semibold text-gray-400">· Không quay lại</span>}
+                                {f.next_destination && <span className="text-[11px] text-gray-400">· Quan tâm: <span className="font-semibold text-brand-600">{f.next_destination}</span></span>}
+                              </div>
                             </div>
                             <span className="text-xs text-gray-400 flex-shrink-0">{formatDate(f.submitted_at)}</span>
                           </div>
