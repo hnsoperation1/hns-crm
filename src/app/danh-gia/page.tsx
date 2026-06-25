@@ -161,6 +161,7 @@ export default function DanhGiaPage() {
   const [filterHasOpp, setFilterHasOpp] = useState(false)
   const [filterNoOpp, setFilterNoOpp] = useState(true)
   // multi-select + link to opportunity
+  const [selectMode, setSelectMode] = useState(false)
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [linkModal, setLinkModal] = useState(false)
   const [oppSearch, setOppSearch] = useState('')
@@ -228,13 +229,6 @@ export default function DanhGiaPage() {
     })
   }
 
-  function toggleCheckAll() {
-    if (checkedIds.size === listFiltered.length) {
-      setCheckedIds(new Set())
-    } else {
-      setCheckedIds(new Set(listFiltered.map(f => f.id)))
-    }
-  }
 
   // Apply date filter
   const dateFiltered = list.filter(f => {
@@ -504,23 +498,20 @@ export default function DanhGiaPage() {
                       <span className="text-xs font-medium text-gray-600">{label}</span>
                     </label>
                   ))}
-                  {!loading && listFiltered.length > 0 && (
-                    <button onClick={toggleCheckAll}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${checkedIds.size > 0 ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-                      <CheckSquare size={13} />
-                      {checkedIds.size > 0 ? `Đã chọn ${checkedIds.size}` : 'Chọn nhiều'}
-                    </button>
-                  )}
+                  <button onClick={() => { setSelectMode(v => !v); setCheckedIds(new Set()) }}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${selectMode ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                    <CheckSquare size={13} />
+                    Chọn
+                  </button>
                 </div>
               )}
               </div>
             </div>
 
             {/* List / Table */}
-            <div className={`flex-1 min-h-0 ${tableFullscreen && allView === 'table' ? 'fixed top-10 left-52 right-0 bottom-0 z-30 bg-white p-3 flex flex-col' : ''}`}>
-              <div
-                onScroll={e => { if (allView === 'table' && !tableFullscreen && (e.currentTarget as HTMLDivElement).scrollTop > 30) setTableFullscreen(true) }}
-                className={`h-full overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm ${allView === 'table' ? 'overflow-x-auto' : ''}`}>
+            <div
+              onScroll={e => { if (allView === 'table' && !tableFullscreen && (e.currentTarget as HTMLDivElement).scrollTop > 30) setTableFullscreen(true) }}
+              className={`overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm ${allView === 'table' ? 'overflow-x-auto' : ''} ${tableFullscreen && allView === 'table' ? 'fixed top-10 left-52 right-0 bottom-0 z-30 rounded-none' : 'flex-1 min-h-0'}`}>
                 {loading ? (
                   <div className="divide-y divide-gray-100">
                     {Array.from({ length: 6 }).map((_, i) => (
@@ -618,7 +609,7 @@ export default function DanhGiaPage() {
                       <div key={f.id} className={expanded === f.id ? 'bg-brand-50/40' : checkedIds.has(f.id) ? 'bg-amber-50/30' : ''}>
                         <div className="px-5 py-4 hover:bg-gray-50/70 transition-colors cursor-pointer" onClick={() => setExpanded(f.id)}>
                           <div className="flex items-start gap-3">
-                            {isSuperAdmin && (
+                            {isSuperAdmin && selectMode && (
                               <div className="pt-0.5 flex-shrink-0" onClick={e => toggleCheck(f.id, e)}>
                                 <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${checkedIds.has(f.id) ? 'bg-brand-600 border-brand-600' : 'border-gray-300 hover:border-brand-400'}`}>
                                   {checkedIds.has(f.id) && <svg viewBox="0 0 10 8" className="w-2.5 h-2 fill-white"><path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
@@ -748,7 +739,6 @@ export default function DanhGiaPage() {
                     </div>
                   )
                 })()}
-            </div>
           </div>
         )}
 
@@ -1021,7 +1011,7 @@ export default function DanhGiaPage() {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-white border border-gray-200 rounded-2xl shadow-xl px-5 py-3 flex items-center gap-4 min-w-[420px]">
           <span className="text-sm font-semibold text-gray-700">Đã chọn <span className="text-brand-600">{checkedIds.size}</span> đánh giá</span>
           <div className="flex-1" />
-          <button onClick={() => setCheckedIds(new Set())} className="px-3.5 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 transition-colors font-medium">
+          <button onClick={() => { setCheckedIds(new Set()); setSelectMode(false) }} className="px-3.5 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 transition-colors font-medium">
             Bỏ chọn
           </button>
           <button onClick={() => { setLinkModal(true); setOppSearch('') }}
