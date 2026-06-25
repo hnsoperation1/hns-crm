@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones, Star, Building } from 'lucide-react'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones, Star, Building, Inbox, Loader2, CheckCircle2 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/contexts/auth'
 import { getInitials } from '@/lib/utils'
@@ -32,10 +32,18 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { user, logout } = useAuth()
 
-  function NavLink({ href, label, icon: Icon }: { href: string; label: string; icon: React.ElementType }) {
-    const active = href === '/' ? pathname === '/' : pathname.startsWith(href)
+  function NavLink({ href, label, icon: Icon, exact }: { href: string; label: string; icon: React.ElementType; exact?: boolean }) {
+    const [hrefPath, hrefQuery] = href.split('?')
+    const currentGroup = searchParams.get('group')
+    const hrefGroup = hrefQuery ? new URLSearchParams(hrefQuery).get('group') : null
+    const active = exact
+      ? pathname === hrefPath && currentGroup === hrefGroup
+      : hrefGroup
+        ? pathname.startsWith(hrefPath) && currentGroup === hrefGroup
+        : pathname.startsWith(hrefPath) && !currentGroup
     return (
       <Link
         href={href}
@@ -49,6 +57,26 @@ export default function Sidebar() {
         }
       >
         <Icon size={18} strokeWidth={active ? 2.5 : 2} />
+        {label}
+      </Link>
+    )
+  }
+
+  function SubNavLink({ href, label }: { href: string; label: string }) {
+    const [hrefPath, hrefQuery] = href.split('?')
+    const currentGroup = searchParams.get('group')
+    const hrefGroup = hrefQuery ? new URLSearchParams(hrefQuery).get('group') : null
+    const active = pathname.startsWith(hrefPath) && currentGroup === hrefGroup
+    return (
+      <Link
+        href={href}
+        className={clsx(
+          'flex items-center gap-2 pl-8 pr-3 py-1.5 rounded-lg text-xs font-medium transition-all',
+          active ? 'text-white' : 'hover:bg-white/10'
+        )}
+        style={active ? { color: '#ef9e7a' } : { color: '#7ab8d0' }}
+      >
+        <span className={clsx('w-1.5 h-1.5 rounded-full flex-shrink-0', active ? 'bg-accent-400' : 'bg-white/20')} />
         {label}
       </Link>
     )
@@ -70,6 +98,16 @@ export default function Sidebar() {
           .filter(item => !(item.href === '/giao-viec' && user?.is_sale_tv))
           .filter(item => !(user?.role === 'cskh' && ['/cong-viec', '/giao-viec', '/nhan-vien'].includes(item.href)))
           .map(item => <NavLink key={item.href} {...item} />)}
+
+        {/* Đơn hàng section */}
+        <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(18,127,175,0.2)' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1.5" style={{ color: '#4a8fa8' }}>
+            Đơn hàng
+          </p>
+          <NavLink href="/don-hang?group=collecting" label="Đang lấy thông tin" icon={Inbox} />
+          <NavLink href="/don-hang?group=processing" label="Đang thực hiện" icon={Loader2} />
+          <NavLink href="/don-hang?group=done" label="Đã xong" icon={CheckCircle2} />
+        </div>
 
         {/* CSKH section — chỉ hiện với cskh / admin / boss */}
         {(user?.role === 'cskh' || user?.role === 'admin' || user?.role === 'boss' || user?.is_super_admin) && (

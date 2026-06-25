@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Kanban, List, Search, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS, formatVND, formatDate, daysUntil, getInitials } from '@/lib/utils'
@@ -26,11 +26,26 @@ const COLUMNS: { stage: OppStage; label: string }[] = [
   { stage: 'lost', label: 'Mất đơn' },
 ]
 
+const GROUP_STAGES: Record<string, OppStage[]> = {
+  collecting: ['stage_1', 'stage_2'],
+  processing: ['stage_3', 'stage_4'],
+  done: ['stage_5'],
+}
+
+const GROUP_LABELS: Record<string, string> = {
+  collecting: 'Đang lấy thông tin',
+  processing: 'Đang thực hiện',
+  done: 'Đã xong',
+}
+
 export function PipelineView() {
   const { user } = useAuth()
   const { setOnRefresh } = useTopbar()
   const supabase = createClient()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const group = searchParams.get('group') as keyof typeof GROUP_STAGES | null
+  const groupStages = group ? GROUP_STAGES[group] : null
   const [view, setView] = useState<ViewMode>('table')
   const [opps, setOpps] = useState<OppWithRelations[]>([])
   const [loading, setLoading] = useState(true)
@@ -91,6 +106,7 @@ export function PipelineView() {
   const activeCount = opps.filter(o => !['lost', 'cancelled'].includes(o.stage)).length
 
   const filtered = opps.filter(o => {
+    if (groupStages && !groupStages.includes(o.stage)) return false
     if (stageFilter !== 'all' && o.stage !== stageFilter) return false
     if (!search.trim()) return true
     const q = search.toLowerCase()
@@ -106,8 +122,8 @@ export function PipelineView() {
       <div className="flex flex-col gap-0 border-b border-gray-200 bg-white flex-shrink-0">
         <div className="flex items-center justify-between px-6 pt-4 pb-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Đơn hàng</h1>
-            <p className="text-sm text-gray-400 mt-0.5">{activeCount} đơn đang xử lý</p>
+            <h1 className="text-2xl font-bold text-gray-900">{group ? GROUP_LABELS[group] : 'Đơn hàng'}</h1>
+            <p className="text-sm text-gray-400 mt-0.5">{filtered.length} đơn{!group && ` · ${activeCount} đang xử lý`}</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="relative" ref={searchRef}>
