@@ -57,6 +57,13 @@ export interface Contact {
   created_at: string
 }
 
+export interface ServiceType {
+  id: string
+  name: string
+  parent_id: string | null
+  sort_order: number
+}
+
 export interface Opportunity {
   id: string
   title: string
@@ -75,6 +82,7 @@ export interface Opportunity {
   lost_reason?: string
   estimated_value?: number
   actual_value?: number
+  service_type_id?: string
   tour_date?: string
   tour_end_date?: string
   deadline?: string

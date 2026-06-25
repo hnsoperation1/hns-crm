@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import ChecklistTab from './ChecklistTab'
 import DateInput from '@/components/DateInput'
+import ServiceTypeSelect from '@/components/ServiceTypeSelect'
 import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2,
   MessageSquare, Plus, CheckSquare, Square,
@@ -74,7 +75,7 @@ export default function OppDetailPage() {
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
   const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'cskh' | 'info' | 'checklist'>('info')
-  const [infoForm, setInfoForm] = useState({ title: '', description: '', tour_date: '', tour_end_date: '', estimated_value: '', actual_value: '', source: '' as string, lost_reason: '' })
+  const [infoForm, setInfoForm] = useState({ title: '', description: '', tour_date: '', tour_end_date: '', estimated_value: '', actual_value: '', source: '' as string, lost_reason: '', service_type_id: '' })
   const [infoSaving, setInfoSaving] = useState(false)
   const [infoSaved, setInfoSaved] = useState(false)
   const [showQR, setShowQR] = useState(false)
@@ -120,6 +121,7 @@ export default function OppDetailPage() {
       actual_value: o.actual_value ? String(o.actual_value) : '',
       source: o.source ?? '',
       lost_reason: o.lost_reason ?? '',
+      service_type_id: (o as any).service_type_id ?? '',
     })
     setAllLogs((logsData ?? []) as LogDetail[])
     setTasks(tasksData ?? [])
@@ -825,6 +827,7 @@ export default function OppDetailPage() {
                   actual_value: infoForm.actual_value ? Number(infoForm.actual_value) : null,
                   source: infoForm.source || undefined,
                   lost_reason: infoForm.lost_reason.trim() || null,
+                  service_type_id: infoForm.service_type_id || null,
                 }).eq('id', id)
                 setInfoSaving(false)
                 setInfoSaved(true)
@@ -878,6 +881,13 @@ export default function OppDetailPage() {
                         <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Doanh thu thực tế (VNĐ)</label>
                         <input type="number" value={infoForm.actual_value} onChange={e => setInfoForm(f => ({ ...f, actual_value: e.target.value }))} placeholder="0" className={iField} />
                       </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Loại dịch vụ</label>
+                      <ServiceTypeSelect
+                        value={infoForm.service_type_id || null}
+                        onChange={id => setInfoForm(f => ({ ...f, service_type_id: id ?? '' }))}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nguồn</label>
