@@ -34,7 +34,7 @@ export default function DangThucHienPage() {
       .select('id, title, description, stage, tour_date, tour_end_date, estimated_value, actual_value, contact:contacts(name, company), assigned_user:users!assigned_to(full_name)')
       .in('stage', ['stage_3', 'stage_4'])
       .order('tour_date', { ascending: true, nullsFirst: false })
-    setRows((data ?? []) as Row[])
+    setRows((data ?? []) as unknown as Row[])
     setLoading(false)
   }, [])
 

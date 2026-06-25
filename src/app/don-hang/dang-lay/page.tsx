@@ -33,7 +33,7 @@ export default function DangLayPage() {
       .select('id, title, description, stage, source, estimated_value, created_at, contact:contacts(name, company), assigned_user:users!assigned_to(full_name)')
       .in('stage', ['stage_1', 'stage_2'])
       .order('created_at', { ascending: false })
-    setRows((data ?? []) as Row[])
+    setRows((data ?? []) as unknown as Row[])
     setLoading(false)
   }, [])
 
