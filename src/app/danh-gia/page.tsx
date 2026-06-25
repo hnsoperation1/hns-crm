@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
 import DateInput from '@/components/DateInput'
 import { useTopbar } from '@/contexts/topbar'
+import { useAuth } from '@/contexts/auth'
 
 type FeedbackRow = {
   id: string
@@ -132,9 +133,13 @@ function CustomerList({ data, onClose }: { data: SelectedList; onClose: () => vo
   )
 }
 
+const SUPER_ADMIN_EMAIL = 'operation1@hanoisuntravel.com'
+
 export default function DanhGiaPage() {
   const supabase = createClient()
   const { setOnRefresh } = useTopbar()
+  const { user: currentUser } = useAuth()
+  const isSuperAdmin = currentUser?.is_super_admin === true || currentUser?.email === SUPER_ADMIN_EMAIL
   const [list, setList] = useState<FeedbackRow[]>([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'all' | 'poor' | 'destination' | 'summary'>('all')
@@ -362,7 +367,8 @@ export default function DanhGiaPage() {
       filterSatisfied === 'unsatisfied' ? f.is_satisfied === false :
       filterSatisfied === 'return' ? f.will_return === true : true
     const hasOpp = !!f.opportunity_id
-    const matchLinked = (filterHasOpp && filterNoOpp) ? true
+    const matchLinked = !isSuperAdmin ? true
+      : (filterHasOpp && filterNoOpp) ? true
       : filterHasOpp ? hasOpp
       : filterNoOpp ? !hasOpp
       : true
@@ -435,25 +441,27 @@ export default function DanhGiaPage() {
                   {f === 'all' ? 'Tất cả' : f === 'satisfied' ? '😊 Hài lòng' : f === 'unsatisfied' ? '😞 Không hài lòng' : '🔁 Sẽ quay lại'}
                 </button>
               ))}
-              <div className="ml-auto flex items-center gap-4">
-                {([
-                  { label: 'Đã có đơn', value: filterHasOpp, set: setFilterHasOpp },
-                  { label: 'Chưa có đơn', value: filterNoOpp, set: setFilterNoOpp },
-                ] as const).map(({ label, value, set }) => (
-                  <label key={label} className="flex items-center gap-1.5 cursor-pointer select-none">
-                    <input type="checkbox" checked={value} onChange={e => set(e.target.checked)}
-                      className="w-3.5 h-3.5 rounded accent-brand-600 cursor-pointer" />
-                    <span className="text-xs font-medium text-gray-600">{label}</span>
-                  </label>
-                ))}
-                {!loading && listFiltered.length > 0 && (
-                  <button onClick={toggleCheckAll}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${checkedIds.size > 0 ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-                    <CheckSquare size={13} />
-                    {checkedIds.size > 0 ? `Đã chọn ${checkedIds.size}` : 'Chọn nhiều'}
-                  </button>
-                )}
-              </div>
+              {isSuperAdmin && (
+                <div className="ml-auto flex items-center gap-4">
+                  {([
+                    { label: 'Đã có đơn', value: filterHasOpp, set: setFilterHasOpp },
+                    { label: 'Chưa có đơn', value: filterNoOpp, set: setFilterNoOpp },
+                  ] as const).map(({ label, value, set }) => (
+                    <label key={label} className="flex items-center gap-1.5 cursor-pointer select-none">
+                      <input type="checkbox" checked={value} onChange={e => set(e.target.checked)}
+                        className="w-3.5 h-3.5 rounded accent-brand-600 cursor-pointer" />
+                      <span className="text-xs font-medium text-gray-600">{label}</span>
+                    </label>
+                  ))}
+                  {!loading && listFiltered.length > 0 && (
+                    <button onClick={toggleCheckAll}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${checkedIds.size > 0 ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                      <CheckSquare size={13} />
+                      {checkedIds.size > 0 ? `Đã chọn ${checkedIds.size}` : 'Chọn nhiều'}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* List full width */}
@@ -478,32 +486,34 @@ export default function DanhGiaPage() {
                   <div className="divide-y divide-gray-100">
                     {listFiltered.map(f => (
                       <div key={f.id} className={expanded === f.id ? 'bg-brand-50/40' : checkedIds.has(f.id) ? 'bg-amber-50/30' : ''}>
-                        <div className="px-4 py-3 hover:bg-gray-50/70 transition-colors cursor-pointer" onClick={() => setExpanded(f.id)}>
+                        <div className="px-5 py-4 hover:bg-gray-50/70 transition-colors cursor-pointer" onClick={() => setExpanded(f.id)}>
                           <div className="flex items-start gap-3">
-                            <div className="pt-0.5 flex-shrink-0" onClick={e => toggleCheck(f.id, e)}>
-                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${checkedIds.has(f.id) ? 'bg-brand-600 border-brand-600' : 'border-gray-300 hover:border-brand-400'}`}>
-                                {checkedIds.has(f.id) && <svg viewBox="0 0 10 8" className="w-2.5 h-2 fill-white"><path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
+                            {isSuperAdmin && (
+                              <div className="pt-0.5 flex-shrink-0" onClick={e => toggleCheck(f.id, e)}>
+                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${checkedIds.has(f.id) ? 'bg-brand-600 border-brand-600' : 'border-gray-300 hover:border-brand-400'}`}>
+                                  {checkedIds.has(f.id) && <svg viewBox="0 0 10 8" className="w-2.5 h-2 fill-white"><path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
+                                </div>
                               </div>
-                            </div>
+                            )}
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className={`font-semibold text-sm ${expanded === f.id ? 'text-brand-700' : 'text-gray-900'}`}>{f.respondent_name ?? '—'}</span>
-                                {f.phone && <span className="text-xs text-gray-400">{f.phone}</span>}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`font-semibold text-base ${expanded === f.id ? 'text-brand-700' : 'text-gray-900'}`}>{f.respondent_name ?? '—'}</span>
+                                {f.phone && <span className="text-sm text-gray-400">{f.phone}</span>}
                               </div>
-                              <div className="flex items-center gap-2 mt-0.5 flex-wrap text-xs text-gray-500">
+                              <div className="flex items-center gap-2 mt-0.5 flex-wrap text-sm text-gray-500">
                                 {f.group_name && <span>Đoàn: <span className="font-medium text-gray-700">{f.group_name}</span></span>}
                                 {f.itinerary && <><span className="text-gray-300">·</span><span>Hành trình: <span className="text-gray-600">{f.itinerary}</span></span></>}
                               </div>
-                              {f.overall_comment && <p className="text-xs text-gray-400 mt-0.5 italic line-clamp-1">Đánh giá chung: "{f.overall_comment}"</p>}
+                              {f.overall_comment && <p className="text-sm text-gray-400 mt-0.5 italic line-clamp-1">Đánh giá chung: "{f.overall_comment}"</p>}
                               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                {f.is_satisfied === true && <span className="text-[11px] font-semibold text-emerald-600">Hài lòng</span>}
-                                {f.is_satisfied === false && <span className="text-[11px] font-semibold text-red-500">Không hài lòng</span>}
-                                {f.will_return === true && <span className="text-[11px] font-semibold text-blue-600">· Sẽ quay lại</span>}
-                                {f.will_return === false && <span className="text-[11px] font-semibold text-gray-400">· Không quay lại</span>}
-                                {f.next_destination && <span className="text-[11px] text-gray-400">· Quan tâm: <span className="font-semibold text-brand-600">{f.next_destination}</span></span>}
+                                {f.is_satisfied === true && <span className="text-xs font-semibold text-emerald-600">Hài lòng</span>}
+                                {f.is_satisfied === false && <span className="text-xs font-semibold text-red-500">Không hài lòng</span>}
+                                {f.will_return === true && <span className="text-xs font-semibold text-blue-600">· Sẽ quay lại</span>}
+                                {f.will_return === false && <span className="text-xs font-semibold text-gray-400">· Không quay lại</span>}
+                                {f.next_destination && <span className="text-xs text-gray-400">· Quan tâm: <span className="font-semibold text-brand-600">{f.next_destination}</span></span>}
                               </div>
                             </div>
-                            <span className="text-xs text-gray-400 flex-shrink-0">{formatDate(f.submitted_at)}</span>
+                            <span className="text-sm text-gray-400 flex-shrink-0">{formatDate(f.submitted_at)}</span>
                           </div>
                         </div>
                       </div>
@@ -876,8 +886,8 @@ export default function DanhGiaPage() {
 
       </div>
 
-      {/* Floating action bar */}
-      {checkedIds.size > 0 && (
+      {/* Floating action bar — super admin only */}
+      {isSuperAdmin && checkedIds.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-white border border-gray-200 rounded-2xl shadow-xl px-5 py-3 flex items-center gap-4 min-w-[420px]">
           <span className="text-sm font-semibold text-gray-700">Đã chọn <span className="text-brand-600">{checkedIds.size}</span> đánh giá</span>
           <div className="flex-1" />
@@ -891,8 +901,8 @@ export default function DanhGiaPage() {
         </div>
       )}
 
-      {/* Modal gắn đơn hàng */}
-      {linkModal && (
+      {/* Modal gắn đơn hàng — super admin only */}
+      {isSuperAdmin && linkModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={() => setLinkModal(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
