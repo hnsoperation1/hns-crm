@@ -19,7 +19,7 @@ import {
   formatVND, formatDate, getInitials, daysSince, daysUntil,
 } from '@/lib/utils'
 import { AlertCircle, Clock as ClockIcon, CheckCircle, PlusCircle } from 'lucide-react'
-import type { OppStage, LogType, Opportunity, Contact, ActivityLog, IssueStatus } from '@/types'
+import type { OppStage, LogType, Opportunity, Contact, ActivityLog, IssueStatus, ServiceType } from '@/types'
 
 // ─── Local types for Supabase joins ──────────────────────────────────────────
 
@@ -78,6 +78,8 @@ export default function OppDetailPage() {
   const [infoForm, setInfoForm] = useState({ title: '', description: '', tour_date: '', tour_end_date: '', estimated_value: '', actual_value: '', source: '' as string, lost_reason: '', service_type_id: '' })
   const [infoSaving, setInfoSaving] = useState(false)
   const [infoSaved, setInfoSaved] = useState(false)
+  const [showInfoModal, setShowInfoModal] = useState(false)
+  const [serviceTypes, setServiceTypes] = useState<ServiceType[]>([])
   const [showQR, setShowQR] = useState(false)
   const [qrCopied, setQrCopied] = useState(false)
   const [qrExporting, setQrExporting] = useState(false)
@@ -89,7 +91,7 @@ export default function OppDetailPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    const [{ data: oppData }, { data: logsData }, { data: tasksData }, { data: usersData }, { data: issuesData }] = await Promise.all([
+    const [{ data: oppData }, { data: logsData }, { data: tasksData }, { data: usersData }, { data: issuesData }, { data: stData }] = await Promise.all([
       supabase.from('opportunities')
         .select('*, contact:contacts(id,name,phone,email,company,tax_code,organization_ids,source,lead_score,created_by,created_at), assigned_user:users!assigned_to(id,full_name), creator:users!created_by(id,full_name)')
         .eq('id', id)
@@ -109,6 +111,7 @@ export default function OppDetailPage() {
         .select('id, description, status, assigned_user:users!assigned_to(full_name), created_at')
         .eq('opportunity_id', id)
         .order('created_at', { ascending: false }),
+      supabase.from('service_types').select('*').order('sort_order'),
     ])
     const o = oppData as OppDetail | null
     setOpp(o)
@@ -128,6 +131,7 @@ export default function OppDetailPage() {
     const users = (usersData ?? []) as UserMin[]
     setAllUsers(users)
     setSaleUsers(users.filter(u => u.is_sale_tv))
+    setServiceTypes((stData ?? []) as ServiceType[])
     setIssues((issuesData ?? []) as unknown as typeof issues)
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -816,6 +820,51 @@ export default function OppDetailPage() {
 
             {/* ══════════ THÔNG TIN ĐƠN TAB ══════════ */}
             {mainTab === 'info' && (() => {
+              const SOURCES_LIST = [
+                { value: 'mkt', label: 'Marketing' }, { value: 'sale', label: 'Sale' },
+                { value: 'partner', label: 'Đối tác' }, { value: 'bod', label: 'Ban GĐ' },
+                { value: 'cskh', label: 'CSKH' }, { value: 'referral', label: 'Giới thiệu' }, { value: 'test', label: 'Test' },
+              ]
+              const stLabel = (() => {
+                const st = serviceTypes.find(t => t.id === infoForm.service_type_id)
+                if (!st) return null
+                const parent = serviceTypes.find(t => t.id === st.parent_id)
+                return parent ? `${parent.name} › ${st.name}` : st.name
+              })()
+              const Row = ({ label, value }: { label: string; value?: string | null }) => (
+                <div className="flex items-start justify-between gap-4 py-2.5 border-b border-gray-50 last:border-0">
+                  <span className="text-xs text-gray-400 font-medium flex-shrink-0 w-36">{label}</span>
+                  <span className="text-sm text-gray-800 font-medium text-right">{value || <span className="text-gray-300">—</span>}</span>
+                </div>
+              )
+              return (
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-900 text-sm">Thông tin đơn hàng</h3>
+                    <button onClick={() => setShowInfoModal(true)}
+                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600 text-sm font-semibold transition-colors">
+                      <Pencil size={13} /> Sửa
+                    </button>
+                  </div>
+                  <div className="px-5 py-2">
+                    <Row label="Tên đơn hàng" value={infoForm.title} />
+                    <Row label="Điểm đến" value={infoForm.description} />
+                    <Row label="Ngày đi" value={infoForm.tour_date ? formatDate(infoForm.tour_date) : null} />
+                    <Row label="Ngày về" value={infoForm.tour_end_date ? formatDate(infoForm.tour_end_date) : null} />
+                    <Row label="Giá trị ước tính" value={infoForm.estimated_value ? formatVND(Number(infoForm.estimated_value)) : null} />
+                    <Row label="Doanh thu thực tế" value={infoForm.actual_value ? formatVND(Number(infoForm.actual_value)) : null} />
+                    <Row label="Loại dịch vụ" value={stLabel} />
+                    <Row label="Nguồn" value={SOURCES_LIST.find(s => s.value === infoForm.source)?.label} />
+                    {(opp.stage === 'lost' || opp.stage === 'cancelled') && (
+                      <Row label="Lý do mất / hủy" value={infoForm.lost_reason} />
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Modal cập nhật thông tin đơn */}
+            {showInfoModal && (() => {
               async function handleInfoSave() {
                 setInfoSaving(true)
                 await supabase.from('opportunities').update({
@@ -832,7 +881,7 @@ export default function OppDetailPage() {
                 setInfoSaving(false)
                 setInfoSaved(true)
                 setOpp(prev => prev ? { ...prev, ...infoForm, estimated_value: infoForm.estimated_value ? Number(infoForm.estimated_value) : undefined, actual_value: infoForm.actual_value ? Number(infoForm.actual_value) : undefined } as OppDetail : prev)
-                setTimeout(() => setInfoSaved(false), 2000)
+                setTimeout(() => { setInfoSaved(false); setShowInfoModal(false) }, 800)
               }
               const iField = 'w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-400'
               const SOURCES_LIST = [
@@ -841,66 +890,66 @@ export default function OppDetailPage() {
                 { value: 'cskh', label: 'CSKH' }, { value: 'referral', label: 'Giới thiệu' }, { value: 'test', label: 'Test' },
               ]
               return (
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                  <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-                    <h3 className="font-semibold text-gray-900 text-sm">Thông tin đơn hàng</h3>
-                    <button
-                      onClick={handleInfoSave}
-                      disabled={infoSaving}
-                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-sm font-semibold transition-colors"
-                    >
-                      {infoSaving ? <Loader2 size={13} className="animate-spin" /> : infoSaved ? <CheckCircle2 size={13} /> : <Pencil size={13} />}
-                      {infoSaved ? 'Đã lưu!' : 'Cập nhật'}
-                    </button>
-                  </div>
-                  <div className="px-5 py-4 space-y-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Tên đơn hàng</label>
-                      <input value={infoForm.title} onChange={e => setInfoForm(f => ({ ...f, title: e.target.value }))} className={iField} />
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={() => setShowInfoModal(false)}>
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                      <h3 className="font-bold text-gray-900">Cập nhật đơn hàng</h3>
+                      <button onClick={() => setShowInfoModal(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400"><X size={16} /></button>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Điểm đến</label>
-                      <input value={infoForm.description} onChange={e => setInfoForm(f => ({ ...f, description: e.target.value }))} placeholder="VD: Đà Nẵng, Nhật Bản..." className={iField} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Ngày đi</label>
-                        <DateInput value={infoForm.tour_date} onChange={v => setInfoForm(f => ({ ...f, tour_date: v }))} className="w-full" />
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Tên đơn hàng</label>
+                        <input value={infoForm.title} onChange={e => setInfoForm(f => ({ ...f, title: e.target.value }))} className={iField} />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Ngày về</label>
-                        <DateInput value={infoForm.tour_end_date} onChange={v => setInfoForm(f => ({ ...f, tour_end_date: v }))} className="w-full" />
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Điểm đến</label>
+                        <input value={infoForm.description} onChange={e => setInfoForm(f => ({ ...f, description: e.target.value }))} placeholder="VD: Đà Nẵng, Nhật Bản..." className={iField} />
                       </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Ngày đi</label>
+                          <DateInput value={infoForm.tour_date} onChange={v => setInfoForm(f => ({ ...f, tour_date: v }))} className="w-full" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Ngày về</label>
+                          <DateInput value={infoForm.tour_end_date} onChange={v => setInfoForm(f => ({ ...f, tour_end_date: v }))} className="w-full" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Giá trị ước tính (VNĐ)</label>
+                          <input type="number" value={infoForm.estimated_value} onChange={e => setInfoForm(f => ({ ...f, estimated_value: e.target.value }))} placeholder="0" className={iField} />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Doanh thu thực tế (VNĐ)</label>
+                          <input type="number" value={infoForm.actual_value} onChange={e => setInfoForm(f => ({ ...f, actual_value: e.target.value }))} placeholder="0" className={iField} />
+                        </div>
+                      </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Giá trị ước tính (VNĐ)</label>
-                        <input type="number" value={infoForm.estimated_value} onChange={e => setInfoForm(f => ({ ...f, estimated_value: e.target.value }))} placeholder="0" className={iField} />
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Loại dịch vụ</label>
+                        <ServiceTypeSelect value={infoForm.service_type_id || null} onChange={id => setInfoForm(f => ({ ...f, service_type_id: id ?? '' }))} />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Doanh thu thực tế (VNĐ)</label>
-                        <input type="number" value={infoForm.actual_value} onChange={e => setInfoForm(f => ({ ...f, actual_value: e.target.value }))} placeholder="0" className={iField} />
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nguồn</label>
+                        <select value={infoForm.source} onChange={e => setInfoForm(f => ({ ...f, source: e.target.value }))} className={iField}>
+                          {SOURCES_LIST.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
                       </div>
+                      {(opp.stage === 'lost' || opp.stage === 'cancelled') && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Lý do mất / hủy</label>
+                          <textarea rows={3} value={infoForm.lost_reason} onChange={e => setInfoForm(f => ({ ...f, lost_reason: e.target.value }))} placeholder="Mô tả lý do..." className={`${iField} resize-none`} />
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Loại dịch vụ</label>
-                      <ServiceTypeSelect
-                        value={infoForm.service_type_id || null}
-                        onChange={id => setInfoForm(f => ({ ...f, service_type_id: id ?? '' }))}
-                      />
+                    <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+                      <button onClick={() => setShowInfoModal(false)} className="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 font-medium">Huỷ</button>
+                      <button onClick={handleInfoSave} disabled={infoSaving}
+                        className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-sm font-semibold transition-colors">
+                        {infoSaving ? <Loader2 size={13} className="animate-spin" /> : infoSaved ? <CheckCircle2 size={13} /> : null}
+                        {infoSaved ? 'Đã lưu!' : 'Cập nhật'}
+                      </button>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nguồn</label>
-                      <select value={infoForm.source} onChange={e => setInfoForm(f => ({ ...f, source: e.target.value }))} className={iField}>
-                        {SOURCES_LIST.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                      </select>
-                    </div>
-                    {(opp.stage === 'lost' || opp.stage === 'cancelled') && (
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Lý do mất / hủy</label>
-                        <textarea rows={3} value={infoForm.lost_reason} onChange={e => setInfoForm(f => ({ ...f, lost_reason: e.target.value }))} placeholder="Mô tả lý do..." className={`${iField} resize-none`} />
-                      </div>
-                    )}
                   </div>
                 </div>
               )
