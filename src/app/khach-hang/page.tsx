@@ -718,7 +718,6 @@ function OrganizationsTab() {
           {[
             { label: 'Tổng', value: orgs.length },
             { label: 'Công ty', value: orgs.filter(o => o.type === 'company').length },
-            { label: 'Loại khác', value: orgs.filter(o => o.type !== 'company').length },
           ].map(({ label, value }) => (
             <div key={label} className="bg-white rounded-xl border border-gray-200 px-4 py-2.5 shadow-sm text-center min-w-[80px]">
               <div className="text-xs text-gray-400">{label}</div>
@@ -849,13 +848,6 @@ function OrganizationsTab() {
                   <Field label="Khu vực">
                     <input type="text" placeholder="VD: Hà Nội, TP.HCM..." value={form.city}
                       onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className={inputCls()} />
-                  </Field>
-                  <Field label="Loại">
-                    <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as OrgType }))} className={inputCls()}>
-                      {(Object.keys(ORG_TYPE_LABELS) as OrgType[]).map(k => (
-                        <option key={k} value={k}>{ORG_TYPE_LABELS[k]}</option>
-                      ))}
-                    </select>
                   </Field>
                 </div>
 
