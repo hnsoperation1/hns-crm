@@ -35,7 +35,7 @@ export default function Sidebar() {
   const { user, logout } = useAuth()
 
   function NavLink({ href, label, icon: Icon, exact }: { href: string; label: string; icon: React.ElementType; exact?: boolean }) {
-    const active = exact ? pathname === href : pathname.startsWith(href)
+    const active = exact ? pathname === href : (pathname === href || pathname.startsWith(href + '/'))
     return (
       <Link
         href={href}
