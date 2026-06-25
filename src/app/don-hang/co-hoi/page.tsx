@@ -21,7 +21,7 @@ type Row = {
   assigned_user: { full_name: string } | null
 }
 
-type ContactOpt = { id: string; name: string; company?: string | null }
+type ContactOpt = { id: string; name: string; phone?: string | null; company?: string | null }
 type UserOpt = { id: string; full_name: string }
 
 const SOURCES: { value: LeadSource; label: string }[] = [
@@ -80,7 +80,7 @@ export default function DangLayPage() {
     setErrors({})
     setContactSearch('')
     const [{ data: c }, { data: u }] = await Promise.all([
-      supabase.from('contacts').select('id, name, company').order('name').limit(200),
+      supabase.from('contacts').select('id, name, phone, company').order('name').limit(200),
       supabase.from('users').select('id, full_name').eq('is_sale_tv', true).eq('is_active', true).order('full_name'),
     ])
     setContacts((c ?? []) as ContactOpt[])
@@ -91,7 +91,6 @@ export default function DangLayPage() {
     const e: Partial<typeof EMPTY_FORM> = {}
     if (!form.title.trim()) e.title = 'Bắt buộc'
     if (!form.contact_id) e.contact_id = 'Bắt buộc'
-    if (!form.assigned_to) e.assigned_to = 'Bắt buộc'
     if (!form.description.trim()) e.description = 'Bắt buộc'
     setErrors(e)
     if (Object.keys(e).length) return
@@ -105,6 +104,7 @@ export default function DangLayPage() {
       assigned_to: form.assigned_to || null,
       stage: 'stage_1' as OppStage,
       stage_updated_at: new Date().toISOString(),
+      created_by: user!.id,
     })
     setSaving(false)
     if (!error) {
@@ -156,7 +156,7 @@ export default function DangLayPage() {
   }
 
   const filteredContacts = contacts.filter(c =>
-    `${c.name} ${c.company ?? ''}`.toLowerCase().includes(contactSearch.toLowerCase())
+    `${c.name} ${c.phone ?? ''} ${c.company ?? ''}`.toLowerCase().includes(contactSearch.toLowerCase())
   )
 
   const iField = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400'
@@ -253,52 +253,26 @@ export default function DangLayPage() {
                 {errors.title && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {errors.title}</p>}
               </div>
 
-              {/* Liên hệ */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Liên hệ <span className="text-red-500">*</span>
-                  </label>
-                  <button type="button" onClick={() => { setShowNewContact(v => !v); setNewContact({ name: contactSearch, phone: '', company: '' }) }}
-                    className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${showNewContact ? 'bg-brand-100 text-brand-700' : 'text-brand-600 hover:bg-brand-50'}`}>
-                    <Plus size={12} strokeWidth={2.5} /> Tạo mới
-                  </button>
-                </div>
-
-                {/* Sub-form tạo khách hàng mới */}
-                {showNewContact && (
-                  <div className="mb-3 p-3 bg-brand-50 border border-brand-100 rounded-xl space-y-2">
-                    <p className="text-xs font-semibold text-brand-700 mb-2">Thông tin khách hàng mới</p>
-                    <input value={newContact.name} onChange={e => { setNewContact(v => ({ ...v, name: e.target.value })); setNewContactErrors(er => ({ ...er, name: '' })) }}
-                      placeholder="Tên khách hàng *" autoFocus
-                      className={`${iField} text-sm py-2 ${newContactErrors.name ? 'border-red-300 bg-red-50' : ''}`} />
-                    <input value={newContact.phone} onChange={e => { setNewContact(v => ({ ...v, phone: e.target.value })); setNewContactErrors(er => ({ ...er, phone: '' })) }}
-                      placeholder="Số điện thoại *"
-                      className={`${iField} text-sm py-2 ${newContactErrors.phone ? 'border-red-300 bg-red-50' : ''}`} />
-                    <input value={newContact.company} onChange={e => setNewContact(v => ({ ...v, company: e.target.value }))}
-                      placeholder="Công ty" className={`${iField} text-sm py-2`} />
-                    <div className="flex gap-2 pt-1">
-                      <button type="button" onClick={handleSaveContact} disabled={savingContact}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors">
-                        {savingContact ? <Loader2 size={11} className="animate-spin" /> : null}
-                        Lưu & chọn
-                      </button>
-                      <button type="button" onClick={() => { setShowNewContact(false); setNewContactErrors({}) }}
-                        className="px-3 py-1.5 text-xs text-gray-500 hover:bg-white rounded-lg transition-colors font-medium">
-                        Huỷ
-                      </button>
-                    </div>
+              {/* Liên hệ + Sale + Nguồn */}
+              <div className="grid grid-cols-3 gap-3">
+                {/* Liên hệ */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Liên hệ <span className="text-red-500">*</span>
+                    </label>
+                    <button type="button" onClick={() => { setShowNewContact(v => !v); setNewContact({ name: contactSearch, phone: '', company: '' }) }}
+                      className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${showNewContact ? 'bg-brand-100 text-brand-700' : 'text-brand-600 hover:bg-brand-50'}`}>
+                      <Plus size={12} strokeWidth={2.5} /> Tạo mới
+                    </button>
                   </div>
-                )}
-
-                {!showNewContact && (
                   <div className="relative">
                     <input
                       value={contactSearch}
                       onChange={e => { setContactSearch(e.target.value); setForm(f => ({ ...f, contact_id: '' })); setContactDropOpen(true) }}
                       onFocus={() => setContactDropOpen(true)}
                       onBlur={() => setTimeout(() => setContactDropOpen(false), 150)}
-                      placeholder="Tìm theo tên hoặc công ty..."
+                      placeholder="Tìm tên, SĐT, công ty..."
                       className={`${iField} ${errors.contact_id ? 'border-red-300 bg-red-50' : ''}`}
                     />
                     {form.contact_id && !contactDropOpen && (
@@ -306,8 +280,8 @@ export default function DangLayPage() {
                         <div className="w-6 h-6 bg-brand-200 rounded-full flex items-center justify-center text-[10px] font-bold text-brand-700 flex-shrink-0">
                           {getInitials(contacts.find(c => c.id === form.contact_id)?.name ?? '')}
                         </div>
-                        {contacts.find(c => c.id === form.contact_id)?.name}
-                        <button type="button" onClick={() => { setForm(f => ({ ...f, contact_id: '' })); setContactSearch('') }} className="ml-auto text-brand-400 hover:text-brand-600"><X size={13} /></button>
+                        <span className="truncate">{contacts.find(c => c.id === form.contact_id)?.name}</span>
+                        <button type="button" onClick={() => { setForm(f => ({ ...f, contact_id: '' })); setContactSearch('') }} className="ml-auto flex-shrink-0 text-brand-400 hover:text-brand-600"><X size={13} /></button>
                       </div>
                     )}
                     {contactDropOpen && (
@@ -316,9 +290,9 @@ export default function DangLayPage() {
                           <div key={c.id} onMouseDown={() => { setForm(f => ({ ...f, contact_id: c.id })); setContactSearch(c.name); setErrors(er => ({ ...er, contact_id: '' })); setContactDropOpen(false) }}
                             className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm transition-colors ${form.contact_id === c.id ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
                             <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600 flex-shrink-0">{getInitials(c.name)}</div>
-                            <div>
-                              <div className="font-medium">{c.name}</div>
-                              {c.company && <div className="text-xs text-gray-400">{c.company}</div>}
+                            <div className="min-w-0">
+                              <div className="font-medium truncate">{c.name}</div>
+                              {c.company && <div className="text-xs text-gray-400 truncate">{c.company}</div>}
                             </div>
                           </div>
                         ))}
@@ -332,22 +306,16 @@ export default function DangLayPage() {
                       </div>
                     )}
                   </div>
-                )}
-                {errors.contact_id && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {errors.contact_id}</p>}
-              </div>
+                  {errors.contact_id && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {errors.contact_id}</p>}
+                </div>
 
-              <div className="grid grid-cols-2 gap-3">
                 {/* Sale TV */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                    Sale phụ trách <span className="text-red-500">*</span>
-                  </label>
-                  <select value={form.assigned_to} onChange={e => { setForm(f => ({ ...f, assigned_to: e.target.value })); setErrors(er => ({ ...er, assigned_to: '' })) }}
-                    className={`${iField} ${errors.assigned_to ? 'border-red-300 bg-red-50' : ''}`}>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale phụ trách</label>
+                  <select value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))} className={iField}>
                     <option value="">— Chọn Sale TV —</option>
                     {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
                   </select>
-                  {errors.assigned_to && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {errors.assigned_to}</p>}
                 </div>
 
                 {/* Nguồn */}
@@ -358,6 +326,34 @@ export default function DangLayPage() {
                   </select>
                 </div>
               </div>
+
+              {/* Sub-form tạo khách hàng mới — full width */}
+              {showNewContact && (
+                <div className="p-3 bg-brand-50 border border-brand-100 rounded-xl space-y-2">
+                  <p className="text-xs font-semibold text-brand-700 mb-2">Thông tin khách hàng mới</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input value={newContact.name} onChange={e => { setNewContact(v => ({ ...v, name: e.target.value })); setNewContactErrors(er => ({ ...er, name: '' })) }}
+                      placeholder="Tên khách hàng *" autoFocus
+                      className={`${iField} text-sm py-2 ${newContactErrors.name ? 'border-red-300 bg-red-50' : ''}`} />
+                    <input value={newContact.phone} onChange={e => { setNewContact(v => ({ ...v, phone: e.target.value })); setNewContactErrors(er => ({ ...er, phone: '' })) }}
+                      placeholder="Số điện thoại *"
+                      className={`${iField} text-sm py-2 ${newContactErrors.phone ? 'border-red-300 bg-red-50' : ''}`} />
+                    <input value={newContact.company} onChange={e => setNewContact(v => ({ ...v, company: e.target.value }))}
+                      placeholder="Công ty" className={`${iField} text-sm py-2`} />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={handleSaveContact} disabled={savingContact}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors">
+                      {savingContact ? <Loader2 size={11} className="animate-spin" /> : null}
+                      Lưu & chọn
+                    </button>
+                    <button type="button" onClick={() => { setShowNewContact(false); setNewContactErrors({}) }}
+                      className="px-3 py-1.5 text-xs text-gray-500 hover:bg-white rounded-lg transition-colors font-medium">
+                      Huỷ
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Mô tả sơ lược */}
               <div>
