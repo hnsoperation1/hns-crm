@@ -532,6 +532,7 @@ export default function DanhGiaPage() {
                     <thead className="sticky top-0 z-10">
                       {/* Header row with sort */}
                       <tr className="bg-brand-50 border-b border-brand-100">
+                        {isSuperAdmin && selectMode && <th className="w-10 px-3 py-2.5" />}
                         {TABLE_COLS.map(({ key, label }) => {
                           const isActive = tableSort?.col === key
                           return (
@@ -549,6 +550,7 @@ export default function DanhGiaPage() {
                       </tr>
                       {/* Filter row */}
                       <tr className="bg-brand-50 border-b border-brand-100">
+                        {isSuperAdmin && selectMode && <td className="w-10 px-3 py-1.5" />}
                         {TABLE_COLS.map(({ key, filter }) => (
                           <td key={key} className="px-2 py-1.5">
                             {filter ? (
@@ -563,8 +565,15 @@ export default function DanhGiaPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {tableData.map(f => (
-                        <tr key={f.id} onClick={() => setExpanded(f.id)}
-                          className={`cursor-pointer transition-colors hover:bg-gray-50 ${expanded === f.id ? 'bg-brand-50/40' : ''}`}>
+                        <tr key={f.id} onClick={() => isSuperAdmin && selectMode ? toggleCheck(f.id, { stopPropagation: () => {} } as React.MouseEvent) : setExpanded(f.id)}
+                          className={`cursor-pointer transition-colors hover:bg-gray-50 ${expanded === f.id ? 'bg-brand-50/40' : checkedIds.has(f.id) ? 'bg-amber-50/40' : ''}`}>
+                          {isSuperAdmin && selectMode && (
+                            <td className="w-10 px-3 py-3" onClick={e => { e.stopPropagation(); toggleCheck(f.id, e) }}>
+                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${checkedIds.has(f.id) ? 'bg-brand-600 border-brand-600' : 'border-gray-300 hover:border-brand-400'}`}>
+                                {checkedIds.has(f.id) && <svg viewBox="0 0 10 8" className="w-2.5 h-2 fill-white"><path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>}
+                              </div>
+                            </td>
+                          )}
                           <td className="px-4 py-3 w-40">
                             <div className="font-semibold text-gray-900 text-sm">{f.respondent_name ?? '—'}</div>
                             {f.phone && <div className="text-xs text-gray-400 mt-0.5">{f.phone}</div>}
