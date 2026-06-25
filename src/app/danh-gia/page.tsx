@@ -156,16 +156,6 @@ export default function DanhGiaPage() {
   const [tableFilters, setTableFilters] = useState<Record<string, string>>({})
   const [commentModal, setCommentModal] = useState<{ name: string; comment: string } | null>(null)
   const [tableFullscreen, setTableFullscreen] = useState(false)
-  const tableScrollRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (allView !== 'table' || tableFullscreen) return
-    const el = tableScrollRef.current
-    if (!el) return
-    const handler = () => { if (el.scrollTop > 30) setTableFullscreen(true) }
-    el.addEventListener('scroll', handler, { passive: true })
-    return () => el.removeEventListener('scroll', handler)
-  }, [allView, tableFullscreen])
   const [expanded, setExpanded] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedList>(null)
   const [filterHasOpp, setFilterHasOpp] = useState(false)
@@ -528,7 +518,9 @@ export default function DanhGiaPage() {
 
             {/* List / Table */}
             <div className={`flex-1 min-h-0 ${tableFullscreen && allView === 'table' ? 'fixed top-10 left-52 right-0 bottom-0 z-30 bg-white p-3 flex flex-col' : ''}`}>
-              <div ref={allView === 'table' ? tableScrollRef : undefined} className={`h-full overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm ${allView === 'table' ? 'overflow-x-auto' : ''}`}>
+              <div
+                onScroll={e => { if (allView === 'table' && !tableFullscreen && (e.currentTarget as HTMLDivElement).scrollTop > 30) setTableFullscreen(true) }}
+                className={`h-full overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm ${allView === 'table' ? 'overflow-x-auto' : ''}`}>
                 {loading ? (
                   <div className="divide-y divide-gray-100">
                     {Array.from({ length: 6 }).map((_, i) => (
