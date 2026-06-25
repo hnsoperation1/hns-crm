@@ -93,7 +93,7 @@ export default function Sidebar() {
           <p className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1.5" style={{ color: '#4a8fa8' }}>
             Đơn hàng
           </p>
-          <NavLink href="/don-hang/dang-lay" label="Đang lấy thông tin" icon={Inbox} />
+          <NavLink href="/don-hang/dang-lay" label="Đơn hàng mới" icon={Inbox} />
           <NavLink href="/don-hang/dang-thuc-hien" label="Đang thực hiện" icon={Loader2} />
           <NavLink href="/don-hang/da-xong" label="Đã xong" icon={CheckCircle2} />
         </div>

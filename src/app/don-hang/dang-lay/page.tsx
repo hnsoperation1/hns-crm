@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useTopbar } from '@/contexts/topbar'
 import { SOURCE_LABELS, SOURCE_COLORS, STAGE_LABELS, STAGE_COLORS, formatDate, formatVND, getInitials } from '@/lib/utils'
-import type { OppStage } from '@/types'
+import type { OppStage, LeadSource } from '@/types'
+import { Plus, X, Loader2, AlertTriangle } from 'lucide-react'
+import DateInput from '@/components/DateInput'
 
 type Row = {
   id: string
@@ -19,12 +21,34 @@ type Row = {
   assigned_user: { full_name: string } | null
 }
 
+type ContactOpt = { id: string; name: string; company?: string | null }
+type UserOpt = { id: string; full_name: string }
+
+const SOURCES: { value: LeadSource; label: string }[] = [
+  { value: 'mkt', label: 'Marketing' }, { value: 'sale', label: 'Sale' },
+  { value: 'partner', label: 'Đối tác' }, { value: 'bod', label: 'Ban GĐ' },
+  { value: 'cskh', label: 'CSKH' }, { value: 'referral', label: 'Giới thiệu' },
+  { value: 'test', label: 'Test' },
+]
+
+const EMPTY_FORM = {
+  title: '', description: '', contact_id: '', source: 'mkt' as LeadSource,
+  assigned_to: '', estimated_value: '', tour_date: '', deadline: '',
+}
+
 export default function DangLayPage() {
   const router = useRouter()
   const { setOnRefresh, setBreadcrumb } = useTopbar()
   const supabase = createClient()
   const [rows, setRows] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [contacts, setContacts] = useState<ContactOpt[]>([])
+  const [users, setUsers] = useState<UserOpt[]>([])
+  const [form, setForm] = useState({ ...EMPTY_FORM })
+  const [errors, setErrors] = useState<Partial<typeof EMPTY_FORM>>({})
+  const [saving, setSaving] = useState(false)
+  const [contactSearch, setContactSearch] = useState('')
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -45,59 +69,223 @@ export default function DangLayPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  async function openModal() {
+    setShowModal(true)
+    setForm({ ...EMPTY_FORM })
+    setErrors({})
+    setContactSearch('')
+    const [{ data: c }, { data: u }] = await Promise.all([
+      supabase.from('contacts').select('id, name, company').order('name').limit(200),
+      supabase.from('users').select('id, full_name').eq('is_sale_tv', true).eq('is_active', true).order('full_name'),
+    ])
+    setContacts((c ?? []) as ContactOpt[])
+    setUsers((u ?? []) as UserOpt[])
+  }
+
+  async function handleSave() {
+    const e: Partial<typeof EMPTY_FORM> = {}
+    if (!form.title.trim()) e.title = 'Bắt buộc'
+    if (!form.contact_id) e.contact_id = 'Bắt buộc'
+    if (!form.assigned_to) e.assigned_to = 'Bắt buộc'
+    setErrors(e)
+    if (Object.keys(e).length) return
+
+    setSaving(true)
+    const { error } = await supabase.from('opportunities').insert({
+      title: form.title.trim(),
+      description: form.description.trim() || null,
+      contact_id: form.contact_id,
+      source: form.source,
+      assigned_to: form.assigned_to || null,
+      stage: 'stage_1' as OppStage,
+      estimated_value: form.estimated_value ? Number(form.estimated_value) : null,
+      tour_date: form.tour_date || null,
+      deadline: form.deadline || null,
+      stage_updated_at: new Date().toISOString(),
+    })
+    setSaving(false)
+    if (!error) {
+      setShowModal(false)
+      loadData()
+    }
+  }
+
+  const filteredContacts = contacts.filter(c =>
+    `${c.name} ${c.company ?? ''}`.toLowerCase().includes(contactSearch.toLowerCase())
+  )
+
+  const iField = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400'
+
   const cols = ['Đơn hàng', 'Giai đoạn', 'Nguồn', 'Sale TV', 'Điểm đến', 'Giá trị ước tính', 'Ngày tạo']
 
   return (
-    <div className="overflow-y-auto bg-white" style={{ height: 'calc(100vh - 40px)' }}>
-      <table className="w-full text-sm">
-        <thead className="sticky top-0 z-10">
-          <tr className="bg-gray-50 border-b border-gray-200">
-            {cols.map(h => (
-              <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {loading ? (
-            Array.from({ length: 8 }).map((_, i) => (
-              <tr key={i} className="animate-pulse">
-                {[40, 16, 14, 18, 20, 14, 12].map((w, j) => (
-                  <td key={j} className="px-5 py-4"><div className="h-3 bg-gray-100 rounded" style={{ width: `${w + (i % 3) * 4}%` }} /></td>
-                ))}
+    <>
+      <div className="overflow-y-auto bg-white" style={{ height: 'calc(100vh - 40px)' }}>
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-gray-50 border-b border-gray-200">
+              {cols.map(h => (
+                <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+              ))}
+              <th className="px-5 py-3 text-right">
+                <button onClick={openModal}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-500 hover:bg-accent-600 text-white text-xs font-semibold rounded-lg transition-colors ml-auto">
+                  <Plus size={13} strokeWidth={2.5} /> Thêm đơn
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {loading ? (
+              Array.from({ length: 8 }).map((_, i) => (
+                <tr key={i} className="animate-pulse">
+                  {[40, 16, 14, 18, 20, 14, 12, 8].map((w, j) => (
+                    <td key={j} className="px-5 py-4"><div className="h-3 bg-gray-100 rounded" style={{ width: `${w + (i % 3) * 4}%` }} /></td>
+                  ))}
+                </tr>
+              ))
+            ) : rows.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-5 py-16 text-center">
+                  <div className="text-gray-300 text-4xl mb-3">📋</div>
+                  <div className="text-gray-400 text-sm mb-4">Chưa có đơn nào đang lấy thông tin</div>
+                  <button onClick={openModal} className="inline-flex items-center gap-1.5 px-4 py-2 bg-accent-500 text-white text-sm font-semibold rounded-xl hover:bg-accent-600 transition-colors">
+                    <Plus size={15} /> Thêm đơn đầu tiên
+                  </button>
+                </td>
               </tr>
-            ))
-          ) : rows.length === 0 ? (
-            <tr><td colSpan={7} className="px-5 py-12 text-center text-gray-400">Không có đơn nào</td></tr>
-          ) : rows.map(r => {
-            const sc = STAGE_COLORS[r.stage]
-            return (
-              <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/co-hoi/${r.id}`)}>
-                <td className="px-5 py-3.5">
-                  <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{r.title}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{r.contact?.company ?? r.contact?.name}</div>
-                </td>
-                <td className="px-5 py-3.5">
-                  <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${sc.bg} ${sc.text}`}>{STAGE_LABELS[r.stage]}</span>
-                </td>
-                <td className="px-5 py-3.5">
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SOURCE_COLORS[r.source as keyof typeof SOURCE_COLORS]}`}>{SOURCE_LABELS[r.source as keyof typeof SOURCE_LABELS]}</span>
-                </td>
-                <td className="px-5 py-3.5">
-                  {r.assigned_user ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">{getInitials(r.assigned_user.full_name)}</div>
-                      <span className="text-gray-700 whitespace-nowrap">{r.assigned_user.full_name}</span>
+            ) : rows.map(r => {
+              const sc = STAGE_COLORS[r.stage]
+              return (
+                <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/co-hoi/${r.id}`)}>
+                  <td className="px-5 py-3.5">
+                    <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{r.title}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{r.contact?.company ?? r.contact?.name}</div>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${sc.bg} ${sc.text}`}>{STAGE_LABELS[r.stage]}</span>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SOURCE_COLORS[r.source as keyof typeof SOURCE_COLORS]}`}>{SOURCE_LABELS[r.source as keyof typeof SOURCE_LABELS]}</span>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    {r.assigned_user ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">{getInitials(r.assigned_user.full_name)}</div>
+                        <span className="text-gray-700 whitespace-nowrap">{r.assigned_user.full_name}</span>
+                      </div>
+                    ) : <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Chờ phân công</span>}
+                  </td>
+                  <td className="px-5 py-3.5 text-gray-600">{r.description || <span className="text-gray-300">—</span>}</td>
+                  <td className="px-5 py-3.5 text-right font-semibold text-gray-800">{r.estimated_value ? formatVND(r.estimated_value) : <span className="text-gray-300">—</span>}</td>
+                  <td className="px-5 py-3.5 text-gray-400 whitespace-nowrap">{formatDate(r.created_at)}</td>
+                  <td />
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Modal thêm đơn */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={() => setShowModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h3 className="font-bold text-gray-900">Thêm đơn hàng mới</h3>
+              <button onClick={() => setShowModal(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400"><X size={16} /></button>
+            </div>
+
+            <div className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* Tên đơn */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  Tên đơn hàng <span className="text-red-500">*</span>
+                </label>
+                <input value={form.title} onChange={e => { setForm(f => ({ ...f, title: e.target.value })); setErrors(er => ({ ...er, title: '' })) }}
+                  placeholder="VD: Công ty ABC – Đà Nẵng Q3/2026"
+                  className={`${iField} ${errors.title ? 'border-red-300 bg-red-50' : ''}`} autoFocus />
+                {errors.title && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {errors.title}</p>}
+              </div>
+
+              {/* Khách hàng */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  Khách hàng <span className="text-red-500">*</span>
+                </label>
+                <input value={contactSearch} onChange={e => setContactSearch(e.target.value)}
+                  placeholder="Tìm theo tên hoặc công ty..."
+                  className={`${iField} mb-2 ${errors.contact_id ? 'border-red-300 bg-red-50' : ''}`} />
+                <div className="border border-gray-200 rounded-xl overflow-hidden max-h-36 overflow-y-auto">
+                  {filteredContacts.slice(0, 30).map(c => (
+                    <div key={c.id} onClick={() => { setForm(f => ({ ...f, contact_id: c.id })); setErrors(er => ({ ...er, contact_id: '' })) }}
+                      className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm transition-colors ${form.contact_id === c.id ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
+                      <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600 flex-shrink-0">{getInitials(c.name)}</div>
+                      <div>
+                        <div className="font-medium">{c.name}</div>
+                        {c.company && <div className="text-xs text-gray-400">{c.company}</div>}
+                      </div>
                     </div>
-                  ) : <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Chờ phân công</span>}
-                </td>
-                <td className="px-5 py-3.5 text-gray-600">{r.description || <span className="text-gray-300">—</span>}</td>
-                <td className="px-5 py-3.5 text-right font-semibold text-gray-800">{r.estimated_value ? formatVND(r.estimated_value) : <span className="text-gray-300">—</span>}</td>
-                <td className="px-5 py-3.5 text-gray-400 whitespace-nowrap">{formatDate(r.created_at)}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
+                  ))}
+                  {filteredContacts.length === 0 && <div className="px-3 py-4 text-sm text-gray-400 text-center">Không tìm thấy</div>}
+                </div>
+                {errors.contact_id && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {errors.contact_id}</p>}
+              </div>
+
+              {/* Sale TV */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  Sale phụ trách <span className="text-red-500">*</span>
+                </label>
+                <select value={form.assigned_to} onChange={e => { setForm(f => ({ ...f, assigned_to: e.target.value })); setErrors(er => ({ ...er, assigned_to: '' })) }}
+                  className={`${iField} ${errors.assigned_to ? 'border-red-300 bg-red-50' : ''}`}>
+                  <option value="">— Chọn Sale TV —</option>
+                  {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                </select>
+                {errors.assigned_to && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {errors.assigned_to}</p>}
+              </div>
+
+              {/* Nguồn */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nguồn</label>
+                <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value as LeadSource }))} className={iField}>
+                  {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </div>
+
+              {/* Điểm đến */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Điểm đến</label>
+                <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="VD: Đà Nẵng, Nhật Bản..." className={iField} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Giá trị */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Giá trị ước tính (VNĐ)</label>
+                  <input type="number" value={form.estimated_value} onChange={e => setForm(f => ({ ...f, estimated_value: e.target.value }))}
+                    placeholder="0" className={iField} />
+                </div>
+                {/* Ngày tour */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Ngày tour</label>
+                  <DateInput value={form.tour_date} onChange={v => setForm(f => ({ ...f, tour_date: v }))} className="w-full" />
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+              <button onClick={() => setShowModal(false)} className="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 font-medium">Huỷ</button>
+              <button onClick={handleSave} disabled={saving}
+                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-sm font-semibold transition-colors">
+                {saving && <Loader2 size={13} className="animate-spin" />}
+                Tạo đơn
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
