@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Plus, Kanban, List, Search, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS, formatVND, formatDate, daysUntil, getInitials } from '@/lib/utils'
@@ -29,6 +30,7 @@ export function PipelineView() {
   const { user } = useAuth()
   const { setOnRefresh } = useTopbar()
   const supabase = createClient()
+  const router = useRouter()
   const [view, setView] = useState<ViewMode>('table')
   const [opps, setOpps] = useState<OppWithRelations[]>([])
   const [loading, setLoading] = useState(true)
@@ -318,7 +320,7 @@ export function PipelineView() {
                       const sc = STAGE_COLORS[opp.stage]
                       const deadline = opp.deadline ? daysUntil(opp.deadline) : null
                       return (
-                        <tr key={opp.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => window.location.href = `/co-hoi/${opp.id}`}>
+                        <tr key={opp.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/co-hoi/${opp.id}`)}>
                           <td className="px-5 py-3.5">
                             <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{opp.title}</div>
                             <div className="text-xs text-gray-400 mt-0.5">{opp.contact?.company ?? opp.contact?.name}</div>
