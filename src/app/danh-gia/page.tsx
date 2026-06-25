@@ -425,9 +425,9 @@ export default function DanhGiaPage() {
           <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-2xl p-1 shadow-sm">
             {([
               { key: 'all', label: 'Tất cả đánh giá' },
+              { key: 'summary', label: 'Theo đoàn' },
               { key: 'poor', label: 'Đánh giá kém' },
               { key: 'destination', label: 'Địa điểm quan tâm' },
-              { key: 'summary', label: 'Theo đơn hàng' },
             ] as const).map(t => (
               <button key={t.key} onClick={() => { setTab(t.key); setSelected(null) }}
                 className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${tab === t.key ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>
@@ -565,7 +565,7 @@ export default function DanhGiaPage() {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {tableData.map(f => (
-                        <tr key={f.id} onClick={() => isSuperAdmin && selectMode ? toggleCheck(f.id, { stopPropagation: () => {} } as React.MouseEvent) : setExpanded(f.id)}
+                        <tr key={f.id} onClick={() => isSuperAdmin && selectMode ? toggleCheck(f.id, { stopPropagation: () => {} } as React.MouseEvent) : setExpanded(v => v === f.id ? null : f.id)}
                           className={`cursor-pointer transition-colors hover:bg-gray-50 ${expanded === f.id ? 'bg-brand-50/40' : checkedIds.has(f.id) ? 'bg-amber-50/40' : ''}`}>
                           {isSuperAdmin && selectMode && (
                             <td className="w-10 px-3 py-3" onClick={e => { e.stopPropagation(); toggleCheck(f.id, e) }}>
@@ -616,7 +616,7 @@ export default function DanhGiaPage() {
                   <div className="divide-y divide-gray-100">
                     {listFiltered.map(f => (
                       <div key={f.id} className={expanded === f.id ? 'bg-brand-50/40' : checkedIds.has(f.id) ? 'bg-amber-50/30' : ''}>
-                        <div className="px-5 py-4 hover:bg-gray-50/70 transition-colors cursor-pointer" onClick={() => setExpanded(f.id)}>
+                        <div className="px-5 py-4 hover:bg-gray-50/70 transition-colors cursor-pointer" onClick={() => setExpanded(v => v === f.id ? null : f.id)}>
                           <div className="flex items-start gap-3">
                             {isSuperAdmin && selectMode && (
                               <div className="pt-0.5 flex-shrink-0" onClick={e => toggleCheck(f.id, e)}>
