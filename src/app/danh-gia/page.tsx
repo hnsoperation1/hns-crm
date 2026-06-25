@@ -154,6 +154,7 @@ export default function DanhGiaPage() {
   const [allView, setAllView] = useState<'list' | 'table'>('table')
   const [tableSort, setTableSort] = useState<{ col: string; dir: 'asc' | 'desc' } | null>(null)
   const [tableFilters, setTableFilters] = useState<Record<string, string>>({})
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
   const [expanded, setExpanded] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedList>(null)
   const [filterHasOpp, setFilterHasOpp] = useState(false)
@@ -570,7 +571,23 @@ export default function DanhGiaPage() {
                           </td>
                           <td className="px-4 py-3 text-gray-700 min-w-[130px]">{f.group_name ?? '—'}</td>
                           <td className="px-4 py-3 text-gray-600 min-w-[120px]">{f.itinerary ?? '—'}</td>
-                          <td className="px-4 py-3 text-gray-500 italic min-w-[180px] max-w-[260px]">{f.overall_comment ? `"${f.overall_comment}"` : '—'}</td>
+                          <td className="px-4 py-3 text-gray-500 italic min-w-[180px] max-w-[260px]">
+                            {f.overall_comment ? (() => {
+                              const isExpanded = expandedComments.has(f.id)
+                              const isLong = f.overall_comment.length > 160
+                              return (
+                                <div>
+                                  <span className={!isExpanded && isLong ? 'line-clamp-4' : ''}>"{f.overall_comment}"</span>
+                                  {isLong && (
+                                    <button onClick={e => { e.stopPropagation(); setExpandedComments(p => { const s = new Set(p); isExpanded ? s.delete(f.id) : s.add(f.id); return s }) }}
+                                      className="text-xs text-brand-500 hover:underline mt-0.5 block not-italic font-medium">
+                                      {isExpanded ? 'Thu gọn' : '... xem thêm'}
+                                    </button>
+                                  )}
+                                </div>
+                              )
+                            })() : '—'}
+                          </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             {f.is_satisfied === true && <span className="text-xs font-semibold text-emerald-600">Hài lòng</span>}
                             {f.is_satisfied === false && <span className="text-xs font-semibold text-red-500">Không hài lòng</span>}
