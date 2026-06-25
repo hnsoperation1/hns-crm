@@ -156,6 +156,7 @@ export default function DanhGiaPage() {
   const [tableFilters, setTableFilters] = useState<Record<string, string>>({})
   const [commentModal, setCommentModal] = useState<{ name: string; comment: string } | null>(null)
   const [tableFullscreen, setTableFullscreen] = useState(false)
+  const [tableScrolled, setTableScrolled] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedList>(null)
   const [filterHasOpp, setFilterHasOpp] = useState(false)
@@ -510,7 +511,7 @@ export default function DanhGiaPage() {
 
             {/* List / Table */}
             <div
-              onScroll={e => { if (allView === 'table' && !tableFullscreen && (e.currentTarget as HTMLDivElement).scrollTop > 30) setTableFullscreen(true) }}
+              onScroll={e => { if (allView === 'table') setTableScrolled((e.currentTarget as HTMLDivElement).scrollTop > 30) }}
               className={`overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-sm ${allView === 'table' ? 'overflow-x-auto' : ''} ${tableFullscreen && allView === 'table' ? 'fixed top-10 left-52 right-0 bottom-0 z-30 rounded-none' : 'flex-1 min-h-0'}`}>
                 {loading ? (
                   <div className="divide-y divide-gray-100">
@@ -1028,6 +1029,15 @@ export default function DanhGiaPage() {
             <Link2 size={14} /> Tìm đơn hàng liên quan
           </button>
         </div>
+      )}
+
+      {/* Nút phóng to khi scroll bảng */}
+      {allView === 'table' && tableScrolled && !tableFullscreen && (
+        <button onClick={() => setTableFullscreen(true)}
+          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2 bg-gray-900/80 hover:bg-gray-900 text-white text-xs font-semibold rounded-full shadow-lg backdrop-blur-sm transition-colors">
+          <Maximize2 size={13} />
+          Phóng to bảng
+        </button>
       )}
 
       {/* Nút thu nhỏ fullscreen */}
