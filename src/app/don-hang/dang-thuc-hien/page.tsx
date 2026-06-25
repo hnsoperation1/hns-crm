@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
@@ -76,7 +76,7 @@ export default function DangThucHienPage() {
             const isPast = daysLeft !== null && daysLeft < 0
             const isUrgent = daysLeft !== null && daysLeft > 0 && daysLeft <= 3
             return (
-              <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/co-hoi/${r.id}`)}>
+              <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/don-hang/${r.id}`)}>
                 <td className="px-5 py-3.5">
                   <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{r.title}</div>
                   <div className="text-xs text-gray-400 mt-0.5">{r.contact?.company ?? r.contact?.name}</div>

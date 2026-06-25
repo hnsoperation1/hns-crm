@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
@@ -455,7 +455,7 @@ export default function AssignPage() {
                           {formatDate(opp.created_at)}
                         </td>
                         <td className="px-4 py-3">
-                          <Link href={`/co-hoi/${opp.id}`}
+                          <Link href={`/don-hang/${opp.id}`}
                             className="text-gray-300 hover:text-accent-500 transition-colors p-1 rounded-lg hover:bg-brand-50 inline-flex">
                             <ChevronRight size={14} />
                           </Link>

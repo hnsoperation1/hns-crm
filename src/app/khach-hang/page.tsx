@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
@@ -381,7 +381,7 @@ function ContactsTab() {
                   </td>
                   <td className="px-5 py-3.5">
                     {currentOpp
-                      ? <Link href={`/co-hoi/${currentOpp.id}`} className="text-accent-500 hover:text-accent-600 hover:underline font-semibold text-xs">{currentOpp.title}</Link>
+                      ? <Link href={`/don-hang/${currentOpp.id}`} className="text-accent-500 hover:text-accent-600 hover:underline font-semibold text-xs">{currentOpp.title}</Link>
                       : <span className="text-gray-300 text-xs">—</span>}
                   </td>
                   <td className="px-5 py-3.5 text-gray-400 text-xs whitespace-nowrap">{formatDate(contact.created_at)}</td>

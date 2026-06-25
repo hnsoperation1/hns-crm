@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
@@ -135,7 +135,7 @@ export function PipelineView() {
             const sc = STAGE_COLORS[opp.stage]
             const deadline = opp.deadline ? daysUntil(opp.deadline) : null
             return (
-              <tr key={opp.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/co-hoi/${opp.id}`)}>
+              <tr key={opp.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/don-hang/${opp.id}`)}>
                 <td className="px-5 py-3.5">
                   <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{opp.title}</div>
                   <div className="text-xs text-gray-400 mt-0.5">{opp.contact?.company ?? opp.contact?.name}</div>
@@ -228,7 +228,7 @@ export function PipelineView() {
                     {filtered.slice(0, 10).map(opp => {
                       const sc = STAGE_COLORS[opp.stage]
                       return (
-                        <Link key={opp.id} href={`/co-hoi/${opp.id}`} onClick={() => { setShowDrop(false); setSearch('') }}
+                        <Link key={opp.id} href={`/don-hang/${opp.id}`} onClick={() => { setShowDrop(false); setSearch('') }}
                           className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
                           <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${sc.dot}`} />
                           <div className="flex-1 min-w-0">
@@ -265,7 +265,7 @@ export function PipelineView() {
               </button>
             </div>
             {user?.role !== 'sale' && (
-              <Link href="/co-hoi/new" className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">
+              <Link href="/don-hang/new" className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">
                 <Plus size={16} strokeWidth={2.5} /> Thêm đơn
               </Link>
             )}
@@ -339,7 +339,7 @@ export function PipelineView() {
                           onDragEnd={canDrag ? () => { setDraggingId(null); setDragOverStage(null) } : undefined}
                           className={`transition-opacity ${isDragging ? 'opacity-40' : 'opacity-100'} ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
                         >
-                          <Link href={`/co-hoi/${opp.id}`} className="block" draggable={false}>
+                          <Link href={`/don-hang/${opp.id}`} className="block" draggable={false}>
                             <div className={`bg-white rounded-xl border p-3.5 hover:shadow-md transition-all group ${!opp.assigned_to ? 'border-amber-200' : 'border-gray-200'}`}>
                               <div className="font-semibold text-sm text-gray-900 group-hover:text-brand-700 transition-colors mb-0.5 line-clamp-2 leading-snug">{opp.title}</div>
                               <div className="text-xs text-gray-400 mb-2.5">{opp.contact?.company ?? opp.contact?.name}</div>

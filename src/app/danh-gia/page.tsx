@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
@@ -121,7 +121,7 @@ function CustomerList({ data, onClose }: { data: SelectedList; onClose: () => vo
                 {f.overall_comment && <p className="text-xs text-gray-500 mt-1 italic line-clamp-2">"{f.overall_comment}"</p>}
               </div>
               {f.opportunity_id && (
-                <Link href={`/co-hoi/${f.opportunity_id}`} className="flex-shrink-0 text-xs text-brand-600 hover:underline flex items-center gap-0.5 mt-0.5">
+                <Link href={`/don-hang/${f.opportunity_id}`} className="flex-shrink-0 text-xs text-brand-600 hover:underline flex items-center gap-0.5 mt-0.5">
                   <ExternalLink size={11} /> Đơn
                 </Link>
               )}
@@ -678,7 +678,7 @@ export default function DanhGiaPage() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           {f.opportunity_id && (
-                            <Link href={`/co-hoi/${f.opportunity_id}`} className="text-xs text-brand-600 hover:underline flex items-center gap-0.5 font-medium">
+                            <Link href={`/don-hang/${f.opportunity_id}`} className="text-xs text-brand-600 hover:underline flex items-center gap-0.5 font-medium">
                               <ExternalLink size={11} /> Đơn
                             </Link>
                           )}
@@ -947,7 +947,7 @@ export default function DanhGiaPage() {
                     return (
                       <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-4 flex-shrink-0">
                         <div className="flex-1 min-w-0">
-                          <Link href={`/co-hoi/${g.id}`} className="font-bold text-gray-900 hover:text-brand-600 transition-colors text-sm flex items-center gap-1.5">
+                          <Link href={`/don-hang/${g.id}`} className="font-bold text-gray-900 hover:text-brand-600 transition-colors text-sm flex items-center gap-1.5">
                             {g.title} <ExternalLink size={12} className="text-gray-400" />
                           </Link>
                           <p className="text-xs text-gray-400 mt-0.5">{g.feedbacks.length} phản hồi</p>

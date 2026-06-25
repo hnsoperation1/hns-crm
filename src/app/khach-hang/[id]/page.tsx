@@ -137,7 +137,7 @@ export default function ContactDetailPage() {
                 {activeOpps.map(opp => {
                   const sc = STAGE_COLORS[opp.stage]
                   return (
-                    <Link key={opp.id} href={`/co-hoi/${opp.id}`}
+                    <Link key={opp.id} href={`/don-hang/${opp.id}`}
                       className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors group">
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors truncate">{opp.title}</div>
@@ -171,7 +171,7 @@ export default function ContactDetailPage() {
                 {closedOpps.map(opp => {
                   const sc = STAGE_COLORS[opp.stage]
                   return (
-                    <Link key={opp.id} href={`/co-hoi/${opp.id}`}
+                    <Link key={opp.id} href={`/don-hang/${opp.id}`}
                       className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors group opacity-70 hover:opacity-100">
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-gray-700 group-hover:text-brand-700 transition-colors truncate text-sm">{opp.title}</div>

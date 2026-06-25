@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Plus, X, Search, Loader2, CheckCircle2, Circle, Clock, AlertCircle } from 'lucide-react'
@@ -232,7 +232,7 @@ export default function CSKHPage() {
                     </td>
                     <td className="px-5 py-3.5">
                       {issue.opportunity ? (
-                        <a href={`/co-hoi/${issue.opportunity.id}`} className="text-brand-600 hover:underline font-medium truncate max-w-[200px] block">
+                        <a href={`/don-hang/${issue.opportunity.id}`} className="text-brand-600 hover:underline font-medium truncate max-w-[200px] block">
                           {issue.opportunity.title}
                         </a>
                       ) : <span className="text-gray-300">—</span>}

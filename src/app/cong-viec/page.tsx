@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
@@ -213,7 +213,7 @@ export default function TasksPage() {
                               )}
                             </div>
                             <Link
-                              href={`/co-hoi/${opp.id}`}
+                              href={`/don-hang/${opp.id}`}
                               className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0 ${
                                 loggedToday ? 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200' : 'bg-accent-500 text-white hover:bg-accent-600'
                               }`}
@@ -255,7 +255,7 @@ export default function TasksPage() {
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               <span className={`text-[11px] font-semibold ${sc.text} opacity-70`}>{done.length}/{done.length + pending.length}</span>
-                              <Link href={`/co-hoi/${opp.id}`} className={`${sc.text} hover:opacity-70`}><ChevronRight size={14} /></Link>
+                              <Link href={`/don-hang/${opp.id}`} className={`${sc.text} hover:opacity-70`}><ChevronRight size={14} /></Link>
                             </div>
                           </div>
                           <div className="h-1 bg-gray-100">

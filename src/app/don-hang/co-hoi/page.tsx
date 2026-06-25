@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
@@ -47,6 +47,7 @@ export default function DangLayPage() {
   const [errors, setErrors] = useState<Partial<typeof EMPTY_FORM>>({})
   const [saving, setSaving] = useState(false)
   const [contactSearch, setContactSearch] = useState('')
+  const [contactDropOpen, setContactDropOpen] = useState(false)
   const [showNewContact, setShowNewContact] = useState(false)
   const [newContact, setNewContact] = useState({ name: '', phone: '', company: '' })
   const [savingContact, setSavingContact] = useState(false)
@@ -176,7 +177,7 @@ export default function DangLayPage() {
             ) : rows.map(r => {
               const sc = STAGE_COLORS[r.stage]
               return (
-                <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/co-hoi/${r.id}`)}>
+                <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/don-hang/${r.id}`)}>
                   <td className="px-5 py-3.5">
                     <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{r.title}</div>
                     <div className="text-xs text-gray-400 mt-0.5">{r.contact?.company ?? r.contact?.name}</div>
@@ -264,53 +265,71 @@ export default function DangLayPage() {
                 )}
 
                 {!showNewContact && (
-                  <>
-                    <input value={contactSearch} onChange={e => { setContactSearch(e.target.value); setForm(f => ({ ...f, contact_id: '' })) }}
+                  <div className="relative">
+                    <input
+                      value={contactSearch}
+                      onChange={e => { setContactSearch(e.target.value); setForm(f => ({ ...f, contact_id: '' })); setContactDropOpen(true) }}
+                      onFocus={() => setContactDropOpen(true)}
+                      onBlur={() => setTimeout(() => setContactDropOpen(false), 150)}
                       placeholder="Tìm theo tên hoặc công ty..."
-                      className={`${iField} mb-2 ${errors.contact_id ? 'border-red-300 bg-red-50' : ''}`} />
-                    <div className="border border-gray-200 rounded-xl overflow-hidden max-h-36 overflow-y-auto">
-                      {filteredContacts.slice(0, 30).map(c => (
-                        <div key={c.id} onClick={() => { setForm(f => ({ ...f, contact_id: c.id })); setContactSearch(c.name); setErrors(er => ({ ...er, contact_id: '' })) }}
-                          className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm transition-colors ${form.contact_id === c.id ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
-                          <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600 flex-shrink-0">{getInitials(c.name)}</div>
-                          <div>
-                            <div className="font-medium">{c.name}</div>
-                            {c.company && <div className="text-xs text-gray-400">{c.company}</div>}
+                      className={`${iField} ${errors.contact_id ? 'border-red-300 bg-red-50' : ''}`}
+                    />
+                    {form.contact_id && !contactDropOpen && (
+                      <div className="mt-1.5 flex items-center gap-2 px-3 py-2 bg-brand-50 border border-brand-100 rounded-xl text-sm text-brand-700 font-medium">
+                        <div className="w-6 h-6 bg-brand-200 rounded-full flex items-center justify-center text-[10px] font-bold text-brand-700 flex-shrink-0">
+                          {getInitials(contacts.find(c => c.id === form.contact_id)?.name ?? '')}
+                        </div>
+                        {contacts.find(c => c.id === form.contact_id)?.name}
+                        <button type="button" onClick={() => { setForm(f => ({ ...f, contact_id: '' })); setContactSearch('') }} className="ml-auto text-brand-400 hover:text-brand-600"><X size={13} /></button>
+                      </div>
+                    )}
+                    {contactDropOpen && (
+                      <div className="absolute left-0 right-0 top-full mt-1 border border-gray-200 rounded-xl bg-white shadow-lg z-20 overflow-hidden max-h-44 overflow-y-auto">
+                        {filteredContacts.slice(0, 30).map(c => (
+                          <div key={c.id} onMouseDown={() => { setForm(f => ({ ...f, contact_id: c.id })); setContactSearch(c.name); setErrors(er => ({ ...er, contact_id: '' })); setContactDropOpen(false) }}
+                            className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm transition-colors ${form.contact_id === c.id ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
+                            <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600 flex-shrink-0">{getInitials(c.name)}</div>
+                            <div>
+                              <div className="font-medium">{c.name}</div>
+                              {c.company && <div className="text-xs text-gray-400">{c.company}</div>}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      {filteredContacts.length === 0 && (
-                        <div className="px-3 py-4 text-sm text-gray-400 text-center">
-                          Không tìm thấy —{' '}
-                          <button type="button" onClick={() => { setShowNewContact(true); setNewContact({ name: contactSearch, phone: '', company: '' }) }}
-                            className="text-brand-600 font-semibold hover:underline">tạo mới</button>
-                        </div>
-                      )}
-                    </div>
-                  </>
+                        ))}
+                        {filteredContacts.length === 0 && (
+                          <div className="px-3 py-4 text-sm text-gray-400 text-center">
+                            Không tìm thấy —{' '}
+                            <button type="button" onMouseDown={() => { setShowNewContact(true); setNewContact({ name: contactSearch, phone: '', company: '' }); setContactDropOpen(false) }}
+                              className="text-brand-600 font-semibold hover:underline">tạo mới</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
                 {errors.contact_id && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {errors.contact_id}</p>}
               </div>
 
-              {/* Sale TV */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                  Sale phụ trách <span className="text-red-500">*</span>
-                </label>
-                <select value={form.assigned_to} onChange={e => { setForm(f => ({ ...f, assigned_to: e.target.value })); setErrors(er => ({ ...er, assigned_to: '' })) }}
-                  className={`${iField} ${errors.assigned_to ? 'border-red-300 bg-red-50' : ''}`}>
-                  <option value="">— Chọn Sale TV —</option>
-                  {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
-                </select>
-                {errors.assigned_to && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {errors.assigned_to}</p>}
-              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {/* Sale TV */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                    Sale phụ trách <span className="text-red-500">*</span>
+                  </label>
+                  <select value={form.assigned_to} onChange={e => { setForm(f => ({ ...f, assigned_to: e.target.value })); setErrors(er => ({ ...er, assigned_to: '' })) }}
+                    className={`${iField} ${errors.assigned_to ? 'border-red-300 bg-red-50' : ''}`}>
+                    <option value="">— Chọn Sale TV —</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                  </select>
+                  {errors.assigned_to && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {errors.assigned_to}</p>}
+                </div>
 
-              {/* Nguồn */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nguồn</label>
-                <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value as LeadSource }))} className={iField}>
-                  {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
+                {/* Nguồn */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nguồn</label>
+                  <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value as LeadSource }))} className={iField}>
+                    {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                </div>
               </div>
 
               {/* Mô tả sơ lược */}
