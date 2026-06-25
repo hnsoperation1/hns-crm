@@ -116,14 +116,96 @@ export function PipelineView() {
       || (o.assigned_user?.full_name ?? '').toLowerCase().includes(q)
   })
 
+  const TableRows = () => (
+    <>
+      {loading ? (
+        Array.from({ length: 8 }).map((_, i) => (
+          <tr key={i} className="animate-pulse">
+            {[40, 20, 24, 20, 16, 16, 14].map((w, j) => (
+              <td key={j} className="px-5 py-4"><div className="h-3 bg-gray-100 rounded" style={{ width: `${w + (i % 3) * 5}%` }} /></td>
+            ))}
+          </tr>
+        ))
+      ) : (
+        <>
+          {filtered.length === 0 && (
+            <tr><td colSpan={7} className="px-5 py-12 text-center text-gray-400">Không có đơn nào</td></tr>
+          )}
+          {filtered.map(opp => {
+            const sc = STAGE_COLORS[opp.stage]
+            const deadline = opp.deadline ? daysUntil(opp.deadline) : null
+            return (
+              <tr key={opp.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/co-hoi/${opp.id}`)}>
+                <td className="px-5 py-3.5">
+                  <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{opp.title}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">{opp.contact?.company ?? opp.contact?.name}</div>
+                </td>
+                <td className="px-5 py-3.5">
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SOURCE_COLORS[opp.source]}`}>{SOURCE_LABELS[opp.source]}</span>
+                </td>
+                <td className="px-5 py-3.5">
+                  <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${sc.bg} ${sc.text}`}>{STAGE_LABELS[opp.stage]}</span>
+                </td>
+                <td className="px-5 py-3.5">
+                  {!opp.assigned_to ? (
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Chờ phân công</span>
+                  ) : opp.assigned_user ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">{getInitials(opp.assigned_user.full_name)}</div>
+                      <span className="text-gray-700 whitespace-nowrap">{opp.assigned_user.full_name}</span>
+                    </div>
+                  ) : null}
+                </td>
+                <td className="px-5 py-3.5 text-right">
+                  <span className="font-semibold text-gray-900 whitespace-nowrap">{opp.estimated_value ? formatVND(opp.estimated_value) : '—'}</span>
+                </td>
+                <td className="px-5 py-3.5 text-gray-500 whitespace-nowrap">{opp.tour_date ? formatDate(opp.tour_date) : '—'}</td>
+                <td className="px-5 py-3.5">
+                  {opp.deadline ? (
+                    <span className={`text-xs font-medium whitespace-nowrap ${deadline !== null && deadline < 0 ? 'text-red-600' : deadline !== null && deadline <= 7 ? 'text-amber-600' : 'text-gray-500'}`}>
+                      {formatDate(opp.deadline)}{deadline !== null && deadline >= 0 && deadline <= 7 && ` · ${deadline}N`}
+                    </span>
+                  ) : <span className="text-gray-300">—</span>}
+                </td>
+              </tr>
+            )
+          })}
+        </>
+      )}
+    </>
+  )
+
+  const TableHead = () => (
+    <tr className="bg-gray-50 border-b border-gray-200">
+      {['Đơn hàng', 'Nguồn', 'Giai đoạn', 'Sale TV', 'Giá trị', 'Ngày tour', 'Deadline'].map(h => (
+        <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+      ))}
+    </tr>
+  )
+
+  if (group) {
+    return (
+      <div className="overflow-y-auto bg-white" style={{ height: 'calc(100vh - 40px)' }}>
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 z-10">
+            <TableHead />
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            <TableRows />
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 40px)' }}>
       {/* Header */}
       <div className="flex flex-col gap-0 border-b border-gray-200 bg-white flex-shrink-0">
         <div className="flex items-center justify-between px-6 pt-4 pb-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{group ? GROUP_LABELS[group] : 'Đơn hàng'}</h1>
-            <p className="text-sm text-gray-400 mt-0.5">{filtered.length} đơn{!group && ` · ${activeCount} đang xử lý`}</p>
+            <h1 className="text-2xl font-bold text-gray-900">Đơn hàng</h1>
+            <p className="text-sm text-gray-400 mt-0.5">{activeCount} đơn đang xử lý</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="relative" ref={searchRef}>
@@ -311,69 +393,8 @@ export function PipelineView() {
         <div className="flex-1 overflow-y-auto p-6">
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  {['Đơn hàng', 'Nguồn', 'Giai đoạn', 'Sale TV', 'Giá trị', 'Ngày tour', 'Deadline'].map(h => (
-                    <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {loading ? (
-                  Array.from({ length: 8 }).map((_, i) => (
-                    <tr key={i} className="animate-pulse">
-                      {[40, 20, 24, 20, 16, 16, 14].map((w, j) => (
-                        <td key={j} className="px-5 py-4"><div className="h-3 bg-gray-100 rounded" style={{ width: `${w + (i % 3) * 5}%` }} /></td>
-                      ))}
-                    </tr>
-                  ))
-                ) : (
-                  <>
-                    {filtered.length === 0 && (
-                      <tr><td colSpan={7} className="px-5 py-12 text-center text-gray-400">{search ? 'Không tìm thấy đơn nào' : 'Chưa có đơn hàng nào'}</td></tr>
-                    )}
-                    {filtered.map(opp => {
-                      const sc = STAGE_COLORS[opp.stage]
-                      const deadline = opp.deadline ? daysUntil(opp.deadline) : null
-                      return (
-                        <tr key={opp.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/co-hoi/${opp.id}`)}>
-                          <td className="px-5 py-3.5">
-                            <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{opp.title}</div>
-                            <div className="text-xs text-gray-400 mt-0.5">{opp.contact?.company ?? opp.contact?.name}</div>
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SOURCE_COLORS[opp.source]}`}>{SOURCE_LABELS[opp.source]}</span>
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${sc.bg} ${sc.text}`}>{STAGE_LABELS[opp.stage]}</span>
-                          </td>
-                          <td className="px-5 py-3.5">
-                            {!opp.assigned_to ? (
-                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Chờ phân công</span>
-                            ) : opp.assigned_user ? (
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600">{getInitials(opp.assigned_user.full_name)}</div>
-                                <span className="text-gray-700 whitespace-nowrap">{opp.assigned_user.full_name}</span>
-                              </div>
-                            ) : null}
-                          </td>
-                          <td className="px-5 py-3.5 text-right">
-                            <span className="font-semibold text-gray-900 whitespace-nowrap">{opp.estimated_value ? formatVND(opp.estimated_value) : '—'}</span>
-                          </td>
-                          <td className="px-5 py-3.5 text-gray-500 whitespace-nowrap">{opp.tour_date ? formatDate(opp.tour_date) : '—'}</td>
-                          <td className="px-5 py-3.5">
-                            {opp.deadline ? (
-                              <span className={`text-xs font-medium whitespace-nowrap ${deadline !== null && deadline < 0 ? 'text-red-600' : deadline !== null && deadline <= 7 ? 'text-amber-600' : 'text-gray-500'}`}>
-                                {formatDate(opp.deadline)}{deadline !== null && deadline >= 0 && deadline <= 7 && ` · ${deadline}N`}
-                              </span>
-                            ) : <span className="text-gray-300">—</span>}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </>
-                )}
-              </tbody>
+              <thead><TableHead /></thead>
+              <tbody className="divide-y divide-gray-100"><TableRows /></tbody>
             </table>
           </div>
         </div>

@@ -9,7 +9,7 @@ import { getInitials } from '@/lib/utils'
 
 const navItems = [
   { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-  { href: '/don-hang', label: 'Đơn hàng', icon: Kanban },
+
   { href: '/cong-viec', label: 'Công việc', icon: ClipboardList },
   { href: '/giao-viec', label: 'Giao việc', icon: UserPlus },
   { href: '/khach-hang', label: 'Khách hàng', icon: Users },
