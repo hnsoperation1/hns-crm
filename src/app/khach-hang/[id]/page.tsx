@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronRight, Phone, Mail, Building2, MapPin, Loader2, ArrowLeft } from 'lucide-react'
@@ -19,27 +19,33 @@ type OppWithUser = Opportunity & {
 export default function ContactDetailPage() {
   const { id } = useParams<{ id: string }>()
   const supabase = createClient()
-  const { setBreadcrumb } = useTopbar()
+  const { setBreadcrumb, setOnRefresh } = useTopbar()
 
   const [contact, setContact] = useState<Contact | null>(null)
   const [opps, setOpps] = useState<OppWithUser[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    async function load() {
-      const [{ data: c }, { data: o }] = await Promise.all([
-        supabase.from('contacts').select('*').eq('id', id).single(),
-        supabase.from('opportunities')
-          .select('*, assigned_user:users!assigned_to(full_name)')
-          .eq('contact_id', id)
-          .order('created_at', { ascending: false }),
-      ])
-      setContact(c as Contact | null)
-      setOpps((o ?? []) as OppWithUser[])
-      setLoading(false)
-    }
-    load()
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    const [{ data: c }, { data: o }] = await Promise.all([
+      supabase.from('contacts').select('*').eq('id', id).single(),
+      supabase.from('opportunities')
+        .select('*, assigned_user:users!assigned_to(full_name)')
+        .eq('contact_id', id)
+        .order('created_at', { ascending: false }),
+    ])
+    setContact(c as Contact | null)
+    setOpps((o ?? []) as OppWithUser[])
+    setLoading(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  useEffect(() => {
+    loadData()
+    setOnRefresh(loadData)
+    return () => setOnRefresh(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadData])
 
   useEffect(() => {
     if (!contact) return

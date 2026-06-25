@@ -173,18 +173,18 @@ export default function DanhGiaPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Debounce search opportunities
+  // Load/search opportunities when modal is open
   useEffect(() => {
     if (!linkModal) return
     if (oppSearchRef.current) clearTimeout(oppSearchRef.current)
-    if (!oppSearch.trim()) { setOppResults([]); return }
+    const delay = oppSearch.trim() ? 300 : 0
     oppSearchRef.current = setTimeout(async () => {
       setOppSearching(true)
-      const { data } = await supabase.from('opportunities').select('id, title, tour_date')
-        .ilike('title', `%${oppSearch.trim()}%`).order('created_at', { ascending: false }).limit(20)
+      const q = supabase.from('opportunities').select('id, title, tour_date').order('created_at', { ascending: false }).limit(20)
+      const { data } = oppSearch.trim() ? await q.ilike('title', `%${oppSearch.trim()}%`) : await q
       setOppResults((data ?? []) as { id: string; title: string; tour_date: string | null }[])
       setOppSearching(false)
-    }, 300)
+    }, delay)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [oppSearch, linkModal])
 
@@ -888,7 +888,7 @@ export default function DanhGiaPage() {
           </button>
           <button onClick={() => { setLinkModal(true); setOppSearch('') }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition-colors shadow-sm">
-            <Link2 size={14} /> Gắn vào đơn hàng
+            <Link2 size={14} /> Tìm đơn hàng liên quan
           </button>
         </div>
       )}
@@ -899,7 +899,7 @@ export default function DanhGiaPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <div>
-                <p className="font-bold text-gray-900 text-sm">Gắn vào đơn hàng</p>
+                <p className="font-bold text-gray-900 text-sm">Tìm đơn hàng liên quan</p>
                 <p className="text-xs text-gray-400 mt-0.5">{checkedIds.size} đánh giá sẽ được liên kết</p>
               </div>
               <button onClick={() => setLinkModal(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"><X size={16} /></button>
@@ -917,7 +917,6 @@ export default function DanhGiaPage() {
               {!oppSearching && oppSearch.trim() && oppResults.length === 0 && (
                 <div className="py-8 text-center text-sm text-gray-400">Không tìm thấy đơn hàng nào</div>
               )}
-              {!oppSearch.trim() && <div className="py-8 text-center text-sm text-gray-300">Nhập tên đơn hàng để tìm kiếm</div>}
               {oppResults.map(opp => (
                 <button key={opp.id} onClick={() => handleLinkOpp(opp.id)} disabled={linking}
                   className="w-full text-left px-5 py-3.5 hover:bg-brand-50 border-b border-gray-50 last:border-0 transition-colors group disabled:opacity-60">
