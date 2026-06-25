@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useTopbar } from '@/contexts/topbar'
+import { useAuth } from '@/contexts/auth'
 import { SOURCE_LABELS, SOURCE_COLORS, STAGE_LABELS, STAGE_COLORS, formatDate, formatVND, getInitials } from '@/lib/utils'
 import type { OppStage, LeadSource } from '@/types'
 import { Plus, X, Loader2, AlertTriangle } from 'lucide-react'
@@ -37,6 +38,7 @@ const EMPTY_FORM = {
 export default function DangLayPage() {
   const router = useRouter()
   const { setOnRefresh, setBreadcrumb } = useTopbar()
+  const { user } = useAuth()
   const supabase = createClient()
   const [rows, setRows] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
@@ -118,6 +120,7 @@ export default function DangLayPage() {
       phone: newContact.phone.trim() || null,
       company: newContact.company.trim() || null,
       source: form.source,
+      created_by: user!.id,
     }).select('id, name, company').single()
     setSavingContact(false)
     if (!error && data) {
