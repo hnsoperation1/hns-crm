@@ -154,7 +154,7 @@ export default function DanhGiaPage() {
   const [allView, setAllView] = useState<'list' | 'table'>('table')
   const [tableSort, setTableSort] = useState<{ col: string; dir: 'asc' | 'desc' } | null>(null)
   const [tableFilters, setTableFilters] = useState<Record<string, string>>({})
-  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
+  const [commentModal, setCommentModal] = useState<{ name: string; comment: string } | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedList>(null)
   const [filterHasOpp, setFilterHasOpp] = useState(false)
@@ -573,15 +573,14 @@ export default function DanhGiaPage() {
                           <td className="px-4 py-3 text-gray-600 min-w-[120px]">{f.itinerary ?? '—'}</td>
                           <td className="px-4 py-3 text-gray-500 italic min-w-[180px] max-w-[260px]">
                             {f.overall_comment ? (() => {
-                              const isExpanded = expandedComments.has(f.id)
                               const isLong = f.overall_comment.length > 160
                               return (
                                 <div>
-                                  <span className={!isExpanded && isLong ? 'line-clamp-4' : ''}>"{f.overall_comment}"</span>
+                                  <span className={isLong ? 'line-clamp-4' : ''}>"{f.overall_comment}"</span>
                                   {isLong && (
-                                    <button onClick={e => { e.stopPropagation(); setExpandedComments(p => { const s = new Set(p); isExpanded ? s.delete(f.id) : s.add(f.id); return s }) }}
+                                    <button onClick={e => { e.stopPropagation(); setCommentModal({ name: f.respondent_name ?? '—', comment: f.overall_comment! }) }}
                                       className="text-xs text-brand-500 hover:underline mt-0.5 block not-italic font-medium">
-                                      {isExpanded ? 'Thu gọn' : '... xem thêm'}
+                                      ... xem thêm
                                     </button>
                                   )}
                                 </div>
@@ -1020,6 +1019,21 @@ export default function DanhGiaPage() {
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition-colors shadow-sm">
             <Link2 size={14} /> Tìm đơn hàng liên quan
           </button>
+        </div>
+      )}
+
+      {/* Modal xem đánh giá chung đầy đủ */}
+      {commentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={() => setCommentModal(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <p className="font-bold text-gray-900 text-sm">{commentModal.name}</p>
+              <button onClick={() => setCommentModal(null)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"><X size={16} /></button>
+            </div>
+            <div className="px-5 py-4 text-sm text-gray-600 italic leading-relaxed max-h-[60vh] overflow-y-auto">
+              "{commentModal.comment}"
+            </div>
+          </div>
         </div>
       )}
 
