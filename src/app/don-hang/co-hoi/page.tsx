@@ -52,6 +52,7 @@ export default function DangLayPage() {
   const [contactDropOpen, setContactDropOpen] = useState(false)
   const [showNewContact, setShowNewContact] = useState(false)
   const [newContact, setNewContact] = useState({ name: '', phone: '', company: '' })
+  const [newContactErrors, setNewContactErrors] = useState<{ name?: string; phone?: string }>({})
   const [savingContact, setSavingContact] = useState(false)
 
   const loadData = useCallback(async () => {
@@ -113,8 +114,29 @@ export default function DangLayPage() {
   }
 
   async function handleSaveContact() {
-    if (!newContact.name.trim()) return
+    const ce: { name?: string; phone?: string } = {}
+    if (!newContact.name.trim()) ce.name = 'Bắt buộc'
+    if (!newContact.phone.trim()) ce.phone = 'Bắt buộc'
+    setNewContactErrors(ce)
+    if (Object.keys(ce).length) return
     setSavingContact(true)
+
+    // Check phone đã tồn tại
+    const { data: existing } = await supabase
+      .from('contacts').select('id, name, company')
+      .eq('phone', newContact.phone.trim()).maybeSingle()
+    if (existing) {
+      const c = existing as ContactOpt
+      if (!contacts.find(x => x.id === c.id)) setContacts(prev => [c, ...prev])
+      setForm(f => ({ ...f, contact_id: c.id }))
+      setContactSearch(c.name)
+      setShowNewContact(false)
+      setNewContact({ name: '', phone: '', company: '' })
+      setNewContactErrors({})
+      setSavingContact(false)
+      return
+    }
+
     const { data, error } = await supabase.from('contacts').insert({
       name: newContact.name.trim(),
       phone: newContact.phone.trim() || null,
@@ -247,19 +269,21 @@ export default function DangLayPage() {
                 {showNewContact && (
                   <div className="mb-3 p-3 bg-brand-50 border border-brand-100 rounded-xl space-y-2">
                     <p className="text-xs font-semibold text-brand-700 mb-2">Thông tin khách hàng mới</p>
-                    <input value={newContact.name} onChange={e => setNewContact(v => ({ ...v, name: e.target.value }))}
-                      placeholder="Tên khách hàng *" className={`${iField} text-sm py-2`} autoFocus />
-                    <input value={newContact.phone} onChange={e => setNewContact(v => ({ ...v, phone: e.target.value }))}
-                      placeholder="Số điện thoại" className={`${iField} text-sm py-2`} />
+                    <input value={newContact.name} onChange={e => { setNewContact(v => ({ ...v, name: e.target.value })); setNewContactErrors(er => ({ ...er, name: '' })) }}
+                      placeholder="Tên khách hàng *" autoFocus
+                      className={`${iField} text-sm py-2 ${newContactErrors.name ? 'border-red-300 bg-red-50' : ''}`} />
+                    <input value={newContact.phone} onChange={e => { setNewContact(v => ({ ...v, phone: e.target.value })); setNewContactErrors(er => ({ ...er, phone: '' })) }}
+                      placeholder="Số điện thoại *"
+                      className={`${iField} text-sm py-2 ${newContactErrors.phone ? 'border-red-300 bg-red-50' : ''}`} />
                     <input value={newContact.company} onChange={e => setNewContact(v => ({ ...v, company: e.target.value }))}
                       placeholder="Công ty" className={`${iField} text-sm py-2`} />
                     <div className="flex gap-2 pt-1">
-                      <button type="button" onClick={handleSaveContact} disabled={savingContact || !newContact.name.trim()}
+                      <button type="button" onClick={handleSaveContact} disabled={savingContact}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors">
                         {savingContact ? <Loader2 size={11} className="animate-spin" /> : null}
                         Lưu & chọn
                       </button>
-                      <button type="button" onClick={() => setShowNewContact(false)}
+                      <button type="button" onClick={() => { setShowNewContact(false); setNewContactErrors({}) }}
                         className="px-3 py-1.5 text-xs text-gray-500 hover:bg-white rounded-lg transition-colors font-medium">
                         Huỷ
                       </button>
