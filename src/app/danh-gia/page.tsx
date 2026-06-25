@@ -538,7 +538,7 @@ export default function DanhGiaPage() {
                   <table className="w-full text-sm border-collapse">
                     <thead className="sticky top-0 z-10">
                       {/* Header row with sort */}
-                      <tr className="bg-brand-50/60 border-b border-brand-100">
+                      <tr className="bg-brand-50 border-b border-brand-100">
                         {TABLE_COLS.map(({ key, label }) => {
                           const isActive = tableSort?.col === key
                           return (
@@ -555,7 +555,7 @@ export default function DanhGiaPage() {
                         })}
                       </tr>
                       {/* Filter row */}
-                      <tr className="bg-brand-50/60 border-b border-brand-100">
+                      <tr className="bg-brand-50 border-b border-brand-100">
                         {TABLE_COLS.map(({ key, filter }) => (
                           <td key={key} className="px-2 py-1.5">
                             {filter ? (
