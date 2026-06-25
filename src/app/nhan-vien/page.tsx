@@ -47,7 +47,7 @@ export default function StaffPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    await mockFetch(null, 2000)
+    await mockFetch(null, 1000)
     setLoading(false)
   }, [])
 

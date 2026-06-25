@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones, Star, Building, Inbox, Loader2, CheckCircle2 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/contexts/auth'
@@ -32,18 +32,10 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const { user, logout } = useAuth()
 
   function NavLink({ href, label, icon: Icon, exact }: { href: string; label: string; icon: React.ElementType; exact?: boolean }) {
-    const [hrefPath, hrefQuery] = href.split('?')
-    const currentGroup = searchParams.get('group')
-    const hrefGroup = hrefQuery ? new URLSearchParams(hrefQuery).get('group') : null
-    const active = exact
-      ? pathname === hrefPath && currentGroup === hrefGroup
-      : hrefGroup
-        ? pathname.startsWith(hrefPath) && currentGroup === hrefGroup
-        : pathname.startsWith(hrefPath) && !currentGroup
+    const active = exact ? pathname === href : pathname.startsWith(href)
     return (
       <Link
         href={href}
@@ -63,10 +55,7 @@ export default function Sidebar() {
   }
 
   function SubNavLink({ href, label }: { href: string; label: string }) {
-    const [hrefPath, hrefQuery] = href.split('?')
-    const currentGroup = searchParams.get('group')
-    const hrefGroup = hrefQuery ? new URLSearchParams(hrefQuery).get('group') : null
-    const active = pathname.startsWith(hrefPath) && currentGroup === hrefGroup
+    const active = pathname.startsWith(href)
     return (
       <Link
         href={href}
@@ -104,9 +93,9 @@ export default function Sidebar() {
           <p className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1.5" style={{ color: '#4a8fa8' }}>
             Đơn hàng
           </p>
-          <NavLink href="/don-hang?group=collecting" label="Đang lấy thông tin" icon={Inbox} />
-          <NavLink href="/don-hang?group=processing" label="Đang thực hiện" icon={Loader2} />
-          <NavLink href="/don-hang?group=done" label="Đã xong" icon={CheckCircle2} />
+          <NavLink href="/don-hang/dang-lay" label="Đang lấy thông tin" icon={Inbox} />
+          <NavLink href="/don-hang/dang-thuc-hien" label="Đang thực hiện" icon={Loader2} />
+          <NavLink href="/don-hang/da-xong" label="Đã xong" icon={CheckCircle2} />
         </div>
 
         {/* CSKH section — chỉ hiện với cskh / admin / boss */}
