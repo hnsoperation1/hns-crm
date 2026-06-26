@@ -55,8 +55,8 @@ export default function TheChamsocPage() {
   }, [user?.id])
 
   useEffect(() => {
-    setBreadcrumb([{ label: 'Thẻ chăm sóc' }])
-    return () => setBreadcrumb([])
+    setBreadcrumb('Thẻ chăm sóc')
+    return () => setBreadcrumb(null)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
