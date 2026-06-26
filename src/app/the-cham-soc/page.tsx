@@ -159,8 +159,8 @@ export default function TheChamsocPage() {
               const cardLogs = logsMap[card.id]
 
               return (
-                <div key={card.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all ${
-                  card.is_done ? 'border-gray-100' : isPast ? 'border-red-200' : isToday ? 'border-amber-200' : 'border-gray-200'
+                <div key={card.id} className={`rounded-2xl border shadow-sm overflow-hidden transition-all ${
+                  card.is_done ? 'bg-emerald-50/60 border-emerald-100' : isPast ? 'bg-white border-red-200' : isToday ? 'bg-white border-amber-200' : 'bg-white border-gray-200'
                 }`}>
                   <div className="px-4 py-3 flex items-start gap-3">
                     {/* Tick done */}
@@ -177,7 +177,7 @@ export default function TheChamsocPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`font-semibold text-sm ${card.is_done ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                          <span className={`font-semibold text-sm ${card.is_done ? 'text-emerald-700' : 'text-gray-900'}`}>
                             {card.customer_name ?? '—'}
                           </span>
                           {card.customer_phone && (
@@ -202,7 +202,7 @@ export default function TheChamsocPage() {
                           )}
                         </div>
                       </div>
-                      <p className={`text-xs mt-1 leading-relaxed ${card.is_done ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <p className={`text-xs mt-1 leading-relaxed ${card.is_done ? 'text-emerald-600/70' : 'text-gray-600'}`}>
                         {card.content}
                       </p>
                       {cardLogs && cardLogs.length > 0 && (
