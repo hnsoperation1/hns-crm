@@ -187,12 +187,6 @@ export default function TheChamsocPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          {card.opportunity_id && (
-                            <Link href={`/don-hang/${card.opportunity_id}`}
-                              className="text-xs text-brand-600 hover:underline flex items-center gap-0.5 font-medium">
-                              <ExternalLink size={11} /> Đơn
-                            </Link>
-                          )}
                           {card.contact_date && (
                             <span className={`text-[11px] font-semibold flex items-center gap-1 px-2 py-0.5 rounded-full ${
                               card.is_done ? 'bg-gray-50 text-gray-400'
