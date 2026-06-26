@@ -95,6 +95,7 @@ function StarRow({ label, value }: { label: string; value: string | null }) {
 type SelectedList = { title: string; entries: FeedbackRow[] } | null
 
 type CareCardSummary = { id: string; content: string; contact_date: string | null; is_done: boolean }
+type CareLog = { id: string; log_content: string; created_at: string }
 
 function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard, careCardsMap }: {
   data: SelectedList; onClose: () => void
@@ -102,6 +103,20 @@ function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard, careC
   onCreateCard: (f: FeedbackRow) => void
   careCardsMap: Record<string, CareCardSummary[]>
 }) {
+  const [expandedCareId, setExpandedCareId] = useState<string | null>(null)
+  const [selectedCard, setSelectedCard] = useState<CareCardSummary | null>(null)
+  const [cardLogs, setCardLogs] = useState<CareLog[]>([])
+  const [loadingLogs, setLoadingLogs] = useState(false)
+
+  async function openCard(card: CareCardSummary) {
+    setSelectedCard(card)
+    setLoadingLogs(true)
+    const { data: logs } = await createClient().from('care_card_logs')
+      .select('id,log_content,created_at').eq('care_card_id', card.id).order('created_at')
+    setCardLogs((logs ?? []) as CareLog[])
+    setLoadingLogs(false)
+  }
+
   if (!data) return (
     <div className="flex-1 flex flex-col items-center justify-center text-center py-16 text-gray-300">
       <Users size={36} className="mb-3" />
@@ -118,50 +133,121 @@ function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard, careC
         <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"><X size={14} /></button>
       </div>
       <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
-        {data.entries.map((f, i) => (
-          <div key={i} onClick={() => onExpand(f)}
-            className={`px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${expandedId === f.id ? 'bg-brand-50 border-l-2 border-brand-500' : ''}`}>
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-sm text-gray-900">{f.respondent_name ?? '—'}</p>
-                {f.phone && <p className="text-xs text-gray-500 mt-0.5">SĐT: {f.phone}</p>}
-                {f.group_name && <p className="text-xs text-gray-400 mt-0.5 truncate">Đoàn: {f.group_name}</p>}
-                {f.overall_comment && <p className="text-xs text-gray-500 mt-1 italic line-clamp-2">Đánh giá chung: "{f.overall_comment}"</p>}
+        {data.entries.map((f, i) => {
+          const cards = careCardsMap[f.id] ?? []
+          const careOpen = expandedCareId === f.id
+          return (
+            <div key={i} onClick={() => onExpand(f)}
+              className={`px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${expandedId === f.id ? 'bg-brand-50 border-l-2 border-brand-500' : ''}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm text-gray-900">{f.respondent_name ?? '—'}</p>
+                  {f.phone && <p className="text-xs text-gray-500 mt-0.5">SĐT: {f.phone}</p>}
+                  {f.group_name && <p className="text-xs text-gray-400 mt-0.5 truncate">Đoàn: {f.group_name}</p>}
+                  {f.overall_comment && <p className="text-xs text-gray-500 mt-1 italic line-clamp-2">Đánh giá chung: "{f.overall_comment}"</p>}
+                </div>
+                {f.opportunity_id && (
+                  <Link href={`/don-hang/${f.opportunity_id}`} onClick={e => e.stopPropagation()}
+                    className="flex-shrink-0 text-xs text-brand-600 hover:underline flex items-center gap-0.5 mt-0.5">
+                    <ExternalLink size={11} /> Đơn
+                  </Link>
+                )}
               </div>
-              {f.opportunity_id && (
-                <Link href={`/don-hang/${f.opportunity_id}`} onClick={e => e.stopPropagation()}
-                  className="flex-shrink-0 text-xs text-brand-600 hover:underline flex items-center gap-0.5 mt-0.5">
-                  <ExternalLink size={11} /> Đơn
-                </Link>
+
+              {/* Bottom row */}
+              <div className="mt-2 flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                {/* Toggle lịch sử CS */}
+                <button onClick={() => setExpandedCareId(prev => prev === f.id ? null : f.id)}
+                  className={`flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg transition-colors ${careOpen ? 'bg-pink-100 text-pink-700' : 'text-gray-400 hover:text-pink-600 hover:bg-pink-50'}`}>
+                  <Heart size={10} />
+                  Lịch sử CS
+                  {cards.length > 0 && (
+                    <span className={`text-[10px] px-1.5 py-0 rounded-full font-bold ${careOpen ? 'bg-pink-200 text-pink-700' : 'bg-gray-100 text-gray-500'}`}>{cards.length}</span>
+                  )}
+                  {careOpen ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                </button>
+                <button onClick={() => onCreateCard(f)}
+                  className="flex items-center gap-1 text-[11px] text-pink-500 hover:text-pink-700 font-medium px-2 py-1 rounded-lg hover:bg-pink-50 transition-colors">
+                  + Tạo thẻ CS
+                </button>
+              </div>
+
+              {/* Expandable care history */}
+              {careOpen && (
+                <div className="mt-2 space-y-1" onClick={e => e.stopPropagation()}>
+                  {cards.length === 0 ? (
+                    <p className="text-[11px] text-gray-400 px-2 py-1 italic">Chưa có thẻ chăm sóc nào</p>
+                  ) : (
+                    cards.map(card => (
+                      <button key={card.id} onClick={() => openCard(card)}
+                        className="w-full flex items-start gap-2 px-2 py-1.5 rounded-lg text-left hover:bg-pink-50 transition-colors group">
+                        <Heart size={10} className={`mt-0.5 flex-shrink-0 ${card.is_done ? 'text-emerald-400' : 'text-pink-400'}`} />
+                        <span className={`flex-1 text-[11px] leading-relaxed ${card.is_done ? 'text-gray-400 line-through' : 'text-gray-700 group-hover:text-pink-700'}`}>{card.content}</span>
+                        {card.contact_date && (
+                          <span className="flex-shrink-0 text-[10px] text-gray-400">{card.contact_date.slice(8, 10)}/{card.contact_date.slice(5, 7)}</span>
+                        )}
+                        <ChevronDown size={9} className="flex-shrink-0 text-gray-300 group-hover:text-pink-400 mt-0.5" />
+                      </button>
+                    ))
+                  )}
+                </div>
               )}
             </div>
-            {/* Thẻ chăm sóc liên quan */}
-            {(() => {
-              const cards = careCardsMap[f.id]
-              return (
-                <div className="mt-2 space-y-1">
-                  {cards && cards.length > 0 && (
-                    <div className="space-y-1 mb-1.5">
-                      {cards.map(c => (
-                        <div key={c.id} onClick={e => e.stopPropagation()}
-                          className={`flex items-start gap-1.5 px-2 py-1.5 rounded-lg text-[11px] ${c.is_done ? 'bg-emerald-50 text-emerald-600' : 'bg-pink-50 text-pink-700'}`}>
-                          <Heart size={10} className={`mt-0.5 flex-shrink-0 ${c.is_done ? 'text-emerald-400' : 'text-pink-400'}`} />
-                          <span className={`flex-1 leading-relaxed ${c.is_done ? 'line-through opacity-60' : ''}`}>{c.content}</span>
-                          {c.contact_date && <span className="flex-shrink-0 opacity-60">{c.contact_date.slice(8, 10)}/{c.contact_date.slice(5, 7)}</span>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <button onClick={e => { e.stopPropagation(); onCreateCard(f) }}
-                    className="flex items-center gap-1 text-[11px] text-pink-500 hover:text-pink-700 font-medium transition-colors px-2 py-1 rounded-lg hover:bg-pink-50">
-                    <Heart size={11} /> Tạo thẻ chăm sóc
-                  </button>
-                </div>
-              )
-            })()}
-          </div>
-        ))}
+          )
+        })}
       </div>
+
+      {/* Care card detail modal */}
+      {selectedCard && (
+        <div className="absolute inset-0 z-20 bg-white flex flex-col" onClick={() => setSelectedCard(null)}>
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setSelectedCard(null)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors">
+              <ChevronDown size={14} className="rotate-90" />
+            </button>
+            <Heart size={14} className={selectedCard.is_done ? 'text-emerald-400' : 'text-pink-400'} />
+            <p className="font-semibold text-sm text-gray-900 flex-1 line-clamp-1">{selectedCard.content}</p>
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3" onClick={e => e.stopPropagation()}>
+            {/* Meta */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${selectedCard.is_done ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                {selectedCard.is_done ? '✓ Đã xong' : '⏳ Chưa xong'}
+              </span>
+              {selectedCard.contact_date && (
+                <span className="text-[11px] text-gray-500 flex items-center gap-1">
+                  📅 {selectedCard.contact_date.slice(8, 10)}/{selectedCard.contact_date.slice(5, 7)}/{selectedCard.contact_date.slice(0, 4)}
+                </span>
+              )}
+            </div>
+            {/* Content */}
+            <div className="bg-pink-50 rounded-xl px-3 py-2.5">
+              <p className="text-xs font-semibold text-pink-600 mb-1">Nội dung chăm sóc</p>
+              <p className="text-sm text-gray-700 leading-relaxed">{selectedCard.content}</p>
+            </div>
+            {/* Logs */}
+            <div>
+              <p className="text-xs font-semibold text-gray-500 mb-2">Nhật ký tư vấn</p>
+              {loadingLogs ? (
+                <p className="text-xs text-gray-400 italic">Đang tải...</p>
+              ) : cardLogs.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">Chưa có ghi chú nào</p>
+              ) : (
+                <div className="space-y-2">
+                  {cardLogs.map(log => (
+                    <div key={log.id} className="flex gap-2.5">
+                      <div className="w-1.5 h-1.5 rounded-full bg-brand-400 mt-1.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-700 leading-relaxed">{log.log_content}</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(log.created_at)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
