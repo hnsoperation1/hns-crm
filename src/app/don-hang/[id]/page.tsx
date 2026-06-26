@@ -86,6 +86,7 @@ export default function OppDetailPage() {
   const [services, setServices] = useState<ServiceRow[]>([])
   const [servicesLoaded, setServicesLoaded] = useState(false)
   const [savingServices, setSavingServices] = useState(false)
+  const [servicesSaved, setServicesSaved] = useState(false)
 
   // Tour intake (dùng chung, đọc/ghi tour_intake)
   type IntakeForm = {
@@ -290,6 +291,7 @@ export default function OppDetailPage() {
 
   async function saveServices() {
     setSavingServices(true)
+    setServicesSaved(false)
     for (const row of services) {
       const payload = {
         opportunity_id: id,
@@ -307,13 +309,17 @@ export default function OppDetailPage() {
         include_in_quote: row.include_in_quote,
       }
       if (row._isNew) {
-        const { data } = await supabase.from('tour_services').insert(payload).select('id').single()
+        const { data, error } = await supabase.from('tour_services').insert(payload).select('id').single()
+        if (error) { alert('Lỗi lưu dịch vụ: ' + error.message); setSavingServices(false); return }
         if (data) setServices(s => s.map(r => r.id === row.id ? { ...r, id: data.id, _isNew: false } : r))
       } else {
-        await supabase.from('tour_services').update(payload).eq('id', row.id)
+        const { error } = await supabase.from('tour_services').update(payload).eq('id', row.id)
+        if (error) { alert('Lỗi cập nhật dịch vụ: ' + error.message); setSavingServices(false); return }
       }
     }
     setSavingServices(false)
+    setServicesSaved(true)
+    setTimeout(() => setServicesSaved(false), 2500)
   }
 
   async function saveIntake() {
@@ -648,9 +654,9 @@ export default function OppDetailPage() {
                     <Plus size={12} /> Thêm hạng mục
                   </button>
                   <button onClick={saveServices} disabled={savingServices}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors">
+                    className={`flex items-center gap-1.5 px-3 py-1.5 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors ${servicesSaved ? 'bg-emerald-500' : 'bg-accent-500 hover:bg-accent-600'}`}>
                     {savingServices ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                    Lưu
+                    {servicesSaved ? 'Đã lưu' : 'Lưu dịch vụ'}
                   </button>
                 </div>
               </div>
