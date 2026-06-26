@@ -66,38 +66,65 @@ export default function OppDetailPage() {
 
   // Tour intake
   type IntakeForm = {
+    // Khách
     pax_adults: string; pax_children_under5: string; pax_children_5to10: string
-    pickup_count: string
+    // Điểm đón
+    pickup_count: string; pickup_time: string
+    // Thời gian
     trip_days: string; trip_date_range: string; trip_timing: string
-    hotel_stars: string
+    // Khách sạn
+    hotel_stars: string; hotel_name: string; hotel_persons_per_room: string
+    hotel_room_details: string; hotel_room_count: string; hotel_vip_rooms: string
+    // Sự kiện
     event_gala: boolean; event_team_building: boolean; event_meeting: boolean
     event_birthday: boolean; event_anniversary: boolean; event_details: string
+    gala_location: string; gala_details: string; team_building_details: string
+    // Điểm đến + Trưởng đoàn
     destination: string
     group_leader_name: string; group_leader_phone: string; group_leader_email: string
-    customer_type: string; flight_preference: string; tour_type: string
-    budget: string; program_goal: string; program_theme: string
-    improvements: string; other_notes: string
+    // Định hướng
+    customer_type: string; flight_preference: string; tour_type: string; budget: string
+    flight_depart_time: string; flight_return_time: string
+    // Xe
+    transport_car_type: string; transport_car_count: string; car_supplier: string
+    // Ăn uống
+    meals_main_count: string; meals_main_price: string; meals_breakfast: boolean
+    // HDV/MC
+    guide_name: string; guide_phone: string; guide_gender: string; guide_requirements: string
+    // Lịch trình & vé
+    itinerary: string; tickets_details: string; other_services: string
+    // Mục tiêu
+    program_goal: string; program_theme: string; improvements: string; other_notes: string
+    // Giá
+    ma_doan: string; sale_price: string; commission: string; vat_required: boolean
   }
+  type MealRow = { day: number; meal: string; menu: string; restaurant: string }
   const EMPTY_INTAKE: IntakeForm = {
     pax_adults: '', pax_children_under5: '', pax_children_5to10: '',
-    pickup_count: '',
+    pickup_count: '', pickup_time: '',
     trip_days: '', trip_date_range: '', trip_timing: '',
-    hotel_stars: '',
+    hotel_stars: '', hotel_name: '', hotel_persons_per_room: '',
+    hotel_room_details: '', hotel_room_count: '', hotel_vip_rooms: '',
     event_gala: false, event_team_building: false, event_meeting: false,
     event_birthday: false, event_anniversary: false, event_details: '',
+    gala_location: '', gala_details: '', team_building_details: '',
     destination: '',
     group_leader_name: '', group_leader_phone: '', group_leader_email: '',
-    customer_type: '', flight_preference: '', tour_type: '',
-    budget: '', program_goal: '', program_theme: '',
-    improvements: '', other_notes: '',
+    customer_type: '', flight_preference: '', tour_type: '', budget: '',
+    flight_depart_time: '', flight_return_time: '',
+    transport_car_type: '', transport_car_count: '', car_supplier: '',
+    meals_main_count: '', meals_main_price: '', meals_breakfast: false,
+    guide_name: '', guide_phone: '', guide_gender: '', guide_requirements: '',
+    itinerary: '', tickets_details: '', other_services: '',
+    program_goal: '', program_theme: '', improvements: '', other_notes: '',
+    ma_doan: '', sale_price: '', commission: '', vat_required: false,
   }
   const [intake, setIntake] = useState<IntakeForm>(EMPTY_INTAKE)
   const [pickupPoints, setPickupPoints] = useState<{ address: string; count: string }[]>([])
+  const [mealsSchedule, setMealsSchedule] = useState<MealRow[]>([])
   const [intakeLoaded, setIntakeLoaded] = useState(false)
   const [savingIntake, setSavingIntake] = useState(false)
   const [intakeSaved, setIntakeSaved] = useState(false)
-  const [creatingHandover, setCreatingHandover] = useState(false)
-  const [handoverCreated, setHandoverCreated] = useState(false)
 
   type LeaderContact = { id: string; name: string; phone: string | null; email: string | null; company: string | null }
   const [leaderSearch, setLeaderSearch] = useState('')
@@ -109,6 +136,18 @@ export default function OppDetailPage() {
     const { data } = await supabase.from('contacts').select('id,name,phone,email,company')
       .or(`name.ilike.%${q}%,phone.ilike.%${q}%`).limit(8)
     setLeaderResults((data ?? []) as LeaderContact[])
+  }
+
+  function syncMealsSchedule(days: number, current: MealRow[]) {
+    const meals = ['Trưa', 'Tối']
+    const rows: MealRow[] = []
+    for (let d = 1; d <= days; d++) {
+      for (const m of meals) {
+        const existing = current.find(r => r.day === d && r.meal === m)
+        rows.push(existing ?? { day: d, meal: m, menu: '', restaurant: '' })
+      }
+    }
+    setMealsSchedule(rows)
   }
   const [taskDone, setTaskDone] = useState<Record<string, boolean>>({})
   const [addedTasks, setAddedTasks] = useState<{ id: string; title: string; due_date: string; assigned_to: string }[]>([])
@@ -156,21 +195,36 @@ export default function OppDetailPage() {
           } catch { /* old plain-text format, ignore */ }
         }
         setPickupPoints(pts)
+        let meals: MealRow[] = []
+        if (intakeData.meals_schedule) {
+          try { meals = JSON.parse(intakeData.meals_schedule) } catch { /* ignore */ }
+        }
+        setMealsSchedule(meals)
+        setLeaderSearch(intakeData.group_leader_name ?? '')
         setIntake({
           pax_adults: intakeData.pax_adults?.toString() ?? '',
           pax_children_under5: intakeData.pax_children_under5?.toString() ?? '',
           pax_children_5to10: intakeData.pax_children_5to10?.toString() ?? '',
           pickup_count: pCount.toString(),
+          pickup_time: intakeData.pickup_time ?? '',
           trip_days: intakeData.trip_days?.toString() ?? '',
           trip_date_range: intakeData.trip_date_range ?? '',
           trip_timing: intakeData.trip_timing ?? '',
           hotel_stars: intakeData.hotel_stars ?? '',
+          hotel_name: intakeData.hotel_name ?? '',
+          hotel_persons_per_room: intakeData.hotel_persons_per_room?.toString() ?? '',
+          hotel_room_details: intakeData.hotel_room_details ?? '',
+          hotel_room_count: intakeData.hotel_room_count?.toString() ?? '',
+          hotel_vip_rooms: intakeData.hotel_vip_rooms ?? '',
           event_gala: intakeData.event_gala ?? false,
           event_team_building: intakeData.event_team_building ?? false,
           event_meeting: intakeData.event_meeting ?? false,
           event_birthday: intakeData.event_birthday ?? false,
           event_anniversary: intakeData.event_anniversary ?? false,
           event_details: intakeData.event_details ?? '',
+          gala_location: intakeData.gala_location ?? '',
+          gala_details: intakeData.gala_details ?? '',
+          team_building_details: intakeData.team_building_details ?? '',
           destination: intakeData.destination ?? '',
           group_leader_name: intakeData.group_leader_name ?? '',
           group_leader_phone: intakeData.group_leader_phone ?? '',
@@ -179,10 +233,29 @@ export default function OppDetailPage() {
           flight_preference: intakeData.flight_preference ?? '',
           tour_type: intakeData.tour_type ?? '',
           budget: intakeData.budget ?? '',
+          flight_depart_time: intakeData.flight_depart_time ?? '',
+          flight_return_time: intakeData.flight_return_time ?? '',
+          transport_car_type: intakeData.transport_car_type ?? '',
+          transport_car_count: intakeData.transport_car_count?.toString() ?? '',
+          car_supplier: intakeData.car_supplier ?? '',
+          meals_main_count: intakeData.meals_main_count?.toString() ?? '',
+          meals_main_price: intakeData.meals_main_price?.toString() ?? '',
+          meals_breakfast: intakeData.meals_breakfast ?? false,
+          guide_name: intakeData.guide_name ?? '',
+          guide_phone: intakeData.guide_phone ?? '',
+          guide_gender: intakeData.guide_gender ?? '',
+          guide_requirements: intakeData.guide_requirements ?? '',
+          itinerary: intakeData.itinerary ?? '',
+          tickets_details: intakeData.tickets_details ?? '',
+          other_services: intakeData.other_services ?? '',
           program_goal: intakeData.program_goal ?? '',
           program_theme: intakeData.program_theme ?? '',
           improvements: intakeData.improvements ?? '',
           other_notes: intakeData.other_notes ?? '',
+          ma_doan: intakeData.ma_doan ?? '',
+          sale_price: intakeData.sale_price?.toString() ?? '',
+          commission: intakeData.commission?.toString() ?? '',
+          vat_required: intakeData.vat_required ?? false,
         })
       }
       setIntakeLoaded(true)
@@ -194,30 +267,59 @@ export default function OppDetailPage() {
     setSavingIntake(true)
     await supabase.from('tour_intake').upsert({
       opportunity_id: id,
+      ma_doan: intake.ma_doan || null,
+      vat_required: intake.vat_required,
+      sale_price: intake.sale_price ? Number(intake.sale_price) : null,
+      commission: intake.commission ? Number(intake.commission) : null,
       pax_adults: intake.pax_adults ? Number(intake.pax_adults) : null,
       pax_children_under5: intake.pax_children_under5 ? Number(intake.pax_children_under5) : null,
       pax_children_5to10: intake.pax_children_5to10 ? Number(intake.pax_children_5to10) : null,
       pickup_location: null,
       pickup_count: pickupPoints.length || null,
       pickup_quantities: pickupPoints.length ? JSON.stringify(pickupPoints) : null,
+      pickup_time: intake.pickup_time || null,
       trip_days: intake.trip_days ? Number(intake.trip_days) : null,
       trip_date_range: intake.trip_date_range || null,
       trip_timing: intake.trip_timing || null,
       hotel_stars: intake.hotel_stars || null,
+      hotel_name: intake.hotel_name || null,
+      hotel_persons_per_room: intake.hotel_persons_per_room ? Number(intake.hotel_persons_per_room) : null,
+      hotel_room_details: intake.hotel_room_details || null,
+      hotel_room_count: intake.hotel_room_count ? Number(intake.hotel_room_count) : null,
+      hotel_vip_rooms: intake.hotel_vip_rooms || null,
       event_gala: intake.event_gala,
       event_team_building: intake.event_team_building,
       event_meeting: intake.event_meeting,
       event_birthday: intake.event_birthday,
       event_anniversary: intake.event_anniversary,
       event_details: intake.event_details || null,
+      gala_location: intake.gala_location || null,
+      gala_details: intake.gala_details || null,
+      team_building_details: intake.team_building_details || null,
       destination: intake.destination || null,
       group_leader_name: intake.group_leader_name || null,
       group_leader_phone: intake.group_leader_phone || null,
       group_leader_email: intake.group_leader_email || null,
       customer_type: intake.customer_type || null,
       flight_preference: intake.flight_preference || null,
+      flight_depart_time: intake.flight_depart_time || null,
+      flight_return_time: intake.flight_return_time || null,
       tour_type: intake.tour_type || null,
       budget: intake.budget || null,
+      transport_car_type: intake.transport_car_type || null,
+      transport_car_count: intake.transport_car_count ? Number(intake.transport_car_count) : null,
+      car_supplier: intake.car_supplier || null,
+      meals_main_count: intake.meals_main_count ? Number(intake.meals_main_count) : null,
+      meals_main_price: intake.meals_main_price ? Number(intake.meals_main_price) : null,
+      meals_breakfast: intake.meals_breakfast,
+      meals_schedule: mealsSchedule.length ? JSON.stringify(mealsSchedule) : null,
+      guide_name: intake.guide_name || null,
+      guide_phone: intake.guide_phone || null,
+      guide_gender: intake.guide_gender || null,
+      guide_requirements: intake.guide_requirements || null,
+      itinerary: intake.itinerary || null,
+      tickets_details: intake.tickets_details || null,
+      other_services: intake.other_services || null,
       program_goal: intake.program_goal || null,
       program_theme: intake.program_theme || null,
       improvements: intake.improvements || null,
@@ -228,82 +330,6 @@ export default function OppDetailPage() {
     setTimeout(() => setIntakeSaved(false), 2000)
   }
 
-  async function createHandover() {
-    setCreatingHandover(true)
-    // Lưu intake trước
-    await supabase.from('tour_intake').upsert({
-      opportunity_id: id,
-      pax_adults: intake.pax_adults ? Number(intake.pax_adults) : null,
-      pax_children_under5: intake.pax_children_under5 ? Number(intake.pax_children_under5) : null,
-      pax_children_5to10: intake.pax_children_5to10 ? Number(intake.pax_children_5to10) : null,
-      pickup_location: null,
-      pickup_count: pickupPoints.length || null,
-      pickup_quantities: pickupPoints.length ? JSON.stringify(pickupPoints) : null,
-      trip_days: intake.trip_days ? Number(intake.trip_days) : null,
-      trip_date_range: intake.trip_date_range || null,
-      trip_timing: intake.trip_timing || null,
-      hotel_stars: intake.hotel_stars || null,
-      event_gala: intake.event_gala, event_team_building: intake.event_team_building,
-      event_meeting: intake.event_meeting, event_birthday: intake.event_birthday,
-      event_anniversary: intake.event_anniversary, event_details: intake.event_details || null,
-      destination: intake.destination || null,
-      group_leader_name: intake.group_leader_name || null,
-      group_leader_phone: intake.group_leader_phone || null,
-      group_leader_email: intake.group_leader_email || null,
-      customer_type: intake.customer_type || null,
-      flight_preference: intake.flight_preference || null,
-      tour_type: intake.tour_type || null,
-      budget: intake.budget || null,
-      program_goal: intake.program_goal || null,
-      program_theme: intake.program_theme || null,
-      improvements: intake.improvements || null,
-      other_notes: intake.other_notes || null,
-    }, { onConflict: 'opportunity_id' })
-    // Copy các field chung sang handover (không ghi đè field riêng của handover nếu đã có)
-    const { data: existingHandover } = await supabase.from('tour_handover')
-      .select('id').eq('opportunity_id', id).maybeSingle()
-    if (!existingHandover) {
-      await supabase.from('tour_handover').insert({
-        opportunity_id: id,
-        pax_adults: intake.pax_adults ? Number(intake.pax_adults) : null,
-        pax_children_under5: intake.pax_children_under5 ? Number(intake.pax_children_under5) : null,
-        pax_children_5to10: intake.pax_children_5to10 ? Number(intake.pax_children_5to10) : null,
-        pickup_location: null,
-        pickup_count: pickupPoints.length || null,
-        pickup_quantities: pickupPoints.length ? JSON.stringify(pickupPoints) : null,
-        trip_days: intake.trip_days ? Number(intake.trip_days) : null,
-        trip_date_range: intake.trip_date_range || null,
-        hotel_stars: intake.hotel_stars || null,
-        event_gala: intake.event_gala, event_team_building: intake.event_team_building,
-        event_meeting: intake.event_meeting, event_birthday: intake.event_birthday,
-        event_anniversary: intake.event_anniversary, event_details: intake.event_details || null,
-        group_leader_name: intake.group_leader_name || null,
-        group_leader_phone: intake.group_leader_phone || null,
-        group_leader_email: intake.group_leader_email || null,
-      })
-    } else {
-      await supabase.from('tour_handover').update({
-        pax_adults: intake.pax_adults ? Number(intake.pax_adults) : null,
-        pax_children_under5: intake.pax_children_under5 ? Number(intake.pax_children_under5) : null,
-        pax_children_5to10: intake.pax_children_5to10 ? Number(intake.pax_children_5to10) : null,
-        pickup_location: null,
-        pickup_count: pickupPoints.length || null,
-        pickup_quantities: pickupPoints.length ? JSON.stringify(pickupPoints) : null,
-        trip_days: intake.trip_days ? Number(intake.trip_days) : null,
-        trip_date_range: intake.trip_date_range || null,
-        hotel_stars: intake.hotel_stars || null,
-        event_gala: intake.event_gala, event_team_building: intake.event_team_building,
-        event_meeting: intake.event_meeting, event_birthday: intake.event_birthday,
-        event_anniversary: intake.event_anniversary, event_details: intake.event_details || null,
-        group_leader_name: intake.group_leader_name || null,
-        group_leader_phone: intake.group_leader_phone || null,
-        group_leader_email: intake.group_leader_email || null,
-      }).eq('opportunity_id', id)
-    }
-    setCreatingHandover(false)
-    setHandoverCreated(true)
-    setTimeout(() => setHandoverCreated(false), 3000)
-  }
 
   async function advanceStage() {
     if (!opp || advancingStage) return
@@ -555,11 +581,6 @@ export default function OppDetailPage() {
               <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
                 <h3 className="font-semibold text-gray-900 text-sm">Phiếu thông tin đoàn</h3>
                 <div className="flex items-center gap-2">
-                  <button onClick={createHandover} disabled={creatingHandover || savingIntake}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors">
-                    {creatingHandover ? <Loader2 size={12} className="animate-spin" /> : <ClipboardCheck size={12} />}
-                    {handoverCreated ? 'Đã lập phiếu ✓' : 'Lập phiếu bàn giao'}
-                  </button>
                   <button onClick={saveIntake} disabled={savingIntake}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors">
                     {savingIntake ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
@@ -730,6 +751,156 @@ export default function OppDetailPage() {
                     <IField label="Vấn đề cần cải thiện (so với các năm trước)"><textarea value={intake.improvements} onChange={e => setIntake(f => ({...f, improvements: e.target.value}))} rows={2} className={`${iCls} resize-none`} placeholder="..." /></IField>
                     <IField label="Lưu ý khác"><textarea value={intake.other_notes} onChange={e => setIntake(f => ({...f, other_notes: e.target.value}))} rows={2} className={`${iCls} resize-none`} placeholder="..." /></IField>
                   </div>
+                </ISection>
+
+                {/* ── PHẦN ĐIỀU HÀNH ── */}
+                <div className="border-t-2 border-dashed border-brand-200 pt-1">
+                  <p className="text-xs font-semibold text-brand-500 uppercase tracking-wider mb-4">Thông tin điều hành</p>
+                </div>
+
+                {/* Mã đoàn / Giá / VAT */}
+                <ISection label="Mã đoàn & Giá bán">
+                  <div className="grid grid-cols-3 gap-3">
+                    <IField label="Mã đoàn"><input value={intake.ma_doan} onChange={e => setIntake(f => ({...f, ma_doan: e.target.value}))} className={iCls} placeholder="VD: HNS-2026-001" /></IField>
+                    <IField label="Giá bán (VNĐ)"><input type="number" value={intake.sale_price} onChange={e => setIntake(f => ({...f, sale_price: e.target.value}))} className={iCls} placeholder="0" /></IField>
+                    <IField label="Hoa hồng (VNĐ)"><input type="number" value={intake.commission} onChange={e => setIntake(f => ({...f, commission: e.target.value}))} className={iCls} placeholder="0" /></IField>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <input type="checkbox" id="vat_i" checked={intake.vat_required} onChange={e => setIntake(f => ({...f, vat_required: e.target.checked}))} className="rounded" />
+                    <label htmlFor="vat_i" className="text-sm text-gray-700">Xuất VAT</label>
+                  </div>
+                </ISection>
+
+                {/* Thời gian đón */}
+                <ISection label="Thời gian đón">
+                  <IField label="Giờ đón khách">
+                    <input value={intake.pickup_time} onChange={e => setIntake(f => ({...f, pickup_time: e.target.value}))} className={iCls} placeholder="VD: 6:30 sáng tại điểm đón" />
+                  </IField>
+                </ISection>
+
+                {/* Khách sạn chi tiết */}
+                <ISection label="Khách sạn">
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <IField label="Tên KS"><input value={intake.hotel_name} onChange={e => setIntake(f => ({...f, hotel_name: e.target.value}))} className={iCls} placeholder="Tên khách sạn..." /></IField>
+                    <IField label="Người/phòng"><input type="number" value={intake.hotel_persons_per_room} onChange={e => setIntake(f => ({...f, hotel_persons_per_room: e.target.value}))} className={iCls} placeholder="2" /></IField>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <IField label="Tổng số phòng"><input type="number" value={intake.hotel_room_count} onChange={e => setIntake(f => ({...f, hotel_room_count: e.target.value}))} className={iCls} placeholder="0" /></IField>
+                    <IField label="Loại phòng chi tiết"><input value={intake.hotel_room_details} onChange={e => setIntake(f => ({...f, hotel_room_details: e.target.value}))} className={iCls} placeholder="VD: 10 đôi, 5 đơn..." /></IField>
+                  </div>
+                  <div className="mt-3">
+                    <IField label="Phòng VIP (nếu có)"><input value={intake.hotel_vip_rooms} onChange={e => setIntake(f => ({...f, hotel_vip_rooms: e.target.value}))} className={iCls} placeholder="VD: 2 phòng suite cho Ban GĐ" /></IField>
+                  </div>
+                </ISection>
+
+                {/* Vé máy bay */}
+                <ISection label="Vé máy bay">
+                  <div className="grid grid-cols-2 gap-3">
+                    <IField label="Giờ đi"><input value={intake.flight_depart_time} onChange={e => setIntake(f => ({...f, flight_depart_time: e.target.value}))} className={iCls} placeholder="VD: 08:00 HAN→DAD" /></IField>
+                    <IField label="Giờ về"><input value={intake.flight_return_time} onChange={e => setIntake(f => ({...f, flight_return_time: e.target.value}))} className={iCls} placeholder="VD: 17:30 DAD→HAN" /></IField>
+                  </div>
+                </ISection>
+
+                {/* Xe */}
+                <ISection label="Xe di chuyển">
+                  <div className="grid grid-cols-3 gap-3">
+                    <IField label="Loại xe"><input value={intake.transport_car_type} onChange={e => setIntake(f => ({...f, transport_car_type: e.target.value}))} className={iCls} placeholder="VD: 45 chỗ" /></IField>
+                    <IField label="Số lượng xe"><input type="number" value={intake.transport_car_count} onChange={e => setIntake(f => ({...f, transport_car_count: e.target.value}))} className={iCls} placeholder="0" /></IField>
+                    <IField label="Đặt xe bên"><input value={intake.car_supplier} onChange={e => setIntake(f => ({...f, car_supplier: e.target.value}))} className={iCls} placeholder="Tên NCC xe..." /></IField>
+                  </div>
+                </ISection>
+
+                {/* Ăn uống */}
+                <ISection label="Ăn uống">
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <IField label="Số bữa chính"><input type="number" value={intake.meals_main_count} onChange={e => setIntake(f => ({...f, meals_main_count: e.target.value}))} className={iCls} placeholder="0" /></IField>
+                    <IField label="Giá / bữa (VNĐ)"><input type="number" value={intake.meals_main_price} onChange={e => setIntake(f => ({...f, meals_main_price: e.target.value}))} className={iCls} placeholder="0" /></IField>
+                  </div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <input type="checkbox" id="mbf_i" checked={intake.meals_breakfast} onChange={e => setIntake(f => ({...f, meals_breakfast: e.target.checked}))} className="rounded" />
+                    <label htmlFor="mbf_i" className="text-sm text-gray-700">Có bữa sáng</label>
+                  </div>
+                  {/* Lịch ăn uống theo ngày */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs text-gray-500">Lịch ăn uống:</span>
+                    <button type="button" onClick={() => { const d = parseInt(intake.trip_days); if (d > 0) syncMealsSchedule(d, mealsSchedule) }}
+                      className="text-xs text-accent-600 hover:text-accent-700 font-medium underline">
+                      Tạo lịch {intake.trip_days ? `${intake.trip_days} ngày` : ''}
+                    </button>
+                  </div>
+                  {mealsSchedule.length > 0 && (
+                    <div className="border border-gray-200 rounded-xl overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead><tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="px-3 py-2 text-left text-gray-500 font-medium w-16">Ngày</th>
+                          <th className="px-3 py-2 text-left text-gray-500 font-medium w-16">Bữa</th>
+                          <th className="px-3 py-2 text-left text-gray-500 font-medium">Thực đơn</th>
+                          <th className="px-3 py-2 text-left text-gray-500 font-medium">Nhà hàng</th>
+                        </tr></thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {mealsSchedule.map((row, i) => (
+                            <tr key={i}>
+                              <td className="px-3 py-1.5 text-gray-500">N{row.day}</td>
+                              <td className="px-3 py-1.5 text-gray-600 font-medium">{row.meal}</td>
+                              <td className="px-1.5 py-1"><input value={row.menu} onChange={e => setMealsSchedule(ms => ms.map((r, j) => j === i ? {...r, menu: e.target.value} : r))} className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="Thực đơn..." /></td>
+                              <td className="px-1.5 py-1"><input value={row.restaurant} onChange={e => setMealsSchedule(ms => ms.map((r, j) => j === i ? {...r, restaurant: e.target.value} : r))} className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="Nhà hàng..." /></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </ISection>
+
+                {/* HDV / MC */}
+                <ISection label="HDV / MC">
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <IField label="Tên HDV / MC"><input value={intake.guide_name} onChange={e => setIntake(f => ({...f, guide_name: e.target.value}))} className={iCls} placeholder="Tên hướng dẫn viên..." /></IField>
+                    <IField label="SĐT HDV / MC"><input value={intake.guide_phone} onChange={e => setIntake(f => ({...f, guide_phone: e.target.value}))} className={iCls} placeholder="0xxx..." /></IField>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <IField label="Giới tính">
+                      <select value={intake.guide_gender} onChange={e => setIntake(f => ({...f, guide_gender: e.target.value}))} className={iCls}>
+                        <option value="">-- Chọn --</option>
+                        <option value="male">Nam</option>
+                        <option value="female">Nữ</option>
+                        <option value="any">Không yêu cầu</option>
+                      </select>
+                    </IField>
+                    <IField label="Yêu cầu thêm"><input value={intake.guide_requirements} onChange={e => setIntake(f => ({...f, guide_requirements: e.target.value}))} className={iCls} placeholder="Kinh nghiệm, ngôn ngữ..." /></IField>
+                  </div>
+                </ISection>
+
+                {/* Sự kiện chi tiết */}
+                {intake.event_gala && (
+                  <ISection label="Gala / Tiệc">
+                    <div className="grid grid-cols-2 gap-3">
+                      <IField label="Địa điểm tổ chức"><input value={intake.gala_location} onChange={e => setIntake(f => ({...f, gala_location: e.target.value}))} className={iCls} placeholder="Sân KS, sảnh ngoài trời..." /></IField>
+                      <IField label="Chi tiết (ATAS, Back, Thời gian...)"><input value={intake.gala_details} onChange={e => setIntake(f => ({...f, gala_details: e.target.value}))} className={iCls} placeholder="..." /></IField>
+                    </div>
+                  </ISection>
+                )}
+                {intake.event_team_building && (
+                  <ISection label="Team Building">
+                    <IField label="Chi tiết (số game, kịch bản, thời gian...)">
+                      <textarea value={intake.team_building_details} onChange={e => setIntake(f => ({...f, team_building_details: e.target.value}))} rows={2} className={`${iCls} resize-none`} placeholder="..." />
+                    </IField>
+                  </ISection>
+                )}
+
+                {/* Vé tham quan & Dịch vụ khác */}
+                <ISection label="Vé tham quan & Dịch vụ khác">
+                  <div className="space-y-3">
+                    <IField label="Vé tham quan"><textarea value={intake.tickets_details} onChange={e => setIntake(f => ({...f, tickets_details: e.target.value}))} rows={2} className={`${iCls} resize-none`} placeholder="Tên điểm, số lượng, giá..." /></IField>
+                    <IField label="Dịch vụ khác"><textarea value={intake.other_services} onChange={e => setIntake(f => ({...f, other_services: e.target.value}))} rows={2} className={`${iCls} resize-none`} placeholder="..." /></IField>
+                  </div>
+                </ISection>
+
+                {/* Lịch trình xác nhận */}
+                <ISection label="Lịch trình xác nhận">
+                  <IField label="">
+                    <textarea value={intake.itinerary} onChange={e => setIntake(f => ({...f, itinerary: e.target.value}))} rows={5} className={`${iCls} resize-none`} placeholder="Lịch trình chi tiết từng ngày..." />
+                  </IField>
                 </ISection>
 
                 <div className="flex justify-end pt-2">
