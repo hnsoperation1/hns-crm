@@ -67,7 +67,7 @@ export default function DangLayPage() {
   }, [])
 
   useEffect(() => {
-    setBreadcrumb(null)
+    setBreadcrumb('Đơn hàng mới')
     loadData()
     setOnRefresh(loadData)
     return () => setOnRefresh(null)

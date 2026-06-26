@@ -37,7 +37,7 @@ export default function DaXongPage() {
   }, [])
 
   useEffect(() => {
-    setBreadcrumb(null)
+    setBreadcrumb('Đã xong')
     loadData()
     setOnRefresh(loadData)
     return () => setOnRefresh(null)
