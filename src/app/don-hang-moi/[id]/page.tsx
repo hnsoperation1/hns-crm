@@ -95,6 +95,18 @@ export default function OppDetailPage() {
   const [intakeLoaded, setIntakeLoaded] = useState(false)
   const [savingIntake, setSavingIntake] = useState(false)
   const [intakeSaved, setIntakeSaved] = useState(false)
+
+  type LeaderContact = { id: string; name: string; phone: string | null; email: string | null; company: string | null }
+  const [leaderSearch, setLeaderSearch] = useState('')
+  const [leaderResults, setLeaderResults] = useState<LeaderContact[]>([])
+  const [leaderDropOpen, setLeaderDropOpen] = useState(false)
+
+  async function searchLeader(q: string) {
+    if (!q.trim()) { setLeaderResults([]); return }
+    const { data } = await supabase.from('contacts').select('id,name,phone,email,company')
+      .or(`name.ilike.%${q}%,phone.ilike.%${q}%`).limit(8)
+    setLeaderResults((data ?? []) as LeaderContact[])
+  }
   const [taskDone, setTaskDone] = useState<Record<string, boolean>>({})
   const [addedTasks, setAddedTasks] = useState<{ id: string; title: string; due_date: string; assigned_to: string }[]>([])
   const [showNewTask, setShowNewTask] = useState(false)
@@ -463,9 +475,9 @@ export default function OppDetailPage() {
                         <div key={i} className="flex items-center gap-2">
                           <span className="text-xs font-bold text-gray-400 w-14 flex-shrink-0">Điểm {i + 1}</span>
                           <input value={pt.address} onChange={e => setPickupPoints(prev => prev.map((p, j) => j === i ? {...p, address: e.target.value} : p))}
-                            className={`${iCls} flex-1`} placeholder="Địa chỉ điểm đón..." />
+                            className="flex-1 min-w-0 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white" placeholder="Địa chỉ điểm đón..." />
                           <input type="number" min={0} value={pt.count} onChange={e => setPickupPoints(prev => prev.map((p, j) => j === i ? {...p, count: e.target.value} : p))}
-                            className={`${iCls} w-24`} placeholder="Số người" />
+                            className="w-28 flex-shrink-0 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white" placeholder="Số người" />
                         </div>
                       ))}
                     </div>
@@ -481,7 +493,7 @@ export default function OppDetailPage() {
                   <div className="mt-3">
                     <IField label="Thời gian mong muốn">
                       <div className="flex gap-4">
-                        {[{v:'weekend',l:'Cuối tuần (T6–CN / T7–T2)'},{v:'weekday',l:'Đầu tuần'}].map(({v,l}) => (
+                        {[{v:'weekend_fri',l:'Cuối tuần (T6–CN)'},{v:'weekend_sat',l:'Cuối tuần (T7–T2)'},{v:'weekday',l:'Đầu tuần'}].map(({v,l}) => (
                           <label key={v} className="flex items-center gap-2 text-sm cursor-pointer">
                             <input type="radio" name="trip_timing" value={v} checked={intake.trip_timing===v} onChange={() => setIntake(f => ({...f, trip_timing: v}))} className="accent-accent-500" />
                             {l}
@@ -495,7 +507,7 @@ export default function OppDetailPage() {
                 {/* Tiêu chuẩn KS */}
                 <ISection label="Tiêu chuẩn khách sạn">
                   <div className="flex gap-4">
-                    {[{v:'3',l:'3 sao'},{v:'4-5',l:'4–5 sao'}].map(({v,l}) => (
+                    {[{v:'3',l:'3 sao'},{v:'4',l:'4 sao'},{v:'5',l:'5 sao'}].map(({v,l}) => (
                       <label key={v} className="flex items-center gap-2 text-sm cursor-pointer">
                         <input type="radio" name="hotel_stars" value={v} checked={intake.hotel_stars===v} onChange={() => setIntake(f => ({...f, hotel_stars: v}))} className="accent-accent-500" />
                         {l}
@@ -524,6 +536,29 @@ export default function OppDetailPage() {
 
                 {/* Trưởng đoàn */}
                 <ISection label="Thông tin trưởng đoàn">
+                  <div className="relative mb-3">
+                    <label className="block text-xs text-gray-500 mb-1">Tìm từ danh sách liên hệ</label>
+                    <input value={leaderSearch}
+                      onChange={e => { setLeaderSearch(e.target.value); searchLeader(e.target.value) }}
+                      onFocus={() => setLeaderDropOpen(true)}
+                      onBlur={() => setTimeout(() => setLeaderDropOpen(false), 150)}
+                      className={iCls} placeholder="Tìm tên hoặc số điện thoại..." />
+                    {leaderDropOpen && leaderResults.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-48 overflow-y-auto">
+                        {leaderResults.map(c => (
+                          <div key={c.id} onMouseDown={() => {
+                            setIntake(f => ({...f, group_leader_name: c.name, group_leader_phone: c.phone ?? '', group_leader_email: c.email ?? ''}))
+                            setLeaderSearch(c.name)
+                            setLeaderDropOpen(false)
+                            setLeaderResults([])
+                          }} className="px-4 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0">
+                            <div className="font-semibold text-sm text-gray-900">{c.name}</div>
+                            {(c.phone || c.company) && <div className="text-xs text-gray-400">{[c.phone, c.company].filter(Boolean).join(' · ')}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div className="grid grid-cols-3 gap-3">
                     <IField label="Họ tên"><input value={intake.group_leader_name} onChange={e => setIntake(f => ({...f, group_leader_name: e.target.value}))} className={iCls} placeholder="Nguyễn Văn A" /></IField>
                     <IField label="Số điện thoại"><input value={intake.group_leader_phone} onChange={e => setIntake(f => ({...f, group_leader_phone: e.target.value}))} className={iCls} placeholder="0912..." /></IField>

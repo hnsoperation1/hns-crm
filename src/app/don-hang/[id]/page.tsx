@@ -525,9 +525,9 @@ export default function OppDetailPage() {
                         <div key={i} className="flex items-center gap-2">
                           <span className="text-xs font-bold text-gray-400 w-14 flex-shrink-0">Điểm {i + 1}</span>
                           <input value={pt.address} onChange={e => setHandoverPickupPoints(prev => prev.map((p, j) => j === i ? {...p, address: e.target.value} : p))}
-                            className={`${hCls} flex-1`} placeholder="Địa chỉ điểm đón..." />
+                            className="flex-1 min-w-0 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white" placeholder="Địa chỉ điểm đón..." />
                           <input type="number" min={0} value={pt.count} onChange={e => setHandoverPickupPoints(prev => prev.map((p, j) => j === i ? {...p, count: e.target.value} : p))}
-                            className={`${hCls} w-24`} placeholder="Số người" />
+                            className="w-28 flex-shrink-0 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white" placeholder="Số người" />
                         </div>
                       ))}
                     </div>
