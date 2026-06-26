@@ -168,7 +168,7 @@ function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard, careC
                 </button>
                 <button onClick={() => onCreateCard(f)}
                   className="flex items-center gap-1 text-[11px] text-pink-500 hover:text-pink-700 font-medium px-2 py-1 rounded-lg hover:bg-pink-50 transition-colors">
-                  + Tạo thẻ CSKHKH
+                  + Tạo thẻ CSKH
                 </button>
               </div>
 
@@ -180,13 +180,13 @@ function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard, careC
                   ) : (
                     cards.map(card => (
                       <button key={card.id} onClick={() => openCard(card)}
-                        className="w-full flex items-start gap-2 px-2 py-1.5 rounded-lg text-left hover:bg-pink-50 transition-colors group">
-                        <Heart size={10} className={`mt-0.5 flex-shrink-0 ${card.is_done ? 'text-emerald-400' : 'text-pink-400'}`} />
-                        <span className={`flex-1 text-[11px] leading-relaxed ${card.is_done ? 'text-gray-400 line-through' : 'text-gray-700 group-hover:text-pink-700'}`}>{card.content}</span>
+                        className={`w-full flex items-start gap-2 px-2 py-1.5 rounded-lg text-left transition-colors group ${card.is_done ? 'bg-emerald-50 hover:bg-emerald-100' : 'hover:bg-pink-50'}`}>
+                        <Heart size={10} fill={card.is_done ? 'currentColor' : 'none'} className={`mt-0.5 flex-shrink-0 ${card.is_done ? 'text-emerald-400' : 'text-pink-400'}`} />
+                        <span className={`flex-1 text-[11px] leading-relaxed ${card.is_done ? 'text-emerald-700' : 'text-gray-700 group-hover:text-pink-700'}`}>{card.content}</span>
                         {card.contact_date && (
-                          <span className="flex-shrink-0 text-[10px] text-gray-400">{card.contact_date.slice(8, 10)}/{card.contact_date.slice(5, 7)}</span>
+                          <span className={`flex-shrink-0 text-[10px] ${card.is_done ? 'text-emerald-500' : 'text-gray-400'}`}>{card.contact_date.slice(8, 10)}/{card.contact_date.slice(5, 7)}</span>
                         )}
-                        <ChevronDown size={9} className="flex-shrink-0 text-gray-300 group-hover:text-pink-400 mt-0.5" />
+                        <ChevronDown size={9} className={`flex-shrink-0 mt-0.5 ${card.is_done ? 'text-emerald-300' : 'text-gray-300 group-hover:text-pink-400'}`} />
                       </button>
                     ))
                   )}
