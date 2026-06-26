@@ -7,7 +7,7 @@ import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2,
   MessageSquare, Plus, CheckSquare, Square,
   Clock, CalendarDays, DollarSign, User, Pencil, CheckCircle2, X,
-  ClipboardList, UserPlus, Loader2, FileText, Save,
+  ClipboardList, UserPlus, Loader2, FileText, Save, ClipboardCheck,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -95,6 +95,8 @@ export default function OppDetailPage() {
   const [intakeLoaded, setIntakeLoaded] = useState(false)
   const [savingIntake, setSavingIntake] = useState(false)
   const [intakeSaved, setIntakeSaved] = useState(false)
+  const [creatingHandover, setCreatingHandover] = useState(false)
+  const [handoverCreated, setHandoverCreated] = useState(false)
 
   type LeaderContact = { id: string; name: string; phone: string | null; email: string | null; company: string | null }
   const [leaderSearch, setLeaderSearch] = useState('')
@@ -221,6 +223,83 @@ export default function OppDetailPage() {
     setSavingIntake(false)
     setIntakeSaved(true)
     setTimeout(() => setIntakeSaved(false), 2000)
+  }
+
+  async function createHandover() {
+    setCreatingHandover(true)
+    // Lưu intake trước
+    await supabase.from('tour_intake').upsert({
+      opportunity_id: id,
+      pax_adults: intake.pax_adults ? Number(intake.pax_adults) : null,
+      pax_children_under5: intake.pax_children_under5 ? Number(intake.pax_children_under5) : null,
+      pax_children_5to10: intake.pax_children_5to10 ? Number(intake.pax_children_5to10) : null,
+      pickup_location: null,
+      pickup_count: pickupPoints.length || null,
+      pickup_quantities: pickupPoints.length ? JSON.stringify(pickupPoints) : null,
+      trip_days: intake.trip_days ? Number(intake.trip_days) : null,
+      trip_date_range: intake.trip_date_range || null,
+      trip_timing: intake.trip_timing || null,
+      hotel_stars: intake.hotel_stars || null,
+      event_gala: intake.event_gala, event_team_building: intake.event_team_building,
+      event_meeting: intake.event_meeting, event_birthday: intake.event_birthday,
+      event_anniversary: intake.event_anniversary, event_details: intake.event_details || null,
+      destination: intake.destination || null,
+      group_leader_name: intake.group_leader_name || null,
+      group_leader_phone: intake.group_leader_phone || null,
+      group_leader_email: intake.group_leader_email || null,
+      customer_type: intake.customer_type || null,
+      flight_preference: intake.flight_preference || null,
+      tour_type: intake.tour_type || null,
+      budget: intake.budget || null,
+      program_goal: intake.program_goal || null,
+      program_theme: intake.program_theme || null,
+      improvements: intake.improvements || null,
+      other_notes: intake.other_notes || null,
+    }, { onConflict: 'opportunity_id' })
+    // Copy các field chung sang handover (không ghi đè field riêng của handover nếu đã có)
+    const { data: existingHandover } = await supabase.from('tour_handover')
+      .select('id').eq('opportunity_id', id).maybeSingle()
+    if (!existingHandover) {
+      await supabase.from('tour_handover').insert({
+        opportunity_id: id,
+        pax_adults: intake.pax_adults ? Number(intake.pax_adults) : null,
+        pax_children_under5: intake.pax_children_under5 ? Number(intake.pax_children_under5) : null,
+        pax_children_5to10: intake.pax_children_5to10 ? Number(intake.pax_children_5to10) : null,
+        pickup_location: null,
+        pickup_count: pickupPoints.length || null,
+        pickup_quantities: pickupPoints.length ? JSON.stringify(pickupPoints) : null,
+        trip_days: intake.trip_days ? Number(intake.trip_days) : null,
+        trip_date_range: intake.trip_date_range || null,
+        hotel_stars: intake.hotel_stars || null,
+        event_gala: intake.event_gala, event_team_building: intake.event_team_building,
+        event_meeting: intake.event_meeting, event_birthday: intake.event_birthday,
+        event_anniversary: intake.event_anniversary, event_details: intake.event_details || null,
+        group_leader_name: intake.group_leader_name || null,
+        group_leader_phone: intake.group_leader_phone || null,
+        group_leader_email: intake.group_leader_email || null,
+      })
+    } else {
+      await supabase.from('tour_handover').update({
+        pax_adults: intake.pax_adults ? Number(intake.pax_adults) : null,
+        pax_children_under5: intake.pax_children_under5 ? Number(intake.pax_children_under5) : null,
+        pax_children_5to10: intake.pax_children_5to10 ? Number(intake.pax_children_5to10) : null,
+        pickup_location: null,
+        pickup_count: pickupPoints.length || null,
+        pickup_quantities: pickupPoints.length ? JSON.stringify(pickupPoints) : null,
+        trip_days: intake.trip_days ? Number(intake.trip_days) : null,
+        trip_date_range: intake.trip_date_range || null,
+        hotel_stars: intake.hotel_stars || null,
+        event_gala: intake.event_gala, event_team_building: intake.event_team_building,
+        event_meeting: intake.event_meeting, event_birthday: intake.event_birthday,
+        event_anniversary: intake.event_anniversary, event_details: intake.event_details || null,
+        group_leader_name: intake.group_leader_name || null,
+        group_leader_phone: intake.group_leader_phone || null,
+        group_leader_email: intake.group_leader_email || null,
+      }).eq('opportunity_id', id)
+    }
+    setCreatingHandover(false)
+    setHandoverCreated(true)
+    setTimeout(() => setHandoverCreated(false), 3000)
   }
 
   if (loading) {
@@ -435,11 +514,18 @@ export default function OppDetailPage() {
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
                 <h3 className="font-semibold text-gray-900 text-sm">Phiếu thông tin đoàn</h3>
-                <button onClick={saveIntake} disabled={savingIntake}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors">
-                  {savingIntake ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                  {intakeSaved ? 'Đã lưu ✓' : 'Lưu'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={createHandover} disabled={creatingHandover || savingIntake}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors">
+                    {creatingHandover ? <Loader2 size={12} className="animate-spin" /> : <ClipboardCheck size={12} />}
+                    {handoverCreated ? 'Đã lập phiếu ✓' : 'Lập phiếu bàn giao'}
+                  </button>
+                  <button onClick={saveIntake} disabled={savingIntake}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors">
+                    {savingIntake ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                    {intakeSaved ? 'Đã lưu ✓' : 'Lưu'}
+                  </button>
+                </div>
               </div>
               {!intakeLoaded ? (
                 <div className="p-8 flex justify-center"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
