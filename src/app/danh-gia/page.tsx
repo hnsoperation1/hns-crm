@@ -94,10 +94,13 @@ function StarRow({ label, value }: { label: string; value: string | null }) {
 
 type SelectedList = { title: string; entries: FeedbackRow[] } | null
 
-function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard }: {
+type CareCardSummary = { id: string; content: string; contact_date: string | null; is_done: boolean }
+
+function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard, careCardsMap }: {
   data: SelectedList; onClose: () => void
   onExpand: (f: FeedbackRow) => void; expandedId: string | null
   onCreateCard: (f: FeedbackRow) => void
+  careCardsMap: Record<string, CareCardSummary[]>
 }) {
   if (!data) return (
     <div className="flex-1 flex flex-col items-center justify-center text-center py-16 text-gray-300">
@@ -132,12 +135,30 @@ function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard }: {
                 </Link>
               )}
             </div>
-            <div className="mt-2">
-              <button onClick={e => { e.stopPropagation(); onCreateCard(f) }}
-                className="flex items-center gap-1 text-[11px] text-pink-500 hover:text-pink-700 font-medium transition-colors px-2 py-1 rounded-lg hover:bg-pink-50">
-                <Heart size={11} /> Tạo thẻ chăm sóc
-              </button>
-            </div>
+            {/* Thẻ chăm sóc liên quan */}
+            {(() => {
+              const cards = careCardsMap[f.id]
+              return (
+                <div className="mt-2 space-y-1">
+                  {cards && cards.length > 0 && (
+                    <div className="space-y-1 mb-1.5">
+                      {cards.map(c => (
+                        <div key={c.id} onClick={e => e.stopPropagation()}
+                          className={`flex items-start gap-1.5 px-2 py-1.5 rounded-lg text-[11px] ${c.is_done ? 'bg-emerald-50 text-emerald-600' : 'bg-pink-50 text-pink-700'}`}>
+                          <Heart size={10} className={`mt-0.5 flex-shrink-0 ${c.is_done ? 'text-emerald-400' : 'text-pink-400'}`} />
+                          <span className={`flex-1 leading-relaxed ${c.is_done ? 'line-through opacity-60' : ''}`}>{c.content}</span>
+                          {c.contact_date && <span className="flex-shrink-0 opacity-60">{c.contact_date.slice(8, 10)}/{c.contact_date.slice(5, 7)}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button onClick={e => { e.stopPropagation(); onCreateCard(f) }}
+                    className="flex items-center gap-1 text-[11px] text-pink-500 hover:text-pink-700 font-medium transition-colors px-2 py-1 rounded-lg hover:bg-pink-50">
+                    <Heart size={11} /> Tạo thẻ chăm sóc
+                  </button>
+                </div>
+              )
+            })()}
           </div>
         ))}
       </div>
@@ -180,6 +201,7 @@ export default function DanhGiaPage() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedList>(null)
   const [expandedFeedback, setExpandedFeedback] = useState<FeedbackRow | null>(null)
+  const [careCardsMap, setCareCardsMap] = useState<Record<string, CareCardSummary[]>>({})
   const [createCardModal, setCreateCardModal] = useState<FeedbackRow | null>(null)
   const [newCardContent, setNewCardContent] = useState('')
   const [newCardDate, setNewCardDate] = useState('')
@@ -372,6 +394,30 @@ export default function DanhGiaPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOppSummary, oppGroups])
 
+  // Fetch care cards khi selected thay đổi
+  useEffect(() => {
+    if (!selected || selected.entries.length === 0) return
+    const ids = selected.entries.map(f => f.id)
+    createClient().from('care_cards').select('id,feedback_id,content,contact_date,is_done')
+      .in('feedback_id', ids)
+      .then(({ data }) => {
+        if (!data) return
+        const map: Record<string, CareCardSummary[]> = {}
+        data.forEach((c: any) => {
+          if (!c.feedback_id) return
+          if (!map[c.feedback_id]) map[c.feedback_id] = []
+          map[c.feedback_id].push(c as CareCardSummary)
+        })
+        setCareCardsMap(prev => ({ ...prev, ...map }))
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected])
+
+  async function refreshCareCards(feedbackId: string) {
+    const { data } = await createClient().from('care_cards').select('id,feedback_id,content,contact_date,is_done').eq('feedback_id', feedbackId)
+    setCareCardsMap(prev => ({ ...prev, [feedbackId]: (data ?? []) as CareCardSummary[] }))
+  }
+
   function handlePoorClick(entry: { key: string; name: string }) {
     const matches = dateFiltered.filter(row => (row as any)[entry.key] === 'Kém')
     setSelected({ title: `Đánh giá Kém · ${entry.name}`, entries: matches })
@@ -397,6 +443,7 @@ export default function DanhGiaPage() {
     })
     setCreatingCard(false)
     setCardCreated(true)
+    await refreshCareCards(createCardModal.id)
     setTimeout(() => {
       setCreateCardModal(null)
       setNewCardContent('')
@@ -840,7 +887,7 @@ export default function DanhGiaPage() {
             </div>
             {/* List panel */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-              <CustomerList data={selected} onClose={() => setSelected(null)} onExpand={f => setExpandedFeedback(prev => prev?.id === f.id ? null : f)} expandedId={expandedFeedback?.id ?? null} onCreateCard={setCreateCardModal} />
+              <CustomerList data={selected} onClose={() => setSelected(null)} onExpand={f => setExpandedFeedback(prev => prev?.id === f.id ? null : f)} expandedId={expandedFeedback?.id ?? null} onCreateCard={setCreateCardModal} careCardsMap={careCardsMap} />
             </div>
           </div>
         )}
@@ -931,7 +978,7 @@ export default function DanhGiaPage() {
 
             {/* List panel */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-              <CustomerList data={selected} onClose={() => setSelected(null)} onExpand={f => setExpandedFeedback(prev => prev?.id === f.id ? null : f)} expandedId={expandedFeedback?.id ?? null} onCreateCard={setCreateCardModal} />
+              <CustomerList data={selected} onClose={() => setSelected(null)} onExpand={f => setExpandedFeedback(prev => prev?.id === f.id ? null : f)} expandedId={expandedFeedback?.id ?? null} onCreateCard={setCreateCardModal} careCardsMap={careCardsMap} />
             </div>
           </div>
         )}
