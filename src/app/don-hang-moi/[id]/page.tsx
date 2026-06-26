@@ -7,7 +7,7 @@ import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2,
   MessageSquare, Plus, CheckSquare, Square,
   Clock, CalendarDays, DollarSign, User, Pencil, CheckCircle2, X,
-  ClipboardList, UserPlus, Loader2,
+  ClipboardList, UserPlus, Loader2, FileText, Save,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -61,7 +61,39 @@ export default function OppDetailPage() {
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
-  const [mainTab, setMainTab] = useState<'activity' | 'tasks'>('activity')
+  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake'>('activity')
+
+  // Tour intake
+  type IntakeForm = {
+    pax_adults: string; pax_children_under5: string; pax_children_5to10: string
+    pickup_location: string; pickup_count: string; pickup_quantities: string
+    trip_days: string; trip_date_range: string; trip_timing: string
+    hotel_stars: string
+    event_gala: boolean; event_team_building: boolean; event_meeting: boolean
+    event_birthday: boolean; event_anniversary: boolean; event_details: string
+    destination: string
+    group_leader_name: string; group_leader_phone: string; group_leader_email: string
+    customer_type: string; flight_preference: string; tour_type: string
+    budget: string; program_goal: string; program_theme: string
+    improvements: string; other_notes: string
+  }
+  const EMPTY_INTAKE: IntakeForm = {
+    pax_adults: '', pax_children_under5: '', pax_children_5to10: '',
+    pickup_location: '', pickup_count: '', pickup_quantities: '',
+    trip_days: '', trip_date_range: '', trip_timing: '',
+    hotel_stars: '',
+    event_gala: false, event_team_building: false, event_meeting: false,
+    event_birthday: false, event_anniversary: false, event_details: '',
+    destination: '',
+    group_leader_name: '', group_leader_phone: '', group_leader_email: '',
+    customer_type: '', flight_preference: '', tour_type: '',
+    budget: '', program_goal: '', program_theme: '',
+    improvements: '', other_notes: '',
+  }
+  const [intake, setIntake] = useState<IntakeForm>(EMPTY_INTAKE)
+  const [intakeLoaded, setIntakeLoaded] = useState(false)
+  const [savingIntake, setSavingIntake] = useState(false)
+  const [intakeSaved, setIntakeSaved] = useState(false)
   const [taskDone, setTaskDone] = useState<Record<string, boolean>>({})
   const [addedTasks, setAddedTasks] = useState<{ id: string; title: string; due_date: string; assigned_to: string }[]>([])
   const [showNewTask, setShowNewTask] = useState(false)
@@ -93,9 +125,83 @@ export default function OppDetailPage() {
       setAllUsers(users)
       setSaleUsers(users.filter(u => u.is_sale_tv))
       setLoading(false)
+
+      // Load tour_intake
+      const { data: intakeData } = await supabase.from('tour_intake').select('*').eq('opportunity_id', id).maybeSingle()
+      if (intakeData) {
+        setIntake({
+          pax_adults: intakeData.pax_adults?.toString() ?? '',
+          pax_children_under5: intakeData.pax_children_under5?.toString() ?? '',
+          pax_children_5to10: intakeData.pax_children_5to10?.toString() ?? '',
+          pickup_location: intakeData.pickup_location ?? '',
+          pickup_count: intakeData.pickup_count?.toString() ?? '',
+          pickup_quantities: intakeData.pickup_quantities ?? '',
+          trip_days: intakeData.trip_days?.toString() ?? '',
+          trip_date_range: intakeData.trip_date_range ?? '',
+          trip_timing: intakeData.trip_timing ?? '',
+          hotel_stars: intakeData.hotel_stars ?? '',
+          event_gala: intakeData.event_gala ?? false,
+          event_team_building: intakeData.event_team_building ?? false,
+          event_meeting: intakeData.event_meeting ?? false,
+          event_birthday: intakeData.event_birthday ?? false,
+          event_anniversary: intakeData.event_anniversary ?? false,
+          event_details: intakeData.event_details ?? '',
+          destination: intakeData.destination ?? '',
+          group_leader_name: intakeData.group_leader_name ?? '',
+          group_leader_phone: intakeData.group_leader_phone ?? '',
+          group_leader_email: intakeData.group_leader_email ?? '',
+          customer_type: intakeData.customer_type ?? '',
+          flight_preference: intakeData.flight_preference ?? '',
+          tour_type: intakeData.tour_type ?? '',
+          budget: intakeData.budget ?? '',
+          program_goal: intakeData.program_goal ?? '',
+          program_theme: intakeData.program_theme ?? '',
+          improvements: intakeData.improvements ?? '',
+          other_notes: intakeData.other_notes ?? '',
+        })
+      }
+      setIntakeLoaded(true)
     }
     load()
   }, [id])
+
+  async function saveIntake() {
+    setSavingIntake(true)
+    await supabase.from('tour_intake').upsert({
+      opportunity_id: id,
+      pax_adults: intake.pax_adults ? Number(intake.pax_adults) : null,
+      pax_children_under5: intake.pax_children_under5 ? Number(intake.pax_children_under5) : null,
+      pax_children_5to10: intake.pax_children_5to10 ? Number(intake.pax_children_5to10) : null,
+      pickup_location: intake.pickup_location || null,
+      pickup_count: intake.pickup_count ? Number(intake.pickup_count) : null,
+      pickup_quantities: intake.pickup_quantities || null,
+      trip_days: intake.trip_days ? Number(intake.trip_days) : null,
+      trip_date_range: intake.trip_date_range || null,
+      trip_timing: intake.trip_timing || null,
+      hotel_stars: intake.hotel_stars || null,
+      event_gala: intake.event_gala,
+      event_team_building: intake.event_team_building,
+      event_meeting: intake.event_meeting,
+      event_birthday: intake.event_birthday,
+      event_anniversary: intake.event_anniversary,
+      event_details: intake.event_details || null,
+      destination: intake.destination || null,
+      group_leader_name: intake.group_leader_name || null,
+      group_leader_phone: intake.group_leader_phone || null,
+      group_leader_email: intake.group_leader_email || null,
+      customer_type: intake.customer_type || null,
+      flight_preference: intake.flight_preference || null,
+      tour_type: intake.tour_type || null,
+      budget: intake.budget || null,
+      program_goal: intake.program_goal || null,
+      program_theme: intake.program_theme || null,
+      improvements: intake.improvements || null,
+      other_notes: intake.other_notes || null,
+    }, { onConflict: 'opportunity_id' })
+    setSavingIntake(false)
+    setIntakeSaved(true)
+    setTimeout(() => setIntakeSaved(false), 2000)
+  }
 
   if (loading) {
     return (
@@ -273,6 +379,14 @@ export default function OppDetailPage() {
 
             <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-2xl p-1 shadow-sm">
               <button
+                onClick={() => setMainTab('intake')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  mainTab === 'intake' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <FileText size={15} /> Thông tin đoàn
+              </button>
+              <button
                 onClick={() => setMainTab('activity')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   mainTab === 'activity' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
@@ -289,12 +403,156 @@ export default function OppDetailPage() {
                   mainTab === 'tasks' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
                 }`}
               >
-                <ClipboardList size={15} /> Công việc & Giao việc
+                <ClipboardList size={15} /> Công việc
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${mainTab === 'tasks' ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
                   {tasks.length + addedTasks.length}
                 </span>
               </button>
             </div>
+
+            {/* ══════════ THÔNG TIN ĐOÀN TAB ══════════ */}
+            {mainTab === 'intake' && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+                <h3 className="font-semibold text-gray-900 text-sm">Phiếu thông tin đoàn</h3>
+                <button onClick={saveIntake} disabled={savingIntake}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors">
+                  {savingIntake ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                  {intakeSaved ? 'Đã lưu ✓' : 'Lưu'}
+                </button>
+              </div>
+              {!intakeLoaded ? (
+                <div className="p-8 flex justify-center"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+              ) : (
+              <div className="p-5 space-y-5">
+                {/* Số lượng khách */}
+                <ISection label="Số lượng khách">
+                  <div className="grid grid-cols-3 gap-3">
+                    <IField label="Người lớn"><input type="number" min={0} value={intake.pax_adults} onChange={e => setIntake(f => ({...f, pax_adults: e.target.value}))} className={iCls} placeholder="0" /></IField>
+                    <IField label="Trẻ em dưới 5 tuổi"><input type="number" min={0} value={intake.pax_children_under5} onChange={e => setIntake(f => ({...f, pax_children_under5: e.target.value}))} className={iCls} placeholder="0" /></IField>
+                    <IField label="Trẻ em 5–10 tuổi"><input type="number" min={0} value={intake.pax_children_5to10} onChange={e => setIntake(f => ({...f, pax_children_5to10: e.target.value}))} className={iCls} placeholder="0" /></IField>
+                  </div>
+                </ISection>
+
+                {/* Điểm đón */}
+                <ISection label="Điểm đón">
+                  <IField label="Điểm đón từ đâu"><input value={intake.pickup_location} onChange={e => setIntake(f => ({...f, pickup_location: e.target.value}))} className={iCls} placeholder="VD: KCN Tử Đà – Phú Thọ" /></IField>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <IField label="Số điểm đón"><input type="number" min={0} value={intake.pickup_count} onChange={e => setIntake(f => ({...f, pickup_count: e.target.value}))} className={iCls} placeholder="0" /></IField>
+                    <IField label="Số lượng mỗi điểm"><input value={intake.pickup_quantities} onChange={e => setIntake(f => ({...f, pickup_quantities: e.target.value}))} className={iCls} placeholder="VD: điểm 1: 20 người, điểm 2: 30 người" /></IField>
+                  </div>
+                </ISection>
+
+                {/* Thời gian */}
+                <ISection label="Thời gian đi">
+                  <div className="grid grid-cols-2 gap-3">
+                    <IField label="Số ngày"><input type="number" min={1} value={intake.trip_days} onChange={e => setIntake(f => ({...f, trip_days: e.target.value}))} className={iCls} placeholder="2" /></IField>
+                    <IField label="Khoảng ngày dự kiến"><input value={intake.trip_date_range} onChange={e => setIntake(f => ({...f, trip_date_range: e.target.value}))} className={iCls} placeholder="VD: cuối tháng 7/2026" /></IField>
+                  </div>
+                  <div className="mt-3">
+                    <IField label="Thời gian mong muốn">
+                      <div className="flex gap-4">
+                        {[{v:'weekend',l:'Cuối tuần (T6–CN / T7–T2)'},{v:'weekday',l:'Đầu tuần'}].map(({v,l}) => (
+                          <label key={v} className="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="radio" name="trip_timing" value={v} checked={intake.trip_timing===v} onChange={() => setIntake(f => ({...f, trip_timing: v}))} className="accent-accent-500" />
+                            {l}
+                          </label>
+                        ))}
+                      </div>
+                    </IField>
+                  </div>
+                </ISection>
+
+                {/* Tiêu chuẩn KS */}
+                <ISection label="Tiêu chuẩn khách sạn">
+                  <div className="flex gap-4">
+                    {[{v:'3',l:'3 sao'},{v:'4-5',l:'4–5 sao'}].map(({v,l}) => (
+                      <label key={v} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="radio" name="hotel_stars" value={v} checked={intake.hotel_stars===v} onChange={() => setIntake(f => ({...f, hotel_stars: v}))} className="accent-accent-500" />
+                        {l}
+                      </label>
+                    ))}
+                  </div>
+                </ISection>
+
+                {/* Yêu cầu sự kiện */}
+                <ISection label="Yêu cầu sự kiện">
+                  <div className="flex flex-wrap gap-3 mb-3">
+                    {([['event_gala','Gala dinner'],['event_team_building','Team building'],['event_meeting','Hội họp'],['event_birthday','Sinh nhật'],['event_anniversary','Kỷ niệm']] as [keyof typeof intake, string][]).map(([k,l]) => (
+                      <label key={k} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" checked={intake[k] as boolean} onChange={e => setIntake(f => ({...f, [k]: e.target.checked}))} className="accent-accent-500 w-4 h-4" />
+                        {l}
+                      </label>
+                    ))}
+                  </div>
+                  <IField label="Chi tiết thêm"><input value={intake.event_details} onChange={e => setIntake(f => ({...f, event_details: e.target.value}))} className={iCls} placeholder="Mô tả yêu cầu sự kiện..." /></IField>
+                </ISection>
+
+                {/* Điểm đến */}
+                <ISection label="Điểm đến mong muốn">
+                  <IField label=""><input value={intake.destination} onChange={e => setIntake(f => ({...f, destination: e.target.value}))} className={iCls} placeholder="VD: Sầm Sơn, Đà Nẵng, Phú Quốc..." /></IField>
+                </ISection>
+
+                {/* Trưởng đoàn */}
+                <ISection label="Thông tin trưởng đoàn">
+                  <div className="grid grid-cols-3 gap-3">
+                    <IField label="Họ tên"><input value={intake.group_leader_name} onChange={e => setIntake(f => ({...f, group_leader_name: e.target.value}))} className={iCls} placeholder="Nguyễn Văn A" /></IField>
+                    <IField label="Số điện thoại"><input value={intake.group_leader_phone} onChange={e => setIntake(f => ({...f, group_leader_phone: e.target.value}))} className={iCls} placeholder="0912..." /></IField>
+                    <IField label="Email"><input value={intake.group_leader_email} onChange={e => setIntake(f => ({...f, group_leader_email: e.target.value}))} className={iCls} placeholder="..." /></IField>
+                  </div>
+                </ISection>
+
+                {/* Đối tượng / Vé / Định hướng / Ngân sách */}
+                <ISection label="Định hướng">
+                  <div className="grid grid-cols-2 gap-4">
+                    <IField label="Đối tượng khách hàng"><input value={intake.customer_type} onChange={e => setIntake(f => ({...f, customer_type: e.target.value}))} className={iCls} placeholder="VD: Công chức, giáo viên, VIP..." /></IField>
+                    <IField label="Ngân sách mong muốn"><input value={intake.budget} onChange={e => setIntake(f => ({...f, budget: e.target.value}))} className={iCls} placeholder="VD: 1.5 triệu/người" /></IField>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mt-3">
+                    <IField label="Vé máy bay">
+                      <div className="flex gap-4">
+                        {[{v:'budget',l:'Hãng giá rẻ'},{v:'quality',l:'Hãng chất lượng'}].map(({v,l}) => (
+                          <label key={v} className="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="radio" name="flight_preference" value={v} checked={intake.flight_preference===v} onChange={() => setIntake(f => ({...f, flight_preference: v}))} className="accent-accent-500" />
+                            {l}
+                          </label>
+                        ))}
+                      </div>
+                    </IField>
+                    <IField label="Định hướng tour">
+                      <div className="flex gap-4">
+                        {[{v:'budget',l:'Tour giá rẻ'},{v:'quality',l:'Tour chất lượng cao'}].map(({v,l}) => (
+                          <label key={v} className="flex items-center gap-2 text-sm cursor-pointer">
+                            <input type="radio" name="tour_type" value={v} checked={intake.tour_type===v} onChange={() => setIntake(f => ({...f, tour_type: v}))} className="accent-accent-500" />
+                            {l}
+                          </label>
+                        ))}
+                      </div>
+                    </IField>
+                  </div>
+                </ISection>
+
+                {/* Mục tiêu / Chủ đề / Cải thiện / Lưu ý */}
+                <ISection label="Mục tiêu & Lưu ý">
+                  <div className="space-y-3">
+                    <IField label="Mục tiêu chương trình"><textarea value={intake.program_goal} onChange={e => setIntake(f => ({...f, program_goal: e.target.value}))} rows={2} className={`${iCls} resize-none`} placeholder="Mong muốn đạt được gì sau chương trình?" /></IField>
+                    <IField label="Chủ đề chương trình"><textarea value={intake.program_theme} onChange={e => setIntake(f => ({...f, program_theme: e.target.value}))} rows={2} className={`${iCls} resize-none`} placeholder="Để lên ý tưởng, thiết kế theo..." /></IField>
+                    <IField label="Vấn đề cần cải thiện (so với các năm trước)"><textarea value={intake.improvements} onChange={e => setIntake(f => ({...f, improvements: e.target.value}))} rows={2} className={`${iCls} resize-none`} placeholder="..." /></IField>
+                    <IField label="Lưu ý khác"><textarea value={intake.other_notes} onChange={e => setIntake(f => ({...f, other_notes: e.target.value}))} rows={2} className={`${iCls} resize-none`} placeholder="..." /></IField>
+                  </div>
+                </ISection>
+
+                <div className="flex justify-end pt-2">
+                  <button onClick={saveIntake} disabled={savingIntake}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors">
+                    {savingIntake ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    {intakeSaved ? 'Đã lưu ✓' : 'Lưu thông tin đoàn'}
+                  </button>
+                </div>
+              </div>
+              )}
+            </div>
+            )}
 
             {/* ══════════ HOẠT ĐỘNG TAB ══════════ */}
             {mainTab === 'activity' && (
@@ -770,6 +1028,26 @@ function InfoRow({ label, value, highlight, warn }: {
       <span className={`font-semibold text-xs text-right ${highlight ? 'text-brand-700' : warn ? 'text-amber-600' : 'text-gray-800'}`}>
         {value}
       </span>
+    </div>
+  )
+}
+
+const iCls = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white'
+
+function ISection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{label}</div>
+      <div className="bg-gray-50 rounded-xl p-3">{children}</div>
+    </div>
+  )
+}
+
+function IField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      {label && <label className="block text-xs text-gray-500 mb-1">{label}</label>}
+      {children}
     </div>
   )
 }

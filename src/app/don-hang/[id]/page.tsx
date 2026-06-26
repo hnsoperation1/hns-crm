@@ -7,7 +7,7 @@ import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2,
   MessageSquare, Plus, CheckSquare, Square,
   Clock, CalendarDays, DollarSign, User, Pencil, CheckCircle2, X,
-  ClipboardList, UserPlus, Loader2,
+  ClipboardList, UserPlus, Loader2, FileText, Save,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -61,7 +61,47 @@ export default function OppDetailPage() {
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
-  const [mainTab, setMainTab] = useState<'activity' | 'tasks'>('activity')
+  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'handover'>('handover')
+
+  // Tour handover
+  type HandoverForm = {
+    ma_doan: string; vat_required: boolean; status: string
+    sale_price: string; commission: string
+    pax_adults: string; pax_children_under5: string; pax_children_5to10: string
+    group_leader_name: string; group_leader_phone: string; group_leader_email: string
+    pickup_location: string; pickup_count: string; pickup_quantities: string; pickup_time: string
+    trip_days: string; trip_date_range: string; itinerary: string
+    hotel_stars: string; hotel_name: string; hotel_persons_per_room: string; hotel_room_details: string
+    transport_car_type: string; transport_car_count: string
+    flight_depart_time: string; flight_return_time: string
+    meals_main_count: string; meals_main_price: string; meals_breakfast: boolean
+    guide_gender: string; guide_requirements: string
+    tickets_details: string
+    event_gala: boolean; event_team_building: boolean; event_meeting: boolean
+    event_birthday: boolean; event_anniversary: boolean; event_details: string
+    other_services: string
+  }
+  const EMPTY_HANDOVER: HandoverForm = {
+    ma_doan: '', vat_required: false, status: '',
+    sale_price: '', commission: '',
+    pax_adults: '', pax_children_under5: '', pax_children_5to10: '',
+    group_leader_name: '', group_leader_phone: '', group_leader_email: '',
+    pickup_location: '', pickup_count: '', pickup_quantities: '', pickup_time: '',
+    trip_days: '', trip_date_range: '', itinerary: '',
+    hotel_stars: '', hotel_name: '', hotel_persons_per_room: '', hotel_room_details: '',
+    transport_car_type: '', transport_car_count: '',
+    flight_depart_time: '', flight_return_time: '',
+    meals_main_count: '', meals_main_price: '', meals_breakfast: false,
+    guide_gender: '', guide_requirements: '',
+    tickets_details: '',
+    event_gala: false, event_team_building: false, event_meeting: false,
+    event_birthday: false, event_anniversary: false, event_details: '',
+    other_services: '',
+  }
+  const [handover, setHandover] = useState<HandoverForm>(EMPTY_HANDOVER)
+  const [handoverLoaded, setHandoverLoaded] = useState(false)
+  const [savingHandover, setSavingHandover] = useState(false)
+  const [handoverSaved, setHandoverSaved] = useState(false)
   const [taskDone, setTaskDone] = useState<Record<string, boolean>>({})
   const [addedTasks, setAddedTasks] = useState<{ id: string; title: string; due_date: string; assigned_to: string }[]>([])
   const [showNewTask, setShowNewTask] = useState(false)
@@ -93,9 +133,105 @@ export default function OppDetailPage() {
       setAllUsers(users)
       setSaleUsers(users.filter(u => u.is_sale_tv))
       setLoading(false)
+
+      // Load tour_handover
+      const { data: hd } = await supabase.from('tour_handover').select('*').eq('opportunity_id', id).maybeSingle()
+      if (hd) {
+        setHandover({
+          ma_doan: hd.ma_doan ?? '',
+          vat_required: hd.vat_required ?? false,
+          status: hd.status ?? '',
+          sale_price: hd.sale_price?.toString() ?? '',
+          commission: hd.commission?.toString() ?? '',
+          pax_adults: hd.pax_adults?.toString() ?? '',
+          pax_children_under5: hd.pax_children_under5?.toString() ?? '',
+          pax_children_5to10: hd.pax_children_5to10?.toString() ?? '',
+          group_leader_name: hd.group_leader_name ?? '',
+          group_leader_phone: hd.group_leader_phone ?? '',
+          group_leader_email: hd.group_leader_email ?? '',
+          pickup_location: hd.pickup_location ?? '',
+          pickup_count: hd.pickup_count?.toString() ?? '',
+          pickup_quantities: hd.pickup_quantities ?? '',
+          pickup_time: hd.pickup_time ?? '',
+          trip_days: hd.trip_days?.toString() ?? '',
+          trip_date_range: hd.trip_date_range ?? '',
+          itinerary: hd.itinerary ?? '',
+          hotel_stars: hd.hotel_stars ?? '',
+          hotel_name: hd.hotel_name ?? '',
+          hotel_persons_per_room: hd.hotel_persons_per_room?.toString() ?? '',
+          hotel_room_details: hd.hotel_room_details ?? '',
+          transport_car_type: hd.transport_car_type ?? '',
+          transport_car_count: hd.transport_car_count?.toString() ?? '',
+          flight_depart_time: hd.flight_depart_time ?? '',
+          flight_return_time: hd.flight_return_time ?? '',
+          meals_main_count: hd.meals_main_count?.toString() ?? '',
+          meals_main_price: hd.meals_main_price?.toString() ?? '',
+          meals_breakfast: hd.meals_breakfast ?? false,
+          guide_gender: hd.guide_gender ?? '',
+          guide_requirements: hd.guide_requirements ?? '',
+          tickets_details: hd.tickets_details ?? '',
+          event_gala: hd.event_gala ?? false,
+          event_team_building: hd.event_team_building ?? false,
+          event_meeting: hd.event_meeting ?? false,
+          event_birthday: hd.event_birthday ?? false,
+          event_anniversary: hd.event_anniversary ?? false,
+          event_details: hd.event_details ?? '',
+          other_services: hd.other_services ?? '',
+        })
+      }
+      setHandoverLoaded(true)
     }
     load()
   }, [id])
+
+  async function saveHandover() {
+    setSavingHandover(true)
+    await supabase.from('tour_handover').upsert({
+      opportunity_id: id,
+      ma_doan: handover.ma_doan || null,
+      vat_required: handover.vat_required,
+      status: handover.status || null,
+      sale_price: handover.sale_price ? Number(handover.sale_price) : null,
+      commission: handover.commission ? Number(handover.commission) : null,
+      pax_adults: handover.pax_adults ? Number(handover.pax_adults) : null,
+      pax_children_under5: handover.pax_children_under5 ? Number(handover.pax_children_under5) : null,
+      pax_children_5to10: handover.pax_children_5to10 ? Number(handover.pax_children_5to10) : null,
+      group_leader_name: handover.group_leader_name || null,
+      group_leader_phone: handover.group_leader_phone || null,
+      group_leader_email: handover.group_leader_email || null,
+      pickup_location: handover.pickup_location || null,
+      pickup_count: handover.pickup_count ? Number(handover.pickup_count) : null,
+      pickup_quantities: handover.pickup_quantities || null,
+      pickup_time: handover.pickup_time || null,
+      trip_days: handover.trip_days ? Number(handover.trip_days) : null,
+      trip_date_range: handover.trip_date_range || null,
+      itinerary: handover.itinerary || null,
+      hotel_stars: handover.hotel_stars || null,
+      hotel_name: handover.hotel_name || null,
+      hotel_persons_per_room: handover.hotel_persons_per_room ? Number(handover.hotel_persons_per_room) : null,
+      hotel_room_details: handover.hotel_room_details || null,
+      transport_car_type: handover.transport_car_type || null,
+      transport_car_count: handover.transport_car_count ? Number(handover.transport_car_count) : null,
+      flight_depart_time: handover.flight_depart_time || null,
+      flight_return_time: handover.flight_return_time || null,
+      meals_main_count: handover.meals_main_count ? Number(handover.meals_main_count) : null,
+      meals_main_price: handover.meals_main_price ? Number(handover.meals_main_price) : null,
+      meals_breakfast: handover.meals_breakfast,
+      guide_gender: handover.guide_gender || null,
+      guide_requirements: handover.guide_requirements || null,
+      tickets_details: handover.tickets_details || null,
+      event_gala: handover.event_gala,
+      event_team_building: handover.event_team_building,
+      event_meeting: handover.event_meeting,
+      event_birthday: handover.event_birthday,
+      event_anniversary: handover.event_anniversary,
+      event_details: handover.event_details || null,
+      other_services: handover.other_services || null,
+    }, { onConflict: 'opportunity_id' })
+    setSavingHandover(false)
+    setHandoverSaved(true)
+    setTimeout(() => setHandoverSaved(false), 2000)
+  }
 
   if (loading) {
     return (
@@ -273,6 +409,14 @@ export default function OppDetailPage() {
 
             <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-2xl p-1 shadow-sm">
               <button
+                onClick={() => setMainTab('handover')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  mainTab === 'handover' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <FileText size={15} /> Bàn giao ĐH
+              </button>
+              <button
                 onClick={() => setMainTab('activity')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   mainTab === 'activity' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
@@ -289,12 +433,172 @@ export default function OppDetailPage() {
                   mainTab === 'tasks' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
                 }`}
               >
-                <ClipboardList size={15} /> Công việc & Giao việc
+                <ClipboardList size={15} /> Công việc
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${mainTab === 'tasks' ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
                   {tasks.length + addedTasks.length}
                 </span>
               </button>
             </div>
+
+            {/* ══════════ BÀN GIAO ĐH TAB ══════════ */}
+            {mainTab === 'handover' && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+                <h3 className="font-semibold text-gray-900 text-sm">Phiếu bàn giao điều hành</h3>
+                <button onClick={saveHandover} disabled={savingHandover}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors">
+                  {savingHandover ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                  {handoverSaved ? 'Đã lưu ✓' : 'Lưu'}
+                </button>
+              </div>
+              {!handoverLoaded ? (
+                <div className="p-8 flex justify-center"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+              ) : (
+              <div className="p-5 space-y-5">
+                {/* Thông tin chung */}
+                <HSection label="Thông tin chung">
+                  <div className="grid grid-cols-2 gap-3">
+                    <HField label="Mã đoàn"><input value={handover.ma_doan} onChange={e => setHandover(f => ({...f, ma_doan: e.target.value}))} className={hCls} placeholder="VD: HNS-2026-001" /></HField>
+                    <HField label="Trạng thái">
+                      <select value={handover.status} onChange={e => setHandover(f => ({...f, status: e.target.value}))} className={hCls}>
+                        <option value="">— Chọn —</option>
+                        <option value="confirmed">Đã xác nhận</option>
+                        <option value="pending">Chờ xác nhận</option>
+                      </select>
+                    </HField>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 mt-3">
+                    <HField label="Giá bán (VNĐ)"><input type="number" value={handover.sale_price} onChange={e => setHandover(f => ({...f, sale_price: e.target.value}))} className={hCls} placeholder="0" /></HField>
+                    <HField label="COM (VNĐ)"><input type="number" value={handover.commission} onChange={e => setHandover(f => ({...f, commission: e.target.value}))} className={hCls} placeholder="0" /></HField>
+                    <HField label="">
+                      <div className="flex items-center gap-2 mt-5">
+                        <input type="checkbox" id="vat_required" checked={handover.vat_required} onChange={e => setHandover(f => ({...f, vat_required: e.target.checked}))} className="accent-accent-500 w-4 h-4" />
+                        <label htmlFor="vat_required" className="text-sm cursor-pointer text-gray-700">Xuất VAT</label>
+                      </div>
+                    </HField>
+                  </div>
+                </HSection>
+
+                {/* Số khách & Trưởng đoàn */}
+                <HSection label="Khách hàng">
+                  <div className="grid grid-cols-3 gap-3">
+                    <HField label="Người lớn"><input type="number" min={0} value={handover.pax_adults} onChange={e => setHandover(f => ({...f, pax_adults: e.target.value}))} className={hCls} placeholder="0" /></HField>
+                    <HField label="Trẻ em dưới 5t"><input type="number" min={0} value={handover.pax_children_under5} onChange={e => setHandover(f => ({...f, pax_children_under5: e.target.value}))} className={hCls} placeholder="0" /></HField>
+                    <HField label="Trẻ em 5–10t"><input type="number" min={0} value={handover.pax_children_5to10} onChange={e => setHandover(f => ({...f, pax_children_5to10: e.target.value}))} className={hCls} placeholder="0" /></HField>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 mt-3">
+                    <HField label="Tên trưởng đoàn"><input value={handover.group_leader_name} onChange={e => setHandover(f => ({...f, group_leader_name: e.target.value}))} className={hCls} placeholder="Nguyễn Văn A" /></HField>
+                    <HField label="SĐT trưởng đoàn"><input value={handover.group_leader_phone} onChange={e => setHandover(f => ({...f, group_leader_phone: e.target.value}))} className={hCls} placeholder="0912..." /></HField>
+                    <HField label="Email trưởng đoàn"><input value={handover.group_leader_email} onChange={e => setHandover(f => ({...f, group_leader_email: e.target.value}))} className={hCls} placeholder="..." /></HField>
+                  </div>
+                </HSection>
+
+                {/* Điểm đón */}
+                <HSection label="Điểm đón & Thời gian">
+                  <div className="grid grid-cols-2 gap-3">
+                    <HField label="Điểm đón – trả"><input value={handover.pickup_location} onChange={e => setHandover(f => ({...f, pickup_location: e.target.value}))} className={hCls} placeholder="VD: KCN Tử Đà – Phú Thọ" /></HField>
+                    <HField label="Thời gian đón"><input value={handover.pickup_time} onChange={e => setHandover(f => ({...f, pickup_time: e.target.value}))} className={hCls} placeholder="VD: 6h00 ngày 01/08" /></HField>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <HField label="Số điểm đón"><input type="number" min={0} value={handover.pickup_count} onChange={e => setHandover(f => ({...f, pickup_count: e.target.value}))} className={hCls} placeholder="0" /></HField>
+                    <HField label="Số lượng mỗi điểm"><input value={handover.pickup_quantities} onChange={e => setHandover(f => ({...f, pickup_quantities: e.target.value}))} className={hCls} placeholder="điểm 1: 20 người, điểm 2: 30 người" /></HField>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <HField label="Số ngày"><input type="number" min={1} value={handover.trip_days} onChange={e => setHandover(f => ({...f, trip_days: e.target.value}))} className={hCls} placeholder="2" /></HField>
+                    <HField label="Ngày đi – ngày về"><input value={handover.trip_date_range} onChange={e => setHandover(f => ({...f, trip_date_range: e.target.value}))} className={hCls} placeholder="VD: 01/08 – 02/08/2026" /></HField>
+                  </div>
+                  <div className="mt-3">
+                    <HField label="Lịch trình xác nhận"><textarea value={handover.itinerary} onChange={e => setHandover(f => ({...f, itinerary: e.target.value}))} rows={4} className={`${hCls} resize-none`} placeholder="Ngày 1: 6h00 khởi hành từ... / Ngày 2:..." /></HField>
+                  </div>
+                </HSection>
+
+                {/* Khách sạn */}
+                <HSection label="Khách sạn">
+                  <div className="grid grid-cols-2 gap-3">
+                    <HField label="Tên khách sạn"><input value={handover.hotel_name} onChange={e => setHandover(f => ({...f, hotel_name: e.target.value}))} className={hCls} placeholder="VD: Mường Thanh Grand Đà Nẵng" /></HField>
+                    <HField label="Hạng sao">
+                      <select value={handover.hotel_stars} onChange={e => setHandover(f => ({...f, hotel_stars: e.target.value}))} className={hCls}>
+                        <option value="">— Chọn —</option>
+                        <option value="3">3 sao</option>
+                        <option value="4-5">4–5 sao</option>
+                      </select>
+                    </HField>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <HField label="Số người / phòng"><input type="number" min={1} value={handover.hotel_persons_per_room} onChange={e => setHandover(f => ({...f, hotel_persons_per_room: e.target.value}))} className={hCls} placeholder="2" /></HField>
+                    <HField label="Chi tiết loại phòng"><input value={handover.hotel_room_details} onChange={e => setHandover(f => ({...f, hotel_room_details: e.target.value}))} className={hCls} placeholder="VD: 10 phòng đôi, 5 phòng đơn" /></HField>
+                  </div>
+                </HSection>
+
+                {/* Vận chuyển & Bay */}
+                <HSection label="Vận chuyển & Máy bay">
+                  <div className="grid grid-cols-2 gap-3">
+                    <HField label="Loại xe"><input value={handover.transport_car_type} onChange={e => setHandover(f => ({...f, transport_car_type: e.target.value}))} className={hCls} placeholder="VD: Xe 45 chỗ" /></HField>
+                    <HField label="Số lượng xe"><input type="number" min={0} value={handover.transport_car_count} onChange={e => setHandover(f => ({...f, transport_car_count: e.target.value}))} className={hCls} placeholder="0" /></HField>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <HField label="Giờ bay đi"><input value={handover.flight_depart_time} onChange={e => setHandover(f => ({...f, flight_depart_time: e.target.value}))} className={hCls} placeholder="VD: VN123 6h00 01/08" /></HField>
+                    <HField label="Giờ bay về"><input value={handover.flight_return_time} onChange={e => setHandover(f => ({...f, flight_return_time: e.target.value}))} className={hCls} placeholder="VD: VN456 20h30 02/08" /></HField>
+                  </div>
+                </HSection>
+
+                {/* Ăn uống */}
+                <HSection label="Ăn uống">
+                  <div className="grid grid-cols-2 gap-3">
+                    <HField label="Số bữa ăn chính"><input type="number" min={0} value={handover.meals_main_count} onChange={e => setHandover(f => ({...f, meals_main_count: e.target.value}))} className={hCls} placeholder="0" /></HField>
+                    <HField label="Giá / bữa (VNĐ)"><input type="number" min={0} value={handover.meals_main_price} onChange={e => setHandover(f => ({...f, meals_main_price: e.target.value}))} className={hCls} placeholder="0" /></HField>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <input type="checkbox" id="meals_breakfast" checked={handover.meals_breakfast} onChange={e => setHandover(f => ({...f, meals_breakfast: e.target.checked}))} className="accent-accent-500 w-4 h-4" />
+                    <label htmlFor="meals_breakfast" className="text-sm cursor-pointer text-gray-700">Có ăn sáng</label>
+                  </div>
+                </HSection>
+
+                {/* HDV */}
+                <HSection label="Hướng dẫn viên">
+                  <div className="grid grid-cols-2 gap-3">
+                    <HField label="Giới tính HDV">
+                      <select value={handover.guide_gender} onChange={e => setHandover(f => ({...f, guide_gender: e.target.value}))} className={hCls}>
+                        <option value="">— Không yêu cầu —</option>
+                        <option value="male">Nam</option>
+                        <option value="female">Nữ</option>
+                      </select>
+                    </HField>
+                    <HField label="Yêu cầu HDV"><input value={handover.guide_requirements} onChange={e => setHandover(f => ({...f, guide_requirements: e.target.value}))} className={hCls} placeholder="VD: Giỏi tiếng Anh, có kinh nghiệm..." /></HField>
+                  </div>
+                </HSection>
+
+                {/* Vé tham quan */}
+                <HSection label="Vé tham quan & Dịch vụ khác">
+                  <HField label="Vé tham quan"><textarea value={handover.tickets_details} onChange={e => setHandover(f => ({...f, tickets_details: e.target.value}))} rows={2} className={`${hCls} resize-none`} placeholder="VD: Vé Sun World Bà Nà Hills cho 50 người lớn, 5 trẻ em..." /></HField>
+                  <div className="mt-3">
+                    <label className="block text-xs text-gray-500 mb-2">Sự kiện đặc biệt</label>
+                    <div className="flex flex-wrap gap-3 mb-3">
+                      {([['event_gala','Gala dinner'],['event_team_building','Team building'],['event_meeting','Hội họp'],['event_birthday','Sinh nhật'],['event_anniversary','Kỷ niệm']] as [keyof typeof handover, string][]).map(([k,l]) => (
+                        <label key={k} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <input type="checkbox" checked={handover[k] as boolean} onChange={e => setHandover(f => ({...f, [k]: e.target.checked}))} className="accent-accent-500 w-4 h-4" />
+                          {l}
+                        </label>
+                      ))}
+                    </div>
+                    <HField label="Chi tiết sự kiện"><input value={handover.event_details} onChange={e => setHandover(f => ({...f, event_details: e.target.value}))} className={hCls} placeholder="Mô tả..." /></HField>
+                  </div>
+                  <div className="mt-3">
+                    <HField label="Dịch vụ khác (tàu, thuyền, hoạt động...)"><textarea value={handover.other_services} onChange={e => setHandover(f => ({...f, other_services: e.target.value}))} rows={2} className={`${hCls} resize-none`} placeholder="..." /></HField>
+                  </div>
+                </HSection>
+
+                <div className="flex justify-end pt-2">
+                  <button onClick={saveHandover} disabled={savingHandover}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors">
+                    {savingHandover ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    {handoverSaved ? 'Đã lưu ✓' : 'Lưu phiếu bàn giao'}
+                  </button>
+                </div>
+              </div>
+              )}
+            </div>
+            )}
 
             {/* ══════════ HOẠT ĐỘNG TAB ══════════ */}
             {mainTab === 'activity' && (
@@ -770,6 +1074,26 @@ function InfoRow({ label, value, highlight, warn }: {
       <span className={`font-semibold text-xs text-right ${highlight ? 'text-brand-700' : warn ? 'text-amber-600' : 'text-gray-800'}`}>
         {value}
       </span>
+    </div>
+  )
+}
+
+const hCls = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white'
+
+function HSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{label}</div>
+      <div className="bg-gray-50 rounded-xl p-3">{children}</div>
+    </div>
+  )
+}
+
+function HField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      {label && <label className="block text-xs text-gray-500 mb-1">{label}</label>}
+      {children}
     </div>
   )
 }
