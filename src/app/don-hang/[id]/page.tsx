@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2,
@@ -45,6 +45,7 @@ const LOG_FILTERS: { key: LogFilter; label: string }[] = [
 
 export default function OppDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const supabase = createClient()
 
   const [opp, setOpp] = useState<OppDetail | null>(null)
@@ -129,6 +130,8 @@ export default function OppDetailPage() {
   const [addedTasks, setAddedTasks] = useState<{ id: string; title: string; due_date: string; assigned_to: string }[]>([])
   const [showNewTask, setShowNewTask] = useState(false)
   const [newTask, setNewTask] = useState({ title: '', due_date: '', assigned_to: '' })
+  const [advancingStage, setAdvancingStage] = useState(false)
+  const [markingLost, setMarkingLost] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -288,6 +291,39 @@ export default function OppDetailPage() {
     setTimeout(() => setHandoverSaved(false), 2000)
   }
 
+  async function advanceStage() {
+    if (!opp || advancingStage) return
+    const nextStage = PIPELINE[PIPELINE.indexOf(opp.stage as OppStage) + 1]
+    if (!nextStage) return
+    setAdvancingStage(true)
+    await supabase.from('opportunities').update({ stage: nextStage, stage_updated_at: new Date().toISOString() }).eq('id', id)
+    await supabase.from('activity_logs').insert({
+      opportunity_id: id, log_type: 'stage_change',
+      stage_from: opp.stage, stage_to: nextStage,
+      log_date: new Date().toISOString(), created_by: opp.created_by,
+    })
+    setAdvancingStage(false)
+    if (nextStage === 'stage_5') {
+      router.push(`/don-hang-da-xong/${id}`)
+    } else {
+      setOpp(o => o ? { ...o, stage: nextStage as OppStage, stage_updated_at: new Date().toISOString() } : o)
+    }
+  }
+
+  async function markLost() {
+    if (!opp || markingLost) return
+    if (!confirm('Xác nhận đánh dấu đơn hàng này là Mất đơn?')) return
+    setMarkingLost(true)
+    await supabase.from('opportunities').update({ stage: 'lost', stage_updated_at: new Date().toISOString() }).eq('id', id)
+    await supabase.from('activity_logs').insert({
+      opportunity_id: id, log_type: 'stage_change',
+      stage_from: opp.stage, stage_to: 'lost',
+      log_date: new Date().toISOString(), created_by: opp.created_by,
+    })
+    setMarkingLost(false)
+    setOpp(o => o ? { ...o, stage: 'lost' as OppStage } : o)
+  }
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -374,13 +410,16 @@ export default function OppDetailPage() {
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {!isLost && stageIndex >= 0 && stageIndex < PIPELINE.length - 1 && (
-              <button className="flex items-center gap-1.5 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
-                Chuyển giai đoạn <ArrowRight size={14} />
+              <button onClick={advanceStage} disabled={advancingStage}
+                className="flex items-center gap-1.5 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
+                {advancingStage ? <Loader2 size={14} className="animate-spin" /> : <ArrowRight size={14} />}
+                {opp.stage === 'stage_4' ? 'Hoàn thành → Đã xong' : 'Chuyển giai đoạn'}
               </button>
             )}
             {!isLost && (
-              <button className="px-3 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-sm font-medium transition-colors">
-                Mất đơn
+              <button onClick={markLost} disabled={markingLost}
+                className="px-3 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-60 text-sm font-medium transition-colors">
+                {markingLost ? <Loader2 size={13} className="animate-spin inline" /> : 'Mất đơn'}
               </button>
             )}
           </div>
