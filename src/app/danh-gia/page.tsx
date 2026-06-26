@@ -1065,7 +1065,7 @@ export default function DanhGiaPage() {
 
       {/* Drawer xem chi tiết đánh giá — dùng cho tab Đánh giá kém & Địa điểm quan tâm */}
       {expandedFeedback && (
-        <div className="fixed right-0 top-10 bottom-0 w-[460px] bg-white border-l border-gray-200 shadow-2xl flex flex-col overflow-hidden z-40">
+        <div className="fixed right-0 top-10 bottom-0 w-[460px] bg-white border-l border-gray-200 shadow-2xl flex flex-col z-40">
           {/* Nút đóng bám cạnh trái drawer */}
           <button onClick={() => setExpandedFeedback(null)}
             className="absolute left-0 top-1/2 -translate-x-full -translate-y-1/2 flex items-center justify-center w-6 h-12 bg-white border border-r-0 border-gray-200 rounded-l-xl shadow-md text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors z-10">
