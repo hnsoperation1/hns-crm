@@ -62,7 +62,30 @@ export default function OppDetailPage() {
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
-  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake'>('intake')
+  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake' | 'services'>('services')
+
+  // Tour services
+  type ServiceRow = {
+    id: string; category: string; name: string; quantity: string; unit: string
+    unit_price: string; total_price: string; supplier_name: string; details: string
+    notes: string; status: string; sort_order: number; include_in_quote: boolean
+    _isNew?: boolean
+  }
+  const CATEGORY_LABELS: Record<string, string> = {
+    xe: 'Xe', ks: 'Khách sạn', an_uong: 'Ăn uống', hdv_mc: 'HDV/MC',
+    ve: 'Vé tham quan', gala: 'Gala', team_building: 'Team Building',
+    may_bay: 'Máy bay', khac: 'Khác',
+  }
+  const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
+    pending:   { label: 'Chờ',      cls: 'bg-gray-100 text-gray-600' },
+    booked:    { label: 'Đã đặt',   cls: 'bg-blue-100 text-blue-700' },
+    confirmed: { label: 'Xác nhận', cls: 'bg-emerald-100 text-emerald-700' },
+    done:      { label: 'Hoàn tất', cls: 'bg-green-100 text-green-700' },
+    cancelled: { label: 'Hủy',      cls: 'bg-red-100 text-red-600' },
+  }
+  const [services, setServices] = useState<ServiceRow[]>([])
+  const [servicesLoaded, setServicesLoaded] = useState(false)
+  const [savingServices, setSavingServices] = useState(false)
 
   // Tour intake (dùng chung, đọc/ghi tour_intake)
   type IntakeForm = {
@@ -217,9 +240,81 @@ export default function OppDetailPage() {
         })
       }
       setIntakeLoaded(true)
+
+      // Load tour_services
+      const { data: svcData } = await supabase.from('tour_services')
+        .select('*').eq('opportunity_id', id).order('sort_order').order('created_at')
+      setServices((svcData ?? []).map((s: Record<string, unknown>) => ({
+        id: s.id as string, category: (s.category as string) ?? '', name: (s.name as string) ?? '',
+        quantity: s.quantity?.toString() ?? '', unit: (s.unit as string) ?? '',
+        unit_price: s.unit_price?.toString() ?? '', total_price: s.total_price?.toString() ?? '',
+        supplier_name: (s.supplier_name as string) ?? '', details: (s.details as string) ?? '',
+        notes: (s.notes as string) ?? '', status: (s.status as string) ?? 'pending',
+        sort_order: (s.sort_order as number) ?? 0, include_in_quote: (s.include_in_quote as boolean) ?? true,
+      })))
+      setServicesLoaded(true)
     }
     load()
   }, [id])
+
+  function addServiceRow() {
+    const newRow: ServiceRow = {
+      id: `new-${Date.now()}`, category: '', name: '', quantity: '1', unit: '',
+      unit_price: '', total_price: '', supplier_name: '', details: '', notes: '',
+      status: 'pending', sort_order: services.length, include_in_quote: true, _isNew: true,
+    }
+    setServices(s => [...s, newRow])
+  }
+
+  function updateServiceRow(idx: number, field: keyof ServiceRow, value: string | boolean) {
+    setServices(s => s.map((row, i) => {
+      if (i !== idx) return row
+      const updated = { ...row, [field]: value }
+      // auto-calc total nếu đổi quantity hoặc unit_price
+      if (field === 'quantity' || field === 'unit_price') {
+        const q = parseFloat(field === 'quantity' ? value as string : updated.quantity) || 0
+        const p = parseFloat(field === 'unit_price' ? value as string : updated.unit_price) || 0
+        if (q > 0 && p > 0) updated.total_price = (q * p).toString()
+      }
+      return updated
+    }))
+  }
+
+  async function deleteServiceRow(idx: number) {
+    const row = services[idx]
+    if (!row._isNew) {
+      await supabase.from('tour_services').delete().eq('id', row.id)
+    }
+    setServices(s => s.filter((_, i) => i !== idx))
+  }
+
+  async function saveServices() {
+    setSavingServices(true)
+    for (const row of services) {
+      const payload = {
+        opportunity_id: id,
+        category: row.category || null,
+        name: row.name,
+        quantity: row.quantity ? Number(row.quantity) : null,
+        unit: row.unit || null,
+        unit_price: row.unit_price ? Number(row.unit_price) : null,
+        total_price: row.total_price ? Number(row.total_price) : null,
+        supplier_name: row.supplier_name || null,
+        details: row.details || null,
+        notes: row.notes || null,
+        status: row.status,
+        sort_order: row.sort_order,
+        include_in_quote: row.include_in_quote,
+      }
+      if (row._isNew) {
+        const { data } = await supabase.from('tour_services').insert(payload).select('id').single()
+        if (data) setServices(s => s.map(r => r.id === row.id ? { ...r, id: data.id, _isNew: false } : r))
+      } else {
+        await supabase.from('tour_services').update(payload).eq('id', row.id)
+      }
+    }
+    setSavingServices(false)
+  }
 
   async function saveIntake() {
     setSavingIntake(true)
@@ -487,6 +582,19 @@ export default function OppDetailPage() {
 
             <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-2xl p-1 shadow-sm">
               <button
+                onClick={() => setMainTab('services')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  mainTab === 'services' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <DollarSign size={15} /> Dịch vụ
+                {services.length > 0 && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${mainTab === 'services' ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    {services.length}
+                  </span>
+                )}
+              </button>
+              <button
                 onClick={() => setMainTab('intake')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   mainTab === 'intake' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
@@ -517,6 +625,127 @@ export default function OppDetailPage() {
                 </span>
               </button>
             </div>
+
+            {/* ══════════ DỊCH VỤ TAB ══════════ */}
+            {mainTab === 'services' && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+                <div>
+                  <h3 className="font-semibold text-gray-900 text-sm">Danh sách dịch vụ</h3>
+                  {services.length > 0 && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Tổng: <span className="font-semibold text-gray-700">
+                        {new Intl.NumberFormat('vi-VN').format(
+                          services.reduce((s, r) => s + (parseFloat(r.total_price) || 0), 0)
+                        )}đ
+                      </span>
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={addServiceRow}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-lg transition-colors">
+                    <Plus size={12} /> Thêm hạng mục
+                  </button>
+                  <button onClick={saveServices} disabled={savingServices}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors">
+                    {savingServices ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                    Lưu
+                  </button>
+                </div>
+              </div>
+
+              {!servicesLoaded ? (
+                <div className="p-8 flex justify-center"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+              ) : services.length === 0 ? (
+                <div className="p-12 text-center">
+                  <DollarSign size={32} className="text-gray-200 mx-auto mb-3" />
+                  <p className="text-sm text-gray-400">Chưa có dịch vụ nào</p>
+                  <button onClick={addServiceRow} className="mt-3 text-xs text-accent-600 hover:underline font-medium">+ Thêm hạng mục đầu tiên</button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-28">Hạng mục</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold">Tên dịch vụ</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-16">SL</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-20">Đơn vị</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-28">Đơn giá</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-28">Thành tiền</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-28">NCC</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-24">TT</th>
+                        <th className="px-3 py-2.5 w-8"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {services.map((row, i) => (
+                        <tr key={row.id} className="hover:bg-gray-50/50 group">
+                          <td className="px-2 py-1.5">
+                            <select value={row.category} onChange={e => updateServiceRow(i, 'category', e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400">
+                              <option value="">--</option>
+                              {Object.entries(CATEGORY_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                            </select>
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input value={row.name} onChange={e => updateServiceRow(i, 'name', e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="Tên dịch vụ..." />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input type="number" value={row.quantity} onChange={e => updateServiceRow(i, 'quantity', e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="0" />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input value={row.unit} onChange={e => updateServiceRow(i, 'unit', e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="xe, phòng..." />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input type="number" value={row.unit_price} onChange={e => updateServiceRow(i, 'unit_price', e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="0" />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input type="number" value={row.total_price} onChange={e => updateServiceRow(i, 'total_price', e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400 font-semibold" placeholder="0" />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input value={row.supplier_name} onChange={e => updateServiceRow(i, 'supplier_name', e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="Nhà cung cấp..." />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <select value={row.status} onChange={e => updateServiceRow(i, 'status', e.target.value)}
+                              className={`w-full border border-gray-200 rounded-lg px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-brand-400 ${STATUS_LABELS[row.status]?.cls ?? ''}`}>
+                              {Object.entries(STATUS_LABELS).map(([v, { label }]) => <option key={v} value={v}>{label}</option>)}
+                            </select>
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <button onClick={() => deleteServiceRow(i)}
+                              className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all p-1 rounded">
+                              <X size={13} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    {services.length > 0 && (
+                      <tfoot>
+                        <tr className="border-t-2 border-gray-200 bg-gray-50">
+                          <td colSpan={5} className="px-3 py-2.5 text-xs font-bold text-gray-500 uppercase tracking-wider">{services.length} hạng mục</td>
+                          <td className="px-3 py-2.5 text-xs font-bold text-gray-900">
+                            {new Intl.NumberFormat('vi-VN').format(
+                              services.reduce((s, r) => s + (parseFloat(r.total_price) || 0), 0)
+                            )}đ
+                          </td>
+                          <td colSpan={3}></td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              )}
+            </div>
+            )}
 
             {/* ══════════ THÔNG TIN ĐOÀN TAB ══════════ */}
             {mainTab === 'intake' && (
