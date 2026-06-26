@@ -794,7 +794,7 @@ export default function DanhGiaPage() {
             </div>
             {/* List panel */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-              <CustomerList data={selected} onClose={() => setSelected(null)} onExpand={f => { setExpandedFeedback(f) }} expandedId={expandedFeedback?.id ?? null} />
+              <CustomerList data={selected} onClose={() => setSelected(null)} onExpand={f => setExpandedFeedback(prev => prev?.id === f.id ? null : f)} expandedId={expandedFeedback?.id ?? null} />
             </div>
           </div>
         )}
@@ -885,7 +885,7 @@ export default function DanhGiaPage() {
 
             {/* List panel */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-              <CustomerList data={selected} onClose={() => setSelected(null)} onExpand={f => { setExpandedFeedback(f) }} expandedId={expandedFeedback?.id ?? null} />
+              <CustomerList data={selected} onClose={() => setSelected(null)} onExpand={f => setExpandedFeedback(prev => prev?.id === f.id ? null : f)} expandedId={expandedFeedback?.id ?? null} />
             </div>
           </div>
         )}
