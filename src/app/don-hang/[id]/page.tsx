@@ -15,6 +15,7 @@ import {
   formatVND, formatDate, getInitials, daysSince, daysUntil,
 } from '@/lib/utils'
 import type { OppStage, LogType, Opportunity, Contact, ActivityLog } from '@/types'
+import { useAuth } from '@/contexts/auth'
 
 // ─── Local types for Supabase joins ──────────────────────────────────────────
 
@@ -47,6 +48,8 @@ export default function OppDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const supabase = createClient()
+  const { user: currentUser } = useAuth()
+  const isSaleTV = currentUser?.is_sale_tv === true
 
   const [opp, setOpp] = useState<OppDetail | null>(null)
   const [allLogs, setAllLogs] = useState<LogDetail[]>([])
@@ -69,6 +72,7 @@ export default function OppDetailPage() {
     id: string; category: string; name: string; quantity: string; unit: string
     unit_price: string; total_price: string; supplier_name: string; details: string
     notes: string; status: string; sort_order: number; include_in_quote: boolean
+    requirement_note: string; sale_approved: boolean | null; sale_note: string
     _isNew?: boolean
   }
   const CATEGORY_LABELS: Record<string, string> = {
@@ -252,6 +256,9 @@ export default function OppDetailPage() {
         supplier_name: (s.supplier_name as string) ?? '', details: (s.details as string) ?? '',
         notes: (s.notes as string) ?? '', status: (s.status as string) ?? 'pending',
         sort_order: (s.sort_order as number) ?? 0, include_in_quote: (s.include_in_quote as boolean) ?? true,
+        requirement_note: (s.requirement_note as string) ?? '',
+        sale_approved: s.sale_approved as boolean | null ?? null,
+        sale_note: (s.sale_note as string) ?? '',
       })))
       setServicesLoaded(true)
     }
@@ -262,12 +269,13 @@ export default function OppDetailPage() {
     const newRow: ServiceRow = {
       id: `new-${Date.now()}`, category: '', name: '', quantity: '1', unit: '',
       unit_price: '', total_price: '', supplier_name: '', details: '', notes: '',
-      status: 'pending', sort_order: services.length, include_in_quote: true, _isNew: true,
+      status: 'pending', sort_order: services.length, include_in_quote: true,
+      requirement_note: '', sale_approved: null, sale_note: '', _isNew: true,
     }
     setServices(s => [...s, newRow])
   }
 
-  function updateServiceRow(idx: number, field: keyof ServiceRow, value: string | boolean) {
+  function updateServiceRow(idx: number, field: keyof ServiceRow, value: string | boolean | null) {
     setServices(s => s.map((row, i) => {
       if (i !== idx) return row
       const updated = { ...row, [field]: value }
@@ -307,6 +315,9 @@ export default function OppDetailPage() {
         status: row.status,
         sort_order: row.sort_order,
         include_in_quote: row.include_in_quote,
+        requirement_note: row.requirement_note || null,
+        sale_approved: row.sale_approved,
+        sale_note: row.sale_note || null,
       }
       if (row._isNew) {
         const { data, error } = await supabase.from('tour_services').insert(payload).select('id').single()
@@ -674,20 +685,23 @@ export default function OppDetailPage() {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-200">
-                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-28">Hạng mục</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-24">Hạng mục</th>
                         <th className="px-3 py-2.5 text-left text-gray-400 font-semibold">Tên dịch vụ</th>
-                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-16">SL</th>
-                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-20">Đơn vị</th>
-                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-28">Đơn giá</th>
-                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-28">Thành tiền</th>
-                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-28">NCC</th>
-                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-24">TT</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-36">Yêu cầu KH</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-14">SL</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-16">ĐV</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-24">Đơn giá</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-24">Thành tiền</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-24">NCC</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-20">TT đặt</th>
+                        <th className="px-3 py-2.5 text-center text-gray-400 font-semibold w-16">Sale OK</th>
                         <th className="px-3 py-2.5 w-8"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {services.map((row, i) => (
-                        <tr key={row.id} className="hover:bg-gray-50/50 group">
+                        <>
+                        <tr key={row.id} className={`hover:bg-gray-50/50 group ${row.sale_approved === false ? 'bg-red-50/40' : ''}`}>
                           <td className="px-2 py-1.5">
                             <select value={row.category} onChange={e => updateServiceRow(i, 'category', e.target.value)}
                               className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400">
@@ -700,12 +714,16 @@ export default function OppDetailPage() {
                               className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="Tên dịch vụ..." />
                           </td>
                           <td className="px-2 py-1.5">
+                            <input value={row.requirement_note} onChange={e => updateServiceRow(i, 'requirement_note', e.target.value)}
+                              className="w-full border border-amber-200 bg-amber-50 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400 placeholder:text-amber-300" placeholder="KH yêu cầu..." />
+                          </td>
+                          <td className="px-2 py-1.5">
                             <input type="number" value={row.quantity} onChange={e => updateServiceRow(i, 'quantity', e.target.value)}
                               className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="0" />
                           </td>
                           <td className="px-2 py-1.5">
                             <input value={row.unit} onChange={e => updateServiceRow(i, 'unit', e.target.value)}
-                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="xe, phòng..." />
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="xe..." />
                           </td>
                           <td className="px-2 py-1.5">
                             <input type="number" value={row.unit_price} onChange={e => updateServiceRow(i, 'unit_price', e.target.value)}
@@ -717,13 +735,29 @@ export default function OppDetailPage() {
                           </td>
                           <td className="px-2 py-1.5">
                             <input value={row.supplier_name} onChange={e => updateServiceRow(i, 'supplier_name', e.target.value)}
-                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="Nhà cung cấp..." />
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="NCC..." />
                           </td>
                           <td className="px-2 py-1.5">
                             <select value={row.status} onChange={e => updateServiceRow(i, 'status', e.target.value)}
                               className={`w-full border border-gray-200 rounded-lg px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-brand-400 ${STATUS_LABELS[row.status]?.cls ?? ''}`}>
                               {Object.entries(STATUS_LABELS).map(([v, { label }]) => <option key={v} value={v}>{label}</option>)}
                             </select>
+                          </td>
+                          <td className="px-2 py-1.5 text-center">
+                            {isSaleTV ? (
+                              <button
+                                onClick={() => updateServiceRow(i, 'sale_approved',
+                                  row.sale_approved === null ? true : row.sale_approved === true ? false : null
+                                )}
+                                title={row.sale_approved === null ? 'Chưa review — bấm để OK' : row.sale_approved ? 'Bấm để đánh dấu Sai' : 'Bấm để bỏ đánh giá'}
+                                className="text-lg leading-none select-none">
+                                {row.sale_approved === null ? '⬜' : row.sale_approved ? '✅' : '❌'}
+                              </button>
+                            ) : (
+                              <span className="text-base leading-none">
+                                {row.sale_approved === null ? <span className="text-gray-300 text-xs">—</span> : row.sale_approved ? '✅' : '❌'}
+                              </span>
+                            )}
                           </td>
                           <td className="px-2 py-1.5">
                             <button onClick={() => deleteServiceRow(i)}
@@ -732,18 +766,34 @@ export default function OppDetailPage() {
                             </button>
                           </td>
                         </tr>
+                        {row.sale_approved === false && (
+                          <tr key={`${row.id}-note`} className="bg-red-50/60">
+                            <td colSpan={2} className="pl-3 pb-1.5 pt-0">
+                              <span className="text-[10px] font-semibold text-red-500 uppercase tracking-wide">❌ Sale ghi chú:</span>
+                            </td>
+                            <td colSpan={9} className="pr-3 pb-1.5 pt-0">
+                              {isSaleTV ? (
+                                <input value={row.sale_note} onChange={e => updateServiceRow(i, 'sale_note', e.target.value)}
+                                  className="w-full border border-red-200 bg-white rounded-lg px-2 py-1 text-xs text-red-700 focus:outline-none focus:ring-1 focus:ring-red-400" placeholder="Ghi chú lý do không OK..." />
+                              ) : (
+                                <span className="text-xs text-red-600 italic">{row.sale_note || '(chưa có ghi chú)'}</span>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                        </>
                       ))}
                     </tbody>
                     {services.length > 0 && (
                       <tfoot>
                         <tr className="border-t-2 border-gray-200 bg-gray-50">
-                          <td colSpan={5} className="px-3 py-2.5 text-xs font-bold text-gray-500 uppercase tracking-wider">{services.length} hạng mục</td>
+                          <td colSpan={6} className="px-3 py-2.5 text-xs font-bold text-gray-500 uppercase tracking-wider">{services.length} hạng mục</td>
                           <td className="px-3 py-2.5 text-xs font-bold text-gray-900">
                             {new Intl.NumberFormat('vi-VN').format(
                               services.reduce((s, r) => s + (parseFloat(r.total_price) || 0), 0)
                             )}đ
                           </td>
-                          <td colSpan={3}></td>
+                          <td colSpan={4}></td>
                         </tr>
                       </tfoot>
                     )}
