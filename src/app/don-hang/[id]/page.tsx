@@ -69,7 +69,7 @@ export default function OppDetailPage() {
     sale_price: string; commission: string
     pax_adults: string; pax_children_under5: string; pax_children_5to10: string
     group_leader_name: string; group_leader_phone: string; group_leader_email: string
-    pickup_location: string; pickup_count: string; pickup_quantities: string; pickup_time: string
+    pickup_count: string; pickup_time: string
     trip_days: string; trip_date_range: string; itinerary: string
     hotel_stars: string; hotel_name: string; hotel_persons_per_room: string; hotel_room_details: string
     transport_car_type: string; transport_car_count: string
@@ -86,7 +86,7 @@ export default function OppDetailPage() {
     sale_price: '', commission: '',
     pax_adults: '', pax_children_under5: '', pax_children_5to10: '',
     group_leader_name: '', group_leader_phone: '', group_leader_email: '',
-    pickup_location: '', pickup_count: '', pickup_quantities: '', pickup_time: '',
+    pickup_count: '', pickup_time: '',
     trip_days: '', trip_date_range: '', itinerary: '',
     hotel_stars: '', hotel_name: '', hotel_persons_per_room: '', hotel_room_details: '',
     transport_car_type: '', transport_car_count: '',
@@ -99,6 +99,7 @@ export default function OppDetailPage() {
     other_services: '',
   }
   const [handover, setHandover] = useState<HandoverForm>(EMPTY_HANDOVER)
+  const [handoverPickupPoints, setHandoverPickupPoints] = useState<{ address: string; count: string }[]>([])
   const [handoverLoaded, setHandoverLoaded] = useState(false)
   const [savingHandover, setSavingHandover] = useState(false)
   const [handoverSaved, setHandoverSaved] = useState(false)
@@ -137,6 +138,15 @@ export default function OppDetailPage() {
       // Load tour_handover
       const { data: hd } = await supabase.from('tour_handover').select('*').eq('opportunity_id', id).maybeSingle()
       if (hd) {
+        const hCount = hd.pickup_count ?? 0
+        let hpts: { address: string; count: string }[] = Array.from({ length: hCount }, () => ({ address: '', count: '' }))
+        if (hd.pickup_quantities) {
+          try {
+            const parsed = JSON.parse(hd.pickup_quantities)
+            if (Array.isArray(parsed)) hpts = parsed
+          } catch { /* old format */ }
+        }
+        setHandoverPickupPoints(hpts)
         setHandover({
           ma_doan: hd.ma_doan ?? '',
           vat_required: hd.vat_required ?? false,
@@ -149,9 +159,7 @@ export default function OppDetailPage() {
           group_leader_name: hd.group_leader_name ?? '',
           group_leader_phone: hd.group_leader_phone ?? '',
           group_leader_email: hd.group_leader_email ?? '',
-          pickup_location: hd.pickup_location ?? '',
-          pickup_count: hd.pickup_count?.toString() ?? '',
-          pickup_quantities: hd.pickup_quantities ?? '',
+          pickup_count: hCount.toString(),
           pickup_time: hd.pickup_time ?? '',
           trip_days: hd.trip_days?.toString() ?? '',
           trip_date_range: hd.trip_date_range ?? '',
@@ -199,9 +207,9 @@ export default function OppDetailPage() {
       group_leader_name: handover.group_leader_name || null,
       group_leader_phone: handover.group_leader_phone || null,
       group_leader_email: handover.group_leader_email || null,
-      pickup_location: handover.pickup_location || null,
-      pickup_count: handover.pickup_count ? Number(handover.pickup_count) : null,
-      pickup_quantities: handover.pickup_quantities || null,
+      pickup_location: null,
+      pickup_count: handoverPickupPoints.length || null,
+      pickup_quantities: handoverPickupPoints.length ? JSON.stringify(handoverPickupPoints) : null,
       pickup_time: handover.pickup_time || null,
       trip_days: handover.trip_days ? Number(handover.trip_days) : null,
       trip_date_range: handover.trip_date_range || null,
@@ -496,13 +504,34 @@ export default function OppDetailPage() {
                 {/* Điểm đón */}
                 <HSection label="Điểm đón & Thời gian">
                   <div className="grid grid-cols-2 gap-3">
-                    <HField label="Điểm đón – trả"><input value={handover.pickup_location} onChange={e => setHandover(f => ({...f, pickup_location: e.target.value}))} className={hCls} placeholder="VD: KCN Tử Đà – Phú Thọ" /></HField>
+                    <HField label="Số điểm đón">
+                      <input type="number" min={0} max={20} value={handover.pickup_count}
+                        onChange={e => {
+                          const n = Math.max(0, Math.min(20, parseInt(e.target.value) || 0))
+                          setHandover(f => ({...f, pickup_count: e.target.value}))
+                          setHandoverPickupPoints(prev => {
+                            if (prev.length === n) return prev
+                            if (prev.length < n) return [...prev, ...Array.from({length: n - prev.length}, () => ({address: '', count: ''}))]
+                            return prev.slice(0, n)
+                          })
+                        }}
+                        className={hCls} placeholder="0" />
+                    </HField>
                     <HField label="Thời gian đón"><input value={handover.pickup_time} onChange={e => setHandover(f => ({...f, pickup_time: e.target.value}))} className={hCls} placeholder="VD: 6h00 ngày 01/08" /></HField>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 mt-3">
-                    <HField label="Số điểm đón"><input type="number" min={0} value={handover.pickup_count} onChange={e => setHandover(f => ({...f, pickup_count: e.target.value}))} className={hCls} placeholder="0" /></HField>
-                    <HField label="Số lượng mỗi điểm"><input value={handover.pickup_quantities} onChange={e => setHandover(f => ({...f, pickup_quantities: e.target.value}))} className={hCls} placeholder="điểm 1: 20 người, điểm 2: 30 người" /></HField>
-                  </div>
+                  {handoverPickupPoints.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {handoverPickupPoints.map((pt, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-gray-400 w-14 flex-shrink-0">Điểm {i + 1}</span>
+                          <input value={pt.address} onChange={e => setHandoverPickupPoints(prev => prev.map((p, j) => j === i ? {...p, address: e.target.value} : p))}
+                            className={`${hCls} flex-1`} placeholder="Địa chỉ điểm đón..." />
+                          <input type="number" min={0} value={pt.count} onChange={e => setHandoverPickupPoints(prev => prev.map((p, j) => j === i ? {...p, count: e.target.value} : p))}
+                            className={`${hCls} w-24`} placeholder="Số người" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-3 mt-3">
                     <HField label="Số ngày"><input type="number" min={1} value={handover.trip_days} onChange={e => setHandover(f => ({...f, trip_days: e.target.value}))} className={hCls} placeholder="2" /></HField>
                     <HField label="Ngày đi – ngày về"><input value={handover.trip_date_range} onChange={e => setHandover(f => ({...f, trip_date_range: e.target.value}))} className={hCls} placeholder="VD: 01/08 – 02/08/2026" /></HField>

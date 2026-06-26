@@ -66,7 +66,7 @@ export default function OppDetailPage() {
   // Tour intake
   type IntakeForm = {
     pax_adults: string; pax_children_under5: string; pax_children_5to10: string
-    pickup_location: string; pickup_count: string; pickup_quantities: string
+    pickup_count: string
     trip_days: string; trip_date_range: string; trip_timing: string
     hotel_stars: string
     event_gala: boolean; event_team_building: boolean; event_meeting: boolean
@@ -79,7 +79,7 @@ export default function OppDetailPage() {
   }
   const EMPTY_INTAKE: IntakeForm = {
     pax_adults: '', pax_children_under5: '', pax_children_5to10: '',
-    pickup_location: '', pickup_count: '', pickup_quantities: '',
+    pickup_count: '',
     trip_days: '', trip_date_range: '', trip_timing: '',
     hotel_stars: '',
     event_gala: false, event_team_building: false, event_meeting: false,
@@ -91,6 +91,7 @@ export default function OppDetailPage() {
     improvements: '', other_notes: '',
   }
   const [intake, setIntake] = useState<IntakeForm>(EMPTY_INTAKE)
+  const [pickupPoints, setPickupPoints] = useState<{ address: string; count: string }[]>([])
   const [intakeLoaded, setIntakeLoaded] = useState(false)
   const [savingIntake, setSavingIntake] = useState(false)
   const [intakeSaved, setIntakeSaved] = useState(false)
@@ -129,13 +130,20 @@ export default function OppDetailPage() {
       // Load tour_intake
       const { data: intakeData } = await supabase.from('tour_intake').select('*').eq('opportunity_id', id).maybeSingle()
       if (intakeData) {
+        const pCount = intakeData.pickup_count ?? 0
+        let pts: { address: string; count: string }[] = Array.from({ length: pCount }, () => ({ address: '', count: '' }))
+        if (intakeData.pickup_quantities) {
+          try {
+            const parsed = JSON.parse(intakeData.pickup_quantities)
+            if (Array.isArray(parsed)) pts = parsed
+          } catch { /* old plain-text format, ignore */ }
+        }
+        setPickupPoints(pts)
         setIntake({
           pax_adults: intakeData.pax_adults?.toString() ?? '',
           pax_children_under5: intakeData.pax_children_under5?.toString() ?? '',
           pax_children_5to10: intakeData.pax_children_5to10?.toString() ?? '',
-          pickup_location: intakeData.pickup_location ?? '',
-          pickup_count: intakeData.pickup_count?.toString() ?? '',
-          pickup_quantities: intakeData.pickup_quantities ?? '',
+          pickup_count: pCount.toString(),
           trip_days: intakeData.trip_days?.toString() ?? '',
           trip_date_range: intakeData.trip_date_range ?? '',
           trip_timing: intakeData.trip_timing ?? '',
@@ -172,9 +180,9 @@ export default function OppDetailPage() {
       pax_adults: intake.pax_adults ? Number(intake.pax_adults) : null,
       pax_children_under5: intake.pax_children_under5 ? Number(intake.pax_children_under5) : null,
       pax_children_5to10: intake.pax_children_5to10 ? Number(intake.pax_children_5to10) : null,
-      pickup_location: intake.pickup_location || null,
-      pickup_count: intake.pickup_count ? Number(intake.pickup_count) : null,
-      pickup_quantities: intake.pickup_quantities || null,
+      pickup_location: null,
+      pickup_count: pickupPoints.length || null,
+      pickup_quantities: pickupPoints.length ? JSON.stringify(pickupPoints) : null,
       trip_days: intake.trip_days ? Number(intake.trip_days) : null,
       trip_date_range: intake.trip_date_range || null,
       trip_timing: intake.trip_timing || null,
@@ -436,11 +444,32 @@ export default function OppDetailPage() {
 
                 {/* Điểm đón */}
                 <ISection label="Điểm đón">
-                  <IField label="Điểm đón từ đâu"><input value={intake.pickup_location} onChange={e => setIntake(f => ({...f, pickup_location: e.target.value}))} className={iCls} placeholder="VD: KCN Tử Đà – Phú Thọ" /></IField>
-                  <div className="grid grid-cols-2 gap-3 mt-3">
-                    <IField label="Số điểm đón"><input type="number" min={0} value={intake.pickup_count} onChange={e => setIntake(f => ({...f, pickup_count: e.target.value}))} className={iCls} placeholder="0" /></IField>
-                    <IField label="Số lượng mỗi điểm"><input value={intake.pickup_quantities} onChange={e => setIntake(f => ({...f, pickup_quantities: e.target.value}))} className={iCls} placeholder="VD: điểm 1: 20 người, điểm 2: 30 người" /></IField>
-                  </div>
+                  <IField label="Số điểm đón">
+                    <input type="number" min={0} max={20} value={intake.pickup_count}
+                      onChange={e => {
+                        const n = Math.max(0, Math.min(20, parseInt(e.target.value) || 0))
+                        setIntake(f => ({...f, pickup_count: e.target.value}))
+                        setPickupPoints(prev => {
+                          if (prev.length === n) return prev
+                          if (prev.length < n) return [...prev, ...Array.from({length: n - prev.length}, () => ({address: '', count: ''}))]
+                          return prev.slice(0, n)
+                        })
+                      }}
+                      className={iCls} placeholder="0" />
+                  </IField>
+                  {pickupPoints.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {pickupPoints.map((pt, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-gray-400 w-14 flex-shrink-0">Điểm {i + 1}</span>
+                          <input value={pt.address} onChange={e => setPickupPoints(prev => prev.map((p, j) => j === i ? {...p, address: e.target.value} : p))}
+                            className={`${iCls} flex-1`} placeholder="Địa chỉ điểm đón..." />
+                          <input type="number" min={0} value={pt.count} onChange={e => setPickupPoints(prev => prev.map((p, j) => j === i ? {...p, count: e.target.value} : p))}
+                            className={`${iCls} w-24`} placeholder="Số người" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </ISection>
 
                 {/* Thời gian */}
