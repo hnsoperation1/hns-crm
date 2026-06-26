@@ -31,6 +31,7 @@ export default function ContactDetailPage() {
       supabase.from('contacts').select('*').eq('id', id).single(),
       supabase.from('opportunities')
         .select('*, assigned_user:users!assigned_to(full_name)')
+        .is('deleted_at', null)
         .eq('contact_id', id)
         .order('created_at', { ascending: false }),
     ])

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, Circle, Clock, Phone, ChevronDown, ChevronUp, Send, Loader2, ExternalLink, Heart } from 'lucide-react'
+import { CheckCircle2, Circle, Clock, Phone, ChevronDown, ChevronUp, Send, Loader2, Heart, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth'
 import { useTopbar } from '@/contexts/topbar'
@@ -46,6 +46,7 @@ export default function TheChamsocPage() {
     const { data } = await supabase
       .from('care_cards')
       .select('*')
+      .is('deleted_at', null)
       .eq('assigned_to', user.id)
       .order('is_done', { ascending: true })
       .order('contact_date', { ascending: true, nullsFirst: false })
@@ -103,6 +104,11 @@ export default function TheChamsocPage() {
     await supabase.from('care_cards').update({ is_done: !card.is_done }).eq('id', card.id)
     setCards(prev => prev.map(c => c.id === card.id ? { ...c, is_done: !c.is_done } : c))
     setTogglingDone(null)
+  }
+
+  async function deleteCard(card: CareCard) {
+    await supabase.from('care_cards').update({ deleted_at: new Date().toISOString() }).eq('id', card.id)
+    setCards(prev => prev.filter(c => c.id !== card.id))
   }
 
   const today = new Date().toISOString().slice(0, 10)
@@ -210,11 +216,17 @@ export default function TheChamsocPage() {
                       )}
                     </div>
 
-                    {/* Expand */}
-                    <button onClick={() => toggleExpand(card.id)}
-                      className="flex-shrink-0 p-1 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors mt-0.5">
-                      {expandedId === card.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
+                    {/* Expand + Delete */}
+                    <div className="flex items-center gap-0.5 flex-shrink-0 mt-0.5">
+                      <button onClick={() => toggleExpand(card.id)}
+                        className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors">
+                        {expandedId === card.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+                      <button onClick={() => deleteCard(card)} title="Chuyển vào thùng rác"
+                        className="p-1 hover:bg-red-50 rounded-lg text-gray-300 hover:text-red-400 transition-colors">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Logs panel */}

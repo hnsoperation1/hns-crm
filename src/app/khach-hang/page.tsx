@@ -113,9 +113,9 @@ function ContactsTab() {
 
   const loadData = useCallback(async () => {
     const [{ data: c }, { data: o }, { data: og }] = await Promise.all([
-      supabase.from('contacts').select('*').order('created_at', { ascending: false }),
-      supabase.from('opportunities').select('id, title, contact_id, stage'),
-      supabase.from('organizations').select('*').order('name'),
+      supabase.from('contacts').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
+      supabase.from('opportunities').select('id, title, contact_id, stage').is('deleted_at', null),
+      supabase.from('organizations').select('*').is('deleted_at', null).order('name'),
     ])
     setContacts((c ?? []) as Contact[])
     setOpps((o ?? []) as Opportunity[])
@@ -133,7 +133,7 @@ function ContactsTab() {
 
   async function refreshOrgs() {
     setOrgsRefreshing(true)
-    const { data } = await supabase.from('organizations').select('*').order('name')
+    const { data } = await supabase.from('organizations').select('*').is('deleted_at', null).order('name')
     setOrgs((data ?? []) as Organization[])
     setOrgsRefreshing(false)
   }
@@ -572,8 +572,8 @@ function OrganizationsTab() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from('organizations').select('*').order('created_at', { ascending: false }),
-      supabase.from('contacts').select('id, name, phone, email, company'),
+      supabase.from('organizations').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
+      supabase.from('contacts').select('id, name, phone, email, company').is('deleted_at', null),
     ]).then(([{ data: orgData }, { data: ctData }]) => {
       setOrgs((orgData ?? []) as Organization[])
       setAllContacts((ctData ?? []) as Contact[])
@@ -693,7 +693,7 @@ function OrganizationsTab() {
 
   async function handleDelete() {
     if (!deleteConfirm) return
-    await supabase.from('organizations').delete().eq('id', deleteConfirm)
+    await supabase.from('organizations').update({ deleted_at: new Date().toISOString() }).eq('id', deleteConfirm)
     setOrgs(prev => prev.filter(o => o.id !== deleteConfirm))
     setDeleteConfirm(null)
   }

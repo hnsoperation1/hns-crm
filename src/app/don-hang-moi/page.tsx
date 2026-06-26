@@ -60,6 +60,7 @@ export default function DangLayPage() {
     const { data } = await supabase
       .from('opportunities')
       .select('id, title, description, stage, source, estimated_value, created_at, contact:contacts(name, company), assigned_user:users!assigned_to(full_name)')
+      .is('deleted_at', null)
       .in('stage', ['stage_1', 'stage_2'])
       .order('created_at', { ascending: false })
     setRows((data ?? []) as unknown as Row[])
@@ -80,7 +81,7 @@ export default function DangLayPage() {
     setErrors({})
     setContactSearch('')
     const [{ data: c }, { data: u }] = await Promise.all([
-      supabase.from('contacts').select('id, name, phone, company').order('name').limit(200),
+      supabase.from('contacts').select('id, name, phone, company').is('deleted_at', null).order('name').limit(200),
       supabase.from('users').select('id, full_name').eq('is_sale_tv', true).eq('is_active', true).order('full_name'),
     ])
     setContacts((c ?? []) as ContactOpt[])

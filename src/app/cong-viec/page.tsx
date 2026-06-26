@@ -34,7 +34,7 @@ export default function TasksPage() {
     if (!currentUser?.id) { setLoading(false); return }
     setLoading(true)
     Promise.all([
-      supabase.from('opportunities').select('*').eq('assigned_to', currentUser.id).in('stage', ACTIVE_STAGES),
+      supabase.from('opportunities').select('*').is('deleted_at', null).eq('assigned_to', currentUser.id).in('stage', ACTIVE_STAGES),
       supabase.from('activity_logs').select('*').order('log_date', { ascending: false }),
       supabase.from('tasks').select('*'),
     ]).then(([oppsRes, logsRes, tasksRes]) => {

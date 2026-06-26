@@ -7,7 +7,7 @@ import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2,
   MessageSquare, Plus, CheckSquare, Square,
   Clock, CalendarDays, DollarSign, User, Pencil, CheckCircle2, X,
-  ClipboardList, UserPlus, Loader2, FileText, Save, Eye, Printer,
+  ClipboardList, UserPlus, Loader2, FileText, Save, Eye, Printer, Trash2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -406,6 +406,13 @@ export default function OppDetailPage() {
     }
   }
 
+  async function deleteOpp() {
+    if (!opp) return
+    if (!confirm('Chuyển đơn hàng này vào thùng rác?')) return
+    await supabase.from('opportunities').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    router.push('/don-hang')
+  }
+
   async function markLost() {
     if (!opp || markingLost) return
     if (!confirm('Xác nhận đánh dấu đơn hàng này là Mất đơn?')) return
@@ -518,6 +525,10 @@ export default function OppDetailPage() {
                 {markingLost ? <Loader2 size={13} className="animate-spin inline" /> : 'Mất đơn'}
               </button>
             )}
+            <button onClick={deleteOpp} title="Chuyển vào thùng rác"
+              className="p-2 rounded-xl border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+              <Trash2 size={15} />
+            </button>
           </div>
         </div>
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones, Star, Building, Inbox, Loader2, CheckCircle2, Heart } from 'lucide-react'
+import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones, Star, Building, Inbox, Loader2, CheckCircle2, Heart, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/contexts/auth'
 import { getInitials } from '@/lib/utils'
@@ -109,6 +109,11 @@ export default function Sidebar() {
             <NavLink href="/the-cham-soc" label="Thẻ chăm sóc" icon={Heart} />
           </div>
         )}
+
+        {/* Thùng rác — tất cả role */}
+        <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(18,127,175,0.2)' }}>
+          <NavLink href="/thung-rac" label="Thùng rác" icon={Trash2} />
+        </div>
 
         {/* Admin section — chỉ hiện với super admin */}
         {user?.is_super_admin && (

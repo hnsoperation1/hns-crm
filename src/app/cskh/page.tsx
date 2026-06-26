@@ -82,7 +82,7 @@ export default function CSKHPage() {
         .from('issues')
         .select('*, opportunity:opportunities(id,title), assigned_user:users!assigned_to(id,full_name), creator:users!created_by(id,full_name)')
         .order('created_at', { ascending: false }),
-      supabase.from('opportunities').select('id, title').order('created_at', { ascending: false }),
+      supabase.from('opportunities').select('id, title').is('deleted_at', null).order('created_at', { ascending: false }),
       supabase.from('users').select('id, full_name').eq('is_active', true).order('full_name'),
     ])
     setIssues((i ?? []) as IssueRow[])
