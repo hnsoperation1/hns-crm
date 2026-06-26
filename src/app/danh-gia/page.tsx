@@ -94,7 +94,10 @@ function StarRow({ label, value }: { label: string; value: string | null }) {
 
 type SelectedList = { title: string; entries: FeedbackRow[] } | null
 
-function CustomerList({ data, onClose }: { data: SelectedList; onClose: () => void }) {
+function CustomerList({ data, onClose, onExpand, expandedId }: {
+  data: SelectedList; onClose: () => void
+  onExpand: (f: FeedbackRow) => void; expandedId: string | null
+}) {
   if (!data) return (
     <div className="flex-1 flex flex-col items-center justify-center text-center py-16 text-gray-300">
       <Users size={36} className="mb-3" />
@@ -106,22 +109,24 @@ function CustomerList({ data, onClose }: { data: SelectedList; onClose: () => vo
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
         <div>
           <p className="font-semibold text-gray-900 text-sm">{data.title}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{data.entries.length} khách</p>
+          <p className="text-xs text-gray-400 mt-0.5">{data.entries.length} khách · bấm để xem chi tiết</p>
         </div>
         <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"><X size={14} /></button>
       </div>
       <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
         {data.entries.map((f, i) => (
-          <div key={i} className="px-4 py-3">
+          <div key={i} onClick={() => onExpand(f)}
+            className={`px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${expandedId === f.id ? 'bg-brand-50 border-l-2 border-brand-500' : ''}`}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="font-semibold text-sm text-gray-900">{f.respondent_name ?? '—'}</p>
-                {f.phone && <p className="text-xs text-gray-500 mt-0.5">{f.phone}</p>}
+                {f.phone && <p className="text-xs text-gray-500 mt-0.5">SĐT: {f.phone}</p>}
                 {f.group_name && <p className="text-xs text-gray-400 mt-0.5 truncate">Đoàn: {f.group_name}</p>}
-                {f.overall_comment && <p className="text-xs text-gray-500 mt-1 italic line-clamp-2">"{f.overall_comment}"</p>}
+                {f.overall_comment && <p className="text-xs text-gray-500 mt-1 italic line-clamp-2">Đánh giá chung: "{f.overall_comment}"</p>}
               </div>
               {f.opportunity_id && (
-                <Link href={`/don-hang/${f.opportunity_id}`} className="flex-shrink-0 text-xs text-brand-600 hover:underline flex items-center gap-0.5 mt-0.5">
+                <Link href={`/don-hang/${f.opportunity_id}`} onClick={e => e.stopPropagation()}
+                  className="flex-shrink-0 text-xs text-brand-600 hover:underline flex items-center gap-0.5 mt-0.5">
                   <ExternalLink size={11} /> Đơn
                 </Link>
               )}
@@ -167,6 +172,7 @@ export default function DanhGiaPage() {
   }, [])
   const [expanded, setExpanded] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedList>(null)
+  const [expandedFeedback, setExpandedFeedback] = useState<FeedbackRow | null>(null)
   const [filterHasOpp, setFilterHasOpp] = useState(false)
   const [filterNoOpp, setFilterNoOpp] = useState(true)
   // multi-select + link to opportunity
@@ -438,7 +444,7 @@ export default function DanhGiaPage() {
               { key: 'poor', label: 'Đánh giá kém' },
               { key: 'destination', label: 'Địa điểm quan tâm' },
             ] as const).map(t => (
-              <button key={t.key} onClick={() => { setTab(t.key); setSelected(null) }}
+              <button key={t.key} onClick={() => { setTab(t.key); setSelected(null); setExpandedFeedback(null) }}
                 className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${tab === t.key ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>
                 {t.label}
               </button>
@@ -788,7 +794,7 @@ export default function DanhGiaPage() {
             </div>
             {/* List panel */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-              <CustomerList data={selected} onClose={() => setSelected(null)} />
+              <CustomerList data={selected} onClose={() => setSelected(null)} onExpand={f => { setExpandedFeedback(f) }} expandedId={expandedFeedback?.id ?? null} />
             </div>
           </div>
         )}
@@ -879,7 +885,7 @@ export default function DanhGiaPage() {
 
             {/* List panel */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-              <CustomerList data={selected} onClose={() => setSelected(null)} />
+              <CustomerList data={selected} onClose={() => setSelected(null)} onExpand={f => { setExpandedFeedback(f) }} expandedId={expandedFeedback?.id ?? null} />
             </div>
           </div>
         )}
@@ -1055,6 +1061,106 @@ export default function DanhGiaPage() {
           <Minimize2 size={13} />
           Thu nhỏ
         </button>
+      )}
+
+      {/* Drawer xem chi tiết đánh giá — dùng cho tab Đánh giá kém & Địa điểm quan tâm */}
+      {expandedFeedback && (
+        <div className="fixed right-0 top-10 bottom-0 w-[460px] bg-white border-l border-gray-200 shadow-2xl flex flex-col overflow-hidden z-40">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-start justify-between flex-shrink-0">
+            <div>
+              <p className="font-semibold text-gray-900">{expandedFeedback.respondent_name ?? '—'}</p>
+              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                {expandedFeedback.phone && <span className="text-xs text-gray-500">{expandedFeedback.phone}</span>}
+                {expandedFeedback.group_name && <span className="text-xs text-gray-400">Đoàn: {expandedFeedback.group_name}</span>}
+                <span className="text-xs text-gray-400">{formatDate(expandedFeedback.submitted_at)}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {expandedFeedback.opportunity_id && (
+                <Link href={`/don-hang/${expandedFeedback.opportunity_id}`} className="text-xs text-brand-600 hover:underline flex items-center gap-0.5 font-medium">
+                  <ExternalLink size={11} /> Đơn
+                </Link>
+              )}
+              <button onClick={() => setExpandedFeedback(null)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"><X size={14} /></button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              {(expandedFeedback.rating_restaurant_space || expandedFeedback.rating_restaurant_food || expandedFeedback.rating_restaurant_service || expandedFeedback.rating_restaurant_price) && (
+                <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Nhà hàng</p>
+                  <StarRow label="Không gian" value={expandedFeedback.rating_restaurant_space} />
+                  <StarRow label="Ẩm thực" value={expandedFeedback.rating_restaurant_food} />
+                  <StarRow label="Thái độ phục vụ" value={expandedFeedback.rating_restaurant_service} />
+                  <StarRow label="Giá cả" value={expandedFeedback.rating_restaurant_price} />
+                </div>
+              )}
+              {(expandedFeedback.rating_guide_attitude || expandedFeedback.rating_guide_skill || expandedFeedback.rating_guide_knowledge) && (
+                <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Hướng dẫn viên</p>
+                  <StarRow label="Thái độ" value={expandedFeedback.rating_guide_attitude} />
+                  <StarRow label="Nghiệp vụ" value={expandedFeedback.rating_guide_skill} />
+                  <StarRow label="Kiến thức" value={expandedFeedback.rating_guide_knowledge} />
+                </div>
+              )}
+              {(expandedFeedback.rating_transport_quality || expandedFeedback.rating_transport_safety || expandedFeedback.rating_transport_driver) && (
+                <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Phương tiện</p>
+                  <StarRow label="Chất lượng xe" value={expandedFeedback.rating_transport_quality} />
+                  <StarRow label="An toàn" value={expandedFeedback.rating_transport_safety} />
+                  <StarRow label="Thái độ tài xế" value={expandedFeedback.rating_transport_driver} />
+                </div>
+              )}
+              {(expandedFeedback.rating_staff_attitude || expandedFeedback.rating_staff_skill || expandedFeedback.rating_staff_knowledge) && (
+                <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Nhân viên tư vấn</p>
+                  <StarRow label="Thái độ" value={expandedFeedback.rating_staff_attitude} />
+                  <StarRow label="Nghiệp vụ" value={expandedFeedback.rating_staff_skill} />
+                  <StarRow label="Kiến thức" value={expandedFeedback.rating_staff_knowledge} />
+                </div>
+              )}
+              {expandedFeedback.rating_hotel && (
+                <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Khách sạn</p>
+                  <StarRow label="Đánh giá" value={expandedFeedback.rating_hotel} />
+                </div>
+              )}
+              {(expandedFeedback.rating_flight_support || expandedFeedback.rating_flight_attitude || expandedFeedback.rating_flight_handling) && (
+                <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Vé máy bay</p>
+                  <StarRow label="Hỗ trợ chuyên môn" value={expandedFeedback.rating_flight_support} />
+                  <StarRow label="Thái độ tư vấn" value={expandedFeedback.rating_flight_attitude} />
+                  <StarRow label="Xử lý tình huống" value={expandedFeedback.rating_flight_handling} />
+                </div>
+              )}
+              {(expandedFeedback.rating_teambuilding || expandedFeedback.rating_gala || expandedFeedback.rating_conference) && (
+                <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Dịch vụ khác</p>
+                  <StarRow label="Teambuilding" value={expandedFeedback.rating_teambuilding} />
+                  <StarRow label="Gala dinner" value={expandedFeedback.rating_gala} />
+                  <StarRow label="Hội nghị" value={expandedFeedback.rating_conference} />
+                </div>
+              )}
+            </div>
+            <div className="bg-gray-50 rounded-xl border border-gray-100 p-3 space-y-2">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tổng kết</p>
+              {expandedFeedback.overall_comment && <p className="text-sm text-gray-700 italic">"{expandedFeedback.overall_comment}"</p>}
+              <div className="flex items-center gap-4 pt-1 flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  {expandedFeedback.is_satisfied ? <ThumbsUp size={13} className="text-emerald-500" /> : <ThumbsDown size={13} className="text-red-400" />}
+                  <span className="text-xs text-gray-600">{expandedFeedback.is_satisfied ? 'Hài lòng' : 'Không hài lòng'}</span>
+                </div>
+                {expandedFeedback.will_return !== null && (
+                  <div className="flex items-center gap-1.5">
+                    {expandedFeedback.will_return ? <ThumbsUp size={13} className="text-blue-500" /> : <ThumbsDown size={13} className="text-gray-400" />}
+                    <span className="text-xs text-gray-600">{expandedFeedback.will_return ? 'Sẽ quay lại' : 'Không quay lại'}</span>
+                  </div>
+                )}
+                {expandedFeedback.next_destination && <span className="text-xs text-gray-500">Quan tâm: <span className="font-medium text-brand-600">{expandedFeedback.next_destination}</span></span>}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal xem đánh giá chung đầy đủ */}
