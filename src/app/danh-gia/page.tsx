@@ -125,18 +125,18 @@ function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard }: {
                 {f.group_name && <p className="text-xs text-gray-400 mt-0.5 truncate">Đoàn: {f.group_name}</p>}
                 {f.overall_comment && <p className="text-xs text-gray-500 mt-1 italic line-clamp-2">Đánh giá chung: "{f.overall_comment}"</p>}
               </div>
-              <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                {f.opportunity_id && (
-                  <Link href={`/don-hang/${f.opportunity_id}`} onClick={e => e.stopPropagation()}
-                    className="text-xs text-brand-600 hover:underline flex items-center gap-0.5">
-                    <ExternalLink size={11} /> Đơn
-                  </Link>
-                )}
-                <button onClick={e => { e.stopPropagation(); onCreateCard(f) }}
-                  className="flex items-center gap-0.5 text-[11px] text-pink-500 hover:text-pink-700 font-medium transition-colors">
-                  <Heart size={11} /> Tạo thẻ CS
-                </button>
-              </div>
+              {f.opportunity_id && (
+                <Link href={`/don-hang/${f.opportunity_id}`} onClick={e => e.stopPropagation()}
+                  className="flex-shrink-0 text-xs text-brand-600 hover:underline flex items-center gap-0.5 mt-0.5">
+                  <ExternalLink size={11} /> Đơn
+                </Link>
+              )}
+            </div>
+            <div className="mt-2">
+              <button onClick={e => { e.stopPropagation(); onCreateCard(f) }}
+                className="flex items-center gap-1 text-[11px] text-pink-500 hover:text-pink-700 font-medium transition-colors px-2 py-1 rounded-lg hover:bg-pink-50">
+                <Heart size={11} /> Tạo thẻ chăm sóc
+              </button>
             </div>
           </div>
         ))}
