@@ -142,9 +142,9 @@ function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard, careC
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-sm text-gray-900">{f.respondent_name ?? '—'}</p>
-                  {f.phone && <p className="text-xs text-gray-500 mt-0.5">SĐT: {f.phone}</p>}
-                  {f.group_name && <p className="text-xs text-gray-400 mt-0.5 truncate">Đoàn: {f.group_name}</p>}
-                  {f.overall_comment && <p className="text-xs text-gray-500 mt-1 italic line-clamp-2">Đánh giá chung: "{f.overall_comment}"</p>}
+                  {f.phone && <p className="text-xs text-gray-800 mt-0.5">SĐT: {f.phone}</p>}
+                  {f.group_name && <p className="text-xs text-gray-800 mt-0.5 truncate">Đoàn: {f.group_name}</p>}
+                  {f.overall_comment && <p className="text-xs text-gray-800 mt-1 italic line-clamp-2">Đánh giá chung: "{f.overall_comment}"</p>}
                 </div>
                 {f.opportunity_id && (
                   <Link href={`/don-hang/${f.opportunity_id}`} onClick={e => e.stopPropagation()}
@@ -160,7 +160,7 @@ function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard, careC
                 <button onClick={() => setExpandedCareId(prev => prev === f.id ? null : f.id)}
                   className={`flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg transition-colors ${careOpen ? 'bg-pink-100 text-pink-700' : 'text-gray-400 hover:text-pink-600 hover:bg-pink-50'}`}>
                   <Heart size={10} />
-                  Lịch sử CS
+                  Lịch sử CSKH
                   {cards.length > 0 && (
                     <span className={`text-[10px] px-1.5 py-0 rounded-full font-bold ${careOpen ? 'bg-pink-200 text-pink-700' : 'bg-gray-100 text-gray-500'}`}>{cards.length}</span>
                   )}
@@ -168,7 +168,7 @@ function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard, careC
                 </button>
                 <button onClick={() => onCreateCard(f)}
                   className="flex items-center gap-1 text-[11px] text-pink-500 hover:text-pink-700 font-medium px-2 py-1 rounded-lg hover:bg-pink-50 transition-colors">
-                  + Tạo thẻ CS
+                  + Tạo thẻ CSKHKH
                 </button>
               </div>
 
@@ -865,7 +865,7 @@ export default function DanhGiaPage() {
                           )}
                           <button onClick={() => setCreateCardModal(f)}
                             className="flex items-center gap-0.5 text-[11px] text-pink-500 hover:text-pink-700 font-semibold px-2 py-1 rounded-lg hover:bg-pink-50 transition-colors">
-                            <Heart size={11} /> Tạo thẻ CS
+                            <Heart size={11} /> Tạo thẻ CSKH
                           </button>
                           <button onClick={() => setExpanded(null)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"><X size={14} /></button>
                         </div>
@@ -1269,7 +1269,7 @@ export default function DanhGiaPage() {
               )}
               <button onClick={() => setCreateCardModal(expandedFeedback)}
                 className="flex items-center gap-0.5 text-[11px] text-pink-500 hover:text-pink-700 font-semibold px-2 py-1 rounded-lg hover:bg-pink-50 transition-colors">
-                <Heart size={11} /> Tạo thẻ CS
+                <Heart size={11} /> Tạo thẻ CSKH
               </button>
               <button onClick={() => setExpandedFeedback(null)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"><X size={14} /></button>
             </div>
@@ -1419,7 +1419,7 @@ export default function DanhGiaPage() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <Heart size={16} className="text-pink-500" />
-                <p className="font-bold text-gray-900 text-sm">Tạo thẻ chăm sóc</p>
+                <p className="font-bold text-gray-900 text-sm">Tạo thẻ CSKH</p>
               </div>
               <button onClick={() => setCreateCardModal(null)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"><X size={16} /></button>
             </div>
@@ -1457,7 +1457,7 @@ export default function DanhGiaPage() {
                 className={`flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50 ${cardCreated ? 'bg-emerald-500' : 'bg-pink-500 hover:bg-pink-600'}`}>
                 {creatingCard ? <><Send size={14} className="animate-pulse" /> Đang tạo...</>
                   : cardCreated ? '✓ Đã tạo!'
-                  : <><Heart size={14} /> Tạo thẻ chăm sóc</>}
+                  : <><Heart size={14} /> Tạo thẻ CSKH</>}
               </button>
             </div>
           </div>
