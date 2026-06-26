@@ -32,7 +32,7 @@ export default function DaXongPage() {
       .select('id, title, description, tour_date, tour_end_date, estimated_value, actual_value, contact:contacts(name, company), assigned_user:users!assigned_to(full_name)')
       .is('deleted_at', null)
       .eq('stage', 'stage_5')
-      .order('tour_date', { ascending: false, nullsFirst: false })
+      .order('tour_date', { ascending: false })
     setRows((data ?? []) as unknown as Row[])
     setLoading(false)
   }, [])

@@ -110,11 +110,6 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Thùng rác — tất cả role */}
-        <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(18,127,175,0.2)' }}>
-          <NavLink href="/thung-rac" label="Thùng rác" icon={Trash2} />
-        </div>
-
         {/* Admin section — chỉ hiện với super admin */}
         {user?.is_super_admin && (
           <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(18,127,175,0.2)' }}>
@@ -150,6 +145,13 @@ export default function Sidebar() {
           <LogOut size={14} />
           Đăng xuất
         </button>
+        <Link href="/thung-rac"
+          className="mt-1 w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-white/10"
+          style={{ color: 'rgba(157,213,236,0.45)' }}
+        >
+          <Trash2 size={14} />
+          Thùng rác
+        </Link>
       </div>
     </aside>
   )

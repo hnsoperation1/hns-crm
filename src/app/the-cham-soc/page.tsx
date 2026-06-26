@@ -49,7 +49,7 @@ export default function TheChamsocPage() {
       .is('deleted_at', null)
       .eq('assigned_to', user.id)
       .order('is_done', { ascending: true })
-      .order('contact_date', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: false })
     setCards((data ?? []) as CareCard[])
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
