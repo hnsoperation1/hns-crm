@@ -71,16 +71,20 @@ export default function OppDetailPage() {
     group_leader_name: string; group_leader_phone: string; group_leader_email: string
     pickup_count: string; pickup_time: string
     trip_days: string; trip_date_range: string; itinerary: string
-    hotel_stars: string; hotel_name: string; hotel_persons_per_room: string; hotel_room_details: string
-    transport_car_type: string; transport_car_count: string
+    hotel_stars: string; hotel_name: string; hotel_persons_per_room: string
+    hotel_room_count: string; hotel_room_details: string; hotel_vip_rooms: string
+    transport_car_type: string; transport_car_count: string; car_supplier: string
     flight_depart_time: string; flight_return_time: string
     meals_main_count: string; meals_main_price: string; meals_breakfast: boolean
-    guide_gender: string; guide_requirements: string
+    guide_name: string; guide_phone: string; guide_gender: string; guide_requirements: string
     tickets_details: string
     event_gala: boolean; event_team_building: boolean; event_meeting: boolean
-    event_birthday: boolean; event_anniversary: boolean; event_details: string
+    event_birthday: boolean; event_anniversary: boolean
+    event_details: string; gala_location: string; gala_details: string
+    team_building_details: string
     other_services: string
   }
+  type MealRow = { day: number; meal: string; menu: string; restaurant: string }
   const EMPTY_HANDOVER: HandoverForm = {
     ma_doan: '', vat_required: false, status: '',
     sale_price: '', commission: '',
@@ -88,16 +92,33 @@ export default function OppDetailPage() {
     group_leader_name: '', group_leader_phone: '', group_leader_email: '',
     pickup_count: '', pickup_time: '',
     trip_days: '', trip_date_range: '', itinerary: '',
-    hotel_stars: '', hotel_name: '', hotel_persons_per_room: '', hotel_room_details: '',
-    transport_car_type: '', transport_car_count: '',
+    hotel_stars: '', hotel_name: '', hotel_persons_per_room: '',
+    hotel_room_count: '', hotel_room_details: '', hotel_vip_rooms: '',
+    transport_car_type: '', transport_car_count: '', car_supplier: '',
     flight_depart_time: '', flight_return_time: '',
     meals_main_count: '', meals_main_price: '', meals_breakfast: false,
-    guide_gender: '', guide_requirements: '',
+    guide_name: '', guide_phone: '', guide_gender: '', guide_requirements: '',
     tickets_details: '',
     event_gala: false, event_team_building: false, event_meeting: false,
-    event_birthday: false, event_anniversary: false, event_details: '',
+    event_birthday: false, event_anniversary: false,
+    event_details: '', gala_location: '', gala_details: '',
+    team_building_details: '',
     other_services: '',
   }
+  const [mealsSchedule, setMealsSchedule] = useState<MealRow[]>([])
+
+  function syncMealsSchedule(days: number, current: MealRow[]) {
+    const meals = ['Trưa', 'Tối']
+    const rows: MealRow[] = []
+    for (let d = 1; d <= days; d++) {
+      for (const m of meals) {
+        const existing = current.find(r => r.day === d && r.meal === m)
+        rows.push(existing ?? { day: d, meal: m, menu: '', restaurant: '' })
+      }
+    }
+    setMealsSchedule(rows)
+  }
+
   const [handover, setHandover] = useState<HandoverForm>(EMPTY_HANDOVER)
   const [handoverPickupPoints, setHandoverPickupPoints] = useState<{ address: string; count: string }[]>([])
   const [handoverLoaded, setHandoverLoaded] = useState(false)
@@ -167,14 +188,19 @@ export default function OppDetailPage() {
           hotel_stars: hd.hotel_stars ?? '',
           hotel_name: hd.hotel_name ?? '',
           hotel_persons_per_room: hd.hotel_persons_per_room?.toString() ?? '',
+          hotel_room_count: hd.hotel_room_count?.toString() ?? '',
           hotel_room_details: hd.hotel_room_details ?? '',
+          hotel_vip_rooms: hd.hotel_vip_rooms ?? '',
           transport_car_type: hd.transport_car_type ?? '',
           transport_car_count: hd.transport_car_count?.toString() ?? '',
+          car_supplier: hd.car_supplier ?? '',
           flight_depart_time: hd.flight_depart_time ?? '',
           flight_return_time: hd.flight_return_time ?? '',
           meals_main_count: hd.meals_main_count?.toString() ?? '',
           meals_main_price: hd.meals_main_price?.toString() ?? '',
           meals_breakfast: hd.meals_breakfast ?? false,
+          guide_name: hd.guide_name ?? '',
+          guide_phone: hd.guide_phone ?? '',
           guide_gender: hd.guide_gender ?? '',
           guide_requirements: hd.guide_requirements ?? '',
           tickets_details: hd.tickets_details ?? '',
@@ -184,8 +210,19 @@ export default function OppDetailPage() {
           event_birthday: hd.event_birthday ?? false,
           event_anniversary: hd.event_anniversary ?? false,
           event_details: hd.event_details ?? '',
+          gala_location: hd.gala_location ?? '',
+          gala_details: hd.gala_details ?? '',
+          team_building_details: hd.team_building_details ?? '',
           other_services: hd.other_services ?? '',
         })
+        // Load meals schedule
+        const savedDays = hd.trip_days ?? 0
+        let mrows: MealRow[] = []
+        if (hd.meals_schedule) {
+          try { mrows = JSON.parse(hd.meals_schedule) } catch { /* ignore */ }
+        }
+        if (mrows.length === 0 && savedDays > 0) syncMealsSchedule(savedDays, [])
+        else setMealsSchedule(mrows)
       }
       setHandoverLoaded(true)
     }
@@ -217,14 +254,20 @@ export default function OppDetailPage() {
       hotel_stars: handover.hotel_stars || null,
       hotel_name: handover.hotel_name || null,
       hotel_persons_per_room: handover.hotel_persons_per_room ? Number(handover.hotel_persons_per_room) : null,
+      hotel_room_count: handover.hotel_room_count ? Number(handover.hotel_room_count) : null,
       hotel_room_details: handover.hotel_room_details || null,
+      hotel_vip_rooms: handover.hotel_vip_rooms || null,
       transport_car_type: handover.transport_car_type || null,
       transport_car_count: handover.transport_car_count ? Number(handover.transport_car_count) : null,
+      car_supplier: handover.car_supplier || null,
       flight_depart_time: handover.flight_depart_time || null,
       flight_return_time: handover.flight_return_time || null,
       meals_main_count: handover.meals_main_count ? Number(handover.meals_main_count) : null,
       meals_main_price: handover.meals_main_price ? Number(handover.meals_main_price) : null,
       meals_breakfast: handover.meals_breakfast,
+      meals_schedule: mealsSchedule.length ? JSON.stringify(mealsSchedule) : null,
+      guide_name: handover.guide_name || null,
+      guide_phone: handover.guide_phone || null,
       guide_gender: handover.guide_gender || null,
       guide_requirements: handover.guide_requirements || null,
       tickets_details: handover.tickets_details || null,
@@ -234,6 +277,9 @@ export default function OppDetailPage() {
       event_birthday: handover.event_birthday,
       event_anniversary: handover.event_anniversary,
       event_details: handover.event_details || null,
+      gala_location: handover.gala_location || null,
+      gala_details: handover.gala_details || null,
+      team_building_details: handover.team_building_details || null,
       other_services: handover.other_services || null,
     }, { onConflict: 'opportunity_id' })
     setSavingHandover(false)
@@ -553,17 +599,22 @@ export default function OppDetailPage() {
                       </select>
                     </HField>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div className="grid grid-cols-3 gap-3 mt-3">
+                    <HField label="Tổng số phòng"><input type="number" min={0} value={handover.hotel_room_count} onChange={e => setHandover(f => ({...f, hotel_room_count: e.target.value}))} className={hCls} placeholder="0" /></HField>
                     <HField label="Số người / phòng"><input type="number" min={1} value={handover.hotel_persons_per_room} onChange={e => setHandover(f => ({...f, hotel_persons_per_room: e.target.value}))} className={hCls} placeholder="2" /></HField>
-                    <HField label="Chi tiết loại phòng"><input value={handover.hotel_room_details} onChange={e => setHandover(f => ({...f, hotel_room_details: e.target.value}))} className={hCls} placeholder="VD: 10 phòng đôi, 5 phòng đơn" /></HField>
+                    <HField label="Chi tiết loại phòng"><input value={handover.hotel_room_details} onChange={e => setHandover(f => ({...f, hotel_room_details: e.target.value}))} className={hCls} placeholder="VD: 10 đôi, 5 đơn" /></HField>
+                  </div>
+                  <div className="mt-3">
+                    <HField label="Phòng VIP (nếu có)"><input value={handover.hotel_vip_rooms} onChange={e => setHandover(f => ({...f, hotel_vip_rooms: e.target.value}))} className={hCls} placeholder="VD: 2 phòng suite tầng 10 cho BGĐ" /></HField>
                   </div>
                 </HSection>
 
                 {/* Vận chuyển & Bay */}
                 <HSection label="Vận chuyển & Máy bay">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <HField label="Loại xe"><input value={handover.transport_car_type} onChange={e => setHandover(f => ({...f, transport_car_type: e.target.value}))} className={hCls} placeholder="VD: Xe 45 chỗ" /></HField>
                     <HField label="Số lượng xe"><input type="number" min={0} value={handover.transport_car_count} onChange={e => setHandover(f => ({...f, transport_car_count: e.target.value}))} className={hCls} placeholder="0" /></HField>
+                    <HField label="Đặt xe bên (NCC)"><input value={handover.car_supplier} onChange={e => setHandover(f => ({...f, car_supplier: e.target.value}))} className={hCls} placeholder="VD: Công ty Minh Phú" /></HField>
                   </div>
                   <div className="grid grid-cols-2 gap-3 mt-3">
                     <HField label="Giờ bay đi"><input value={handover.flight_depart_time} onChange={e => setHandover(f => ({...f, flight_depart_time: e.target.value}))} className={hCls} placeholder="VD: VN123 6h00 01/08" /></HField>
@@ -573,36 +624,67 @@ export default function OppDetailPage() {
 
                 {/* Ăn uống */}
                 <HSection label="Ăn uống">
-                  <div className="grid grid-cols-2 gap-3">
-                    <HField label="Số bữa ăn chính"><input type="number" min={0} value={handover.meals_main_count} onChange={e => setHandover(f => ({...f, meals_main_count: e.target.value}))} className={hCls} placeholder="0" /></HField>
-                    <HField label="Giá / bữa (VNĐ)"><input type="number" min={0} value={handover.meals_main_price} onChange={e => setHandover(f => ({...f, meals_main_price: e.target.value}))} className={hCls} placeholder="0" /></HField>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <HField label="Giá tiêu chuẩn / bữa (VNĐ)"><input type="number" min={0} value={handover.meals_main_price} onChange={e => setHandover(f => ({...f, meals_main_price: e.target.value}))} className={hCls} placeholder="0" /></HField>
+                    <HField label="">
+                      <div className="flex items-center gap-2 mt-5">
+                        <input type="checkbox" id="meals_breakfast" checked={handover.meals_breakfast} onChange={e => setHandover(f => ({...f, meals_breakfast: e.target.checked}))} className="accent-accent-500 w-4 h-4" />
+                        <label htmlFor="meals_breakfast" className="text-sm cursor-pointer text-gray-700">Có ăn sáng</label>
+                      </div>
+                    </HField>
                   </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    <input type="checkbox" id="meals_breakfast" checked={handover.meals_breakfast} onChange={e => setHandover(f => ({...f, meals_breakfast: e.target.checked}))} className="accent-accent-500 w-4 h-4" />
-                    <label htmlFor="meals_breakfast" className="text-sm cursor-pointer text-gray-700">Có ăn sáng</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs text-gray-500">Lịch bữa ăn (thực đơn + nhà hàng)</label>
+                    {handover.trip_days && (
+                      <button type="button" onClick={() => syncMealsSchedule(Number(handover.trip_days), mealsSchedule)}
+                        className="text-xs text-brand-600 hover:underline font-semibold">
+                        Tạo lịch {handover.trip_days} ngày
+                      </button>
+                    )}
                   </div>
+                  {mealsSchedule.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="grid grid-cols-[56px_52px_1fr_1fr] gap-2 text-[10px] font-bold text-gray-400 uppercase px-1">
+                        <span>Ngày</span><span>Bữa</span><span>Thực đơn</span><span>Nhà hàng</span>
+                      </div>
+                      {mealsSchedule.map((row, i) => (
+                        <div key={i} className="grid grid-cols-[56px_52px_1fr_1fr] gap-2 items-center">
+                          <span className="text-xs text-gray-500 text-center">Ngày {row.day}</span>
+                          <span className="text-xs font-semibold text-gray-700">{row.meal}</span>
+                          <input value={row.menu} onChange={e => setMealsSchedule(prev => prev.map((r,j) => j===i ? {...r, menu: e.target.value} : r))}
+                            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400 bg-white" placeholder="Thực đơn..." />
+                          <input value={row.restaurant} onChange={e => setMealsSchedule(prev => prev.map((r,j) => j===i ? {...r, restaurant: e.target.value} : r))}
+                            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-400 bg-white" placeholder="Nhà hàng..." />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </HSection>
 
-                {/* HDV */}
-                <HSection label="Hướng dẫn viên">
+                {/* HDV / MC */}
+                <HSection label="Hướng dẫn viên / MC">
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <HField label="Tên HDV / MC"><input value={handover.guide_name} onChange={e => setHandover(f => ({...f, guide_name: e.target.value}))} className={hCls} placeholder="Nguyễn Văn A" /></HField>
+                    <HField label="SĐT HDV / MC"><input value={handover.guide_phone} onChange={e => setHandover(f => ({...f, guide_phone: e.target.value}))} className={hCls} placeholder="0912..." /></HField>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <HField label="Giới tính HDV">
+                    <HField label="Giới tính">
                       <select value={handover.guide_gender} onChange={e => setHandover(f => ({...f, guide_gender: e.target.value}))} className={hCls}>
                         <option value="">— Không yêu cầu —</option>
                         <option value="male">Nam</option>
                         <option value="female">Nữ</option>
                       </select>
                     </HField>
-                    <HField label="Yêu cầu HDV"><input value={handover.guide_requirements} onChange={e => setHandover(f => ({...f, guide_requirements: e.target.value}))} className={hCls} placeholder="VD: Giỏi tiếng Anh, có kinh nghiệm..." /></HField>
+                    <HField label="Yêu cầu thêm"><input value={handover.guide_requirements} onChange={e => setHandover(f => ({...f, guide_requirements: e.target.value}))} className={hCls} placeholder="VD: Giỏi tiếng Anh..." /></HField>
                   </div>
                 </HSection>
 
-                {/* Vé tham quan */}
-                <HSection label="Vé tham quan & Dịch vụ khác">
-                  <HField label="Vé tham quan"><textarea value={handover.tickets_details} onChange={e => setHandover(f => ({...f, tickets_details: e.target.value}))} rows={2} className={`${hCls} resize-none`} placeholder="VD: Vé Sun World Bà Nà Hills cho 50 người lớn, 5 trẻ em..." /></HField>
+                {/* Vé & Sự kiện */}
+                <HSection label="Vé tham quan & Sự kiện">
+                  <HField label="Vé tham quan"><textarea value={handover.tickets_details} onChange={e => setHandover(f => ({...f, tickets_details: e.target.value}))} rows={2} className={`${hCls} resize-none`} placeholder="VD: Vé Sun World Bà Nà Hills: 50 NL, 5 TE..." /></HField>
                   <div className="mt-3">
-                    <label className="block text-xs text-gray-500 mb-2">Sự kiện đặc biệt</label>
-                    <div className="flex flex-wrap gap-3 mb-3">
+                    <label className="block text-xs text-gray-500 mb-2">Loại sự kiện</label>
+                    <div className="flex flex-wrap gap-3">
                       {([['event_gala','Gala dinner'],['event_team_building','Team building'],['event_meeting','Hội họp'],['event_birthday','Sinh nhật'],['event_anniversary','Kỷ niệm']] as [keyof typeof handover, string][]).map(([k,l]) => (
                         <label key={k} className="flex items-center gap-2 text-sm cursor-pointer">
                           <input type="checkbox" checked={handover[k] as boolean} onChange={e => setHandover(f => ({...f, [k]: e.target.checked}))} className="accent-accent-500 w-4 h-4" />
@@ -610,11 +692,27 @@ export default function OppDetailPage() {
                         </label>
                       ))}
                     </div>
-                    <HField label="Chi tiết sự kiện"><input value={handover.event_details} onChange={e => setHandover(f => ({...f, event_details: e.target.value}))} className={hCls} placeholder="Mô tả..." /></HField>
                   </div>
+                  {handover.event_gala && (
+                    <div className="mt-3 space-y-2 p-3 bg-amber-50 rounded-xl border border-amber-100">
+                      <p className="text-xs font-bold text-amber-700">Chi tiết Gala dinner</p>
+                      <HField label="Địa điểm tổ chức"><input value={handover.gala_location} onChange={e => setHandover(f => ({...f, gala_location: e.target.value}))} className={hCls} placeholder="VD: Sân thượng KS Mường Thanh" /></HField>
+                      <HField label="Bao gồm (ATAS / Back / Sảnh / Thời gian)"><textarea value={handover.gala_details} onChange={e => setHandover(f => ({...f, gala_details: e.target.value}))} rows={2} className={`${hCls} resize-none`} placeholder="VD: ATAS 1 sân khấu, Back 50m², Sảnh 18h–22h..." /></HField>
+                    </div>
+                  )}
+                  {handover.event_team_building && (
+                    <div className="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                      <p className="text-xs font-bold text-blue-700 mb-2">Chi tiết Team building</p>
+                      <HField label="Số game / Kịch bản / Thời gian tổ chức"><textarea value={handover.team_building_details} onChange={e => setHandover(f => ({...f, team_building_details: e.target.value}))} rows={2} className={`${hCls} resize-none`} placeholder="VD: 5 game, kịch bản Biệt đội hành động, 14h–17h ngày 2..." /></HField>
+                    </div>
+                  )}
                   <div className="mt-3">
-                    <HField label="Dịch vụ khác (tàu, thuyền, hoạt động...)"><textarea value={handover.other_services} onChange={e => setHandover(f => ({...f, other_services: e.target.value}))} rows={2} className={`${hCls} resize-none`} placeholder="..." /></HField>
+                    <HField label="Lưu ý / chi tiết khác"><input value={handover.event_details} onChange={e => setHandover(f => ({...f, event_details: e.target.value}))} className={hCls} placeholder="Mô tả..." /></HField>
                   </div>
+                </HSection>
+
+                <HSection label="Dịch vụ khác">
+                  <HField label="Tàu / thuyền / hoạt động thêm"><textarea value={handover.other_services} onChange={e => setHandover(f => ({...f, other_services: e.target.value}))} rows={2} className={`${hCls} resize-none`} placeholder="..." /></HField>
                 </HSection>
 
                 <div className="flex justify-end pt-2">
