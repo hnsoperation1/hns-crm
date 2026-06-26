@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones, Star, Building, Inbox, Loader2, CheckCircle2 } from 'lucide-react'
+import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones, Star, Building, Inbox, Loader2, CheckCircle2, Heart } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/contexts/auth'
 import { getInitials } from '@/lib/utils'
@@ -85,7 +85,7 @@ export default function Sidebar() {
       <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
         {navItems
           .filter(item => !(item.href === '/giao-viec' && user?.is_sale_tv))
-          .filter(item => !(user?.role === 'cskh' && ['/cong-viec', '/giao-viec', '/nhan-vien'].includes(item.href)))
+          .filter(item => !(user?.role === 'cskh' && ['/giao-viec', '/nhan-vien'].includes(item.href)))
           .map(item => <NavLink key={item.href} {...item} />)}
 
         {/* Đơn hàng section */}
@@ -106,6 +106,7 @@ export default function Sidebar() {
             </p>
             <NavLink href="/cskh" label="Issues" icon={Headphones} />
             <NavLink href="/danh-gia" label="Đánh giá KH" icon={Star} />
+            <NavLink href="/the-cham-soc" label="Thẻ chăm sóc" icon={Heart} />
           </div>
         )}
 

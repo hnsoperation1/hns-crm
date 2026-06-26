@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import { Star, ThumbsUp, ThumbsDown, Search, ExternalLink, X, MapPin, Users, Link2, CheckSquare, LayoutGrid, BarChart2, List, Table2, ChevronUp, ChevronDown, ChevronsUpDown, Maximize2, Minimize2 } from 'lucide-react'
+import { Star, ThumbsUp, ThumbsDown, Search, ExternalLink, X, MapPin, Users, Link2, CheckSquare, LayoutGrid, BarChart2, List, Table2, ChevronUp, ChevronDown, ChevronsUpDown, Maximize2, Minimize2, Heart, Send } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
@@ -94,9 +94,10 @@ function StarRow({ label, value }: { label: string; value: string | null }) {
 
 type SelectedList = { title: string; entries: FeedbackRow[] } | null
 
-function CustomerList({ data, onClose, onExpand, expandedId }: {
+function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard }: {
   data: SelectedList; onClose: () => void
   onExpand: (f: FeedbackRow) => void; expandedId: string | null
+  onCreateCard: (f: FeedbackRow) => void
 }) {
   if (!data) return (
     <div className="flex-1 flex flex-col items-center justify-center text-center py-16 text-gray-300">
@@ -118,18 +119,24 @@ function CustomerList({ data, onClose, onExpand, expandedId }: {
           <div key={i} onClick={() => onExpand(f)}
             className={`px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 ${expandedId === f.id ? 'bg-brand-50 border-l-2 border-brand-500' : ''}`}>
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="font-semibold text-sm text-gray-900">{f.respondent_name ?? '—'}</p>
                 {f.phone && <p className="text-xs text-gray-500 mt-0.5">SĐT: {f.phone}</p>}
                 {f.group_name && <p className="text-xs text-gray-400 mt-0.5 truncate">Đoàn: {f.group_name}</p>}
                 {f.overall_comment && <p className="text-xs text-gray-500 mt-1 italic line-clamp-2">Đánh giá chung: "{f.overall_comment}"</p>}
               </div>
-              {f.opportunity_id && (
-                <Link href={`/don-hang/${f.opportunity_id}`} onClick={e => e.stopPropagation()}
-                  className="flex-shrink-0 text-xs text-brand-600 hover:underline flex items-center gap-0.5 mt-0.5">
-                  <ExternalLink size={11} /> Đơn
-                </Link>
-              )}
+              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                {f.opportunity_id && (
+                  <Link href={`/don-hang/${f.opportunity_id}`} onClick={e => e.stopPropagation()}
+                    className="text-xs text-brand-600 hover:underline flex items-center gap-0.5">
+                    <ExternalLink size={11} /> Đơn
+                  </Link>
+                )}
+                <button onClick={e => { e.stopPropagation(); onCreateCard(f) }}
+                  className="flex items-center gap-0.5 text-[11px] text-pink-500 hover:text-pink-700 font-medium transition-colors">
+                  <Heart size={11} /> Tạo thẻ CS
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -173,6 +180,11 @@ export default function DanhGiaPage() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [selected, setSelected] = useState<SelectedList>(null)
   const [expandedFeedback, setExpandedFeedback] = useState<FeedbackRow | null>(null)
+  const [createCardModal, setCreateCardModal] = useState<FeedbackRow | null>(null)
+  const [newCardContent, setNewCardContent] = useState('')
+  const [newCardDate, setNewCardDate] = useState('')
+  const [creatingCard, setCreatingCard] = useState(false)
+  const [cardCreated, setCardCreated] = useState(false)
   const [filterHasOpp, setFilterHasOpp] = useState(false)
   const [filterNoOpp, setFilterNoOpp] = useState(true)
   // multi-select + link to opportunity
@@ -368,6 +380,29 @@ export default function DanhGiaPage() {
   function handleDestClick(entry: { name: string }) {
     const matches = dateFiltered.filter(f => f.next_destination?.trim() === entry.name)
     setSelected({ title: `Quan tâm · ${entry.name}`, entries: matches })
+  }
+
+  async function createCareCard() {
+    if (!createCardModal || !newCardContent.trim()) return
+    setCreatingCard(true)
+    await createClient().from('care_cards').insert({
+      feedback_id: createCardModal.id,
+      opportunity_id: createCardModal.opportunity_id ?? null,
+      assigned_to: currentUser?.id,
+      created_by: currentUser?.id,
+      customer_name: createCardModal.respondent_name,
+      customer_phone: createCardModal.phone,
+      content: newCardContent.trim(),
+      contact_date: newCardDate || null,
+    })
+    setCreatingCard(false)
+    setCardCreated(true)
+    setTimeout(() => {
+      setCreateCardModal(null)
+      setNewCardContent('')
+      setNewCardDate('')
+      setCardCreated(false)
+    }, 1200)
   }
 
   const listFiltered = dateFiltered.filter(f => {
@@ -695,6 +730,10 @@ export default function DanhGiaPage() {
                               <ExternalLink size={11} /> Đơn
                             </Link>
                           )}
+                          <button onClick={() => setCreateCardModal(f)}
+                            className="flex items-center gap-0.5 text-[11px] text-pink-500 hover:text-pink-700 font-semibold px-2 py-1 rounded-lg hover:bg-pink-50 transition-colors">
+                            <Heart size={11} /> Tạo thẻ CS
+                          </button>
                           <button onClick={() => setExpanded(null)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"><X size={14} /></button>
                         </div>
                       </div>
@@ -801,7 +840,7 @@ export default function DanhGiaPage() {
             </div>
             {/* List panel */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-              <CustomerList data={selected} onClose={() => setSelected(null)} onExpand={f => setExpandedFeedback(prev => prev?.id === f.id ? null : f)} expandedId={expandedFeedback?.id ?? null} />
+              <CustomerList data={selected} onClose={() => setSelected(null)} onExpand={f => setExpandedFeedback(prev => prev?.id === f.id ? null : f)} expandedId={expandedFeedback?.id ?? null} onCreateCard={setCreateCardModal} />
             </div>
           </div>
         )}
@@ -892,7 +931,7 @@ export default function DanhGiaPage() {
 
             {/* List panel */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-              <CustomerList data={selected} onClose={() => setSelected(null)} onExpand={f => setExpandedFeedback(prev => prev?.id === f.id ? null : f)} expandedId={expandedFeedback?.id ?? null} />
+              <CustomerList data={selected} onClose={() => setSelected(null)} onExpand={f => setExpandedFeedback(prev => prev?.id === f.id ? null : f)} expandedId={expandedFeedback?.id ?? null} onCreateCard={setCreateCardModal} />
             </div>
           </div>
         )}
@@ -1095,6 +1134,10 @@ export default function DanhGiaPage() {
                   <ExternalLink size={11} /> Đơn
                 </Link>
               )}
+              <button onClick={() => setCreateCardModal(expandedFeedback)}
+                className="flex items-center gap-0.5 text-[11px] text-pink-500 hover:text-pink-700 font-semibold px-2 py-1 rounded-lg hover:bg-pink-50 transition-colors">
+                <Heart size={11} /> Tạo thẻ CS
+              </button>
               <button onClick={() => setExpandedFeedback(null)} className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"><X size={14} /></button>
             </div>
           </div>
@@ -1232,6 +1275,58 @@ export default function DanhGiaPage() {
             {linking && (
               <div className="px-5 py-3 bg-brand-50 border-t border-brand-100 text-xs text-brand-700 font-medium text-center">Đang lưu...</div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal tạo thẻ chăm sóc */}
+      {createCardModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={() => { if (!creatingCard) setCreateCardModal(null) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Heart size={16} className="text-pink-500" />
+                <p className="font-bold text-gray-900 text-sm">Tạo thẻ chăm sóc</p>
+              </div>
+              <button onClick={() => setCreateCardModal(null)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 transition-colors"><X size={16} /></button>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              {/* Khách hàng */}
+              <div className="flex items-center gap-3 bg-pink-50 rounded-xl px-3 py-2.5">
+                <div className="w-8 h-8 rounded-full bg-pink-200 flex items-center justify-center text-xs font-bold text-pink-700 flex-shrink-0">
+                  {(createCardModal.respondent_name ?? '?').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{createCardModal.respondent_name ?? '—'}</p>
+                  {createCardModal.phone && <p className="text-xs text-gray-500">{createCardModal.phone}</p>}
+                  {createCardModal.group_name && <p className="text-xs text-gray-400">Đoàn: {createCardModal.group_name}</p>}
+                </div>
+              </div>
+              {/* Nội dung */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Nội dung chăm sóc <span className="text-red-400">*</span></label>
+                <textarea value={newCardContent} onChange={e => setNewCardContent(e.target.value)} rows={3}
+                  placeholder="VD: Tư vấn tour Hạ Long 3N2Đ, giới thiệu gói mới..."
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 resize-none" />
+              </div>
+              {/* Ngày dự kiến */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Thời gian dự kiến liên hệ</label>
+                <DateInput value={newCardDate} onChange={setNewCardDate} />
+              </div>
+            </div>
+            <div className="px-5 pb-5 flex gap-2">
+              <button onClick={() => setCreateCardModal(null)} disabled={creatingCard}
+                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                Hủy
+              </button>
+              <button onClick={createCareCard} disabled={creatingCard || !newCardContent.trim()}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50 ${cardCreated ? 'bg-emerald-500' : 'bg-pink-500 hover:bg-pink-600'}`}>
+                {creatingCard ? <><Send size={14} className="animate-pulse" /> Đang tạo...</>
+                  : cardCreated ? '✓ Đã tạo!'
+                  : <><Heart size={14} /> Tạo thẻ chăm sóc</>}
+              </button>
+            </div>
           </div>
         </div>
       )}
