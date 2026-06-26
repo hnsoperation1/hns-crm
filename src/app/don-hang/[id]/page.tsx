@@ -7,7 +7,7 @@ import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2,
   MessageSquare, Plus, CheckSquare, Square,
   Clock, CalendarDays, DollarSign, User, Pencil, CheckCircle2, X,
-  ClipboardList, UserPlus, Loader2, FileText, Save,
+  ClipboardList, UserPlus, Loader2, FileText, Save, Eye, Printer,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -124,6 +124,7 @@ export default function OppDetailPage() {
   const [handoverLoaded, setHandoverLoaded] = useState(false)
   const [savingHandover, setSavingHandover] = useState(false)
   const [handoverSaved, setHandoverSaved] = useState(false)
+  const [showHandoverPreview, setShowHandoverPreview] = useState(false)
   const [taskDone, setTaskDone] = useState<Record<string, boolean>>({})
   const [addedTasks, setAddedTasks] = useState<{ id: string; title: string; due_date: string; assigned_to: string }[]>([])
   const [showNewTask, setShowNewTask] = useState(false)
@@ -499,11 +500,17 @@ export default function OppDetailPage() {
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
                 <h3 className="font-semibold text-gray-900 text-sm">Phiếu bàn giao điều hành</h3>
-                <button onClick={saveHandover} disabled={savingHandover}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors">
-                  {savingHandover ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
-                  {handoverSaved ? 'Đã lưu ✓' : 'Lưu'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowHandoverPreview(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-colors">
+                    <Eye size={12} /> Xem phiếu
+                  </button>
+                  <button onClick={saveHandover} disabled={savingHandover}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors">
+                    {savingHandover ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                    {handoverSaved ? 'Đã lưu ✓' : 'Lưu'}
+                  </button>
+                </div>
               </div>
               {!handoverLoaded ? (
                 <div className="p-8 flex justify-center"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
@@ -1187,6 +1194,172 @@ export default function OppDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ══ MODAL XEM PHIẾU BÀN GIAO ══ */}
+      {showHandoverPreview && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 overflow-y-auto py-8 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl">
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 print:hidden">
+              <h2 className="font-bold text-gray-900">Xem phiếu bàn giao điều hành</h2>
+              <div className="flex items-center gap-2">
+                <button onClick={() => window.print()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                  <Printer size={13} /> In / Xuất PDF
+                </button>
+                <button onClick={() => setShowHandoverPreview(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Phiếu */}
+            <div id="handover-print" className="p-8 space-y-5 text-sm text-gray-800">
+              {/* Tiêu đề */}
+              <div className="text-center border-b-2 border-gray-800 pb-4">
+                <div className="font-black text-xl uppercase tracking-wide">HNS TRAVEL</div>
+                <div className="font-bold text-base mt-1">PHIẾU BÀN GIAO ĐIỀU HÀNH</div>
+                {handover.ma_doan && <div className="text-xs text-gray-500 mt-1">Mã đoàn: {handover.ma_doan}</div>}
+              </div>
+
+              {/* Thông tin chung */}
+              <PRow2 a={['Tên đoàn', opp.title]} b={['Trạng thái', handover.status === 'confirmed' ? 'Đã xác nhận' : handover.status === 'pending' ? 'Chờ xác nhận' : '—']} />
+              <PRow2 a={['Giá bán', handover.sale_price ? formatVND(Number(handover.sale_price)) : '—']} b={['COM', handover.commission ? formatVND(Number(handover.commission)) : '—']} />
+              <PRow2 a={['VAT', handover.vat_required ? 'Có xuất VAT' : 'Không xuất VAT']} b={['Ngày đi – về', handover.trip_date_range || '—']} />
+
+              <div className="border-t border-gray-200 pt-4">
+                <PSectionTitle>Số lượng khách</PSectionTitle>
+                <PRow3
+                  a={['Người lớn', handover.pax_adults || '—']}
+                  b={['Trẻ em dưới 5t', handover.pax_children_under5 || '—']}
+                  c={['Trẻ em 5–10t', handover.pax_children_5to10 || '—']}
+                />
+              </div>
+
+              <div className="border-t border-gray-200 pt-4">
+                <PSectionTitle>Trưởng đoàn</PSectionTitle>
+                <PRow3
+                  a={['Họ tên', handover.group_leader_name || '—']}
+                  b={['SĐT', handover.group_leader_phone || '—']}
+                  c={['Email', handover.group_leader_email || '—']}
+                />
+              </div>
+
+              {handoverPickupPoints.length > 0 && (
+                <div className="border-t border-gray-200 pt-4">
+                  <PSectionTitle>Điểm đón</PSectionTitle>
+                  {handover.pickup_time && <PField label="Thời gian đón" value={handover.pickup_time} />}
+                  <table className="w-full mt-2 text-xs border border-gray-200">
+                    <thead><tr className="bg-gray-50"><th className="px-3 py-2 text-left border-b border-gray-200 font-semibold">Điểm</th><th className="px-3 py-2 text-left border-b border-gray-200 font-semibold">Địa chỉ</th><th className="px-3 py-2 text-right border-b border-gray-200 font-semibold">Số người</th></tr></thead>
+                    <tbody>{handoverPickupPoints.map((p, i) => (
+                      <tr key={i} className="border-b border-gray-100 last:border-0">
+                        <td className="px-3 py-1.5 font-semibold text-gray-500">Điểm {i+1}</td>
+                        <td className="px-3 py-1.5">{p.address || '—'}</td>
+                        <td className="px-3 py-1.5 text-right">{p.count || '—'}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="border-t border-gray-200 pt-4">
+                <PSectionTitle>Khách sạn</PSectionTitle>
+                <PRow2 a={['Tên KS', handover.hotel_name || '—']} b={['Hạng', handover.hotel_stars ? `${handover.hotel_stars} sao` : '—']} />
+                <PRow3 a={['Tổng phòng', handover.hotel_room_count || '—']} b={['Người/phòng', handover.hotel_persons_per_room || '—']} c={['Loại phòng', handover.hotel_room_details || '—']} />
+                {handover.hotel_vip_rooms && <PField label="Phòng VIP" value={handover.hotel_vip_rooms} />}
+              </div>
+
+              <div className="border-t border-gray-200 pt-4">
+                <PSectionTitle>Vận chuyển</PSectionTitle>
+                <PRow3 a={['Loại xe', handover.transport_car_type || '—']} b={['Số lượng', handover.transport_car_count || '—']} c={['NCC xe', handover.car_supplier || '—']} />
+                {(handover.flight_depart_time || handover.flight_return_time) && (
+                  <PRow2 a={['Bay đi', handover.flight_depart_time || '—']} b={['Bay về', handover.flight_return_time || '—']} />
+                )}
+              </div>
+
+              {mealsSchedule.length > 0 && (
+                <div className="border-t border-gray-200 pt-4">
+                  <PSectionTitle>Bữa ăn</PSectionTitle>
+                  {handover.meals_main_price && <PField label="Giá tiêu chuẩn / bữa" value={formatVND(Number(handover.meals_main_price))} />}
+                  {handover.meals_breakfast && <PField label="Ăn sáng" value="Có" />}
+                  <table className="w-full mt-2 text-xs border border-gray-200">
+                    <thead><tr className="bg-gray-50">
+                      <th className="px-3 py-2 text-left border-b border-gray-200 font-semibold">Ngày</th>
+                      <th className="px-3 py-2 text-left border-b border-gray-200 font-semibold">Bữa</th>
+                      <th className="px-3 py-2 text-left border-b border-gray-200 font-semibold">Thực đơn</th>
+                      <th className="px-3 py-2 text-left border-b border-gray-200 font-semibold">Nhà hàng</th>
+                    </tr></thead>
+                    <tbody>{mealsSchedule.map((r, i) => (
+                      <tr key={i} className="border-b border-gray-100 last:border-0">
+                        <td className="px-3 py-1.5 text-gray-500">Ngày {r.day}</td>
+                        <td className="px-3 py-1.5 font-semibold">{r.meal}</td>
+                        <td className="px-3 py-1.5">{r.menu || '—'}</td>
+                        <td className="px-3 py-1.5">{r.restaurant || '—'}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="border-t border-gray-200 pt-4">
+                <PSectionTitle>Hướng dẫn viên / MC</PSectionTitle>
+                <PRow3 a={['Tên HDV/MC', handover.guide_name || '—']} b={['SĐT', handover.guide_phone || '—']} c={['Giới tính', handover.guide_gender === 'male' ? 'Nam' : handover.guide_gender === 'female' ? 'Nữ' : 'Không yêu cầu']} />
+                {handover.guide_requirements && <PField label="Yêu cầu thêm" value={handover.guide_requirements} />}
+              </div>
+
+              {handover.tickets_details && (
+                <div className="border-t border-gray-200 pt-4">
+                  <PSectionTitle>Vé tham quan</PSectionTitle>
+                  <div className="text-sm whitespace-pre-wrap">{handover.tickets_details}</div>
+                </div>
+              )}
+
+              {(handover.event_gala || handover.event_team_building || handover.event_meeting || handover.event_birthday || handover.event_anniversary) && (
+                <div className="border-t border-gray-200 pt-4">
+                  <PSectionTitle>Sự kiện đặc biệt</PSectionTitle>
+                  <div className="flex gap-2 flex-wrap mb-2">
+                    {handover.event_gala && <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-semibold">Gala dinner</span>}
+                    {handover.event_team_building && <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-semibold">Team building</span>}
+                    {handover.event_meeting && <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-semibold">Hội họp</span>}
+                    {handover.event_birthday && <span className="px-2 py-0.5 bg-pink-100 text-pink-700 rounded text-xs font-semibold">Sinh nhật</span>}
+                    {handover.event_anniversary && <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-semibold">Kỷ niệm</span>}
+                  </div>
+                  {handover.gala_location && <PField label="Địa điểm Gala" value={handover.gala_location} />}
+                  {handover.gala_details && <PField label="Gala bao gồm" value={handover.gala_details} />}
+                  {handover.team_building_details && <PField label="Team building" value={handover.team_building_details} />}
+                  {handover.event_details && <PField label="Lưu ý" value={handover.event_details} />}
+                </div>
+              )}
+
+              {handover.itinerary && (
+                <div className="border-t border-gray-200 pt-4">
+                  <PSectionTitle>Lịch trình xác nhận</PSectionTitle>
+                  <div className="text-sm whitespace-pre-wrap bg-gray-50 rounded-xl p-3">{handover.itinerary}</div>
+                </div>
+              )}
+
+              {handover.other_services && (
+                <div className="border-t border-gray-200 pt-4">
+                  <PSectionTitle>Dịch vụ khác</PSectionTitle>
+                  <div className="text-sm whitespace-pre-wrap">{handover.other_services}</div>
+                </div>
+              )}
+
+              {/* Ký tên */}
+              <div className="border-t-2 border-gray-800 pt-6 mt-6 grid grid-cols-2 gap-8 text-center text-xs">
+                <div>
+                  <p className="font-semibold mb-12">Sale phụ trách</p>
+                  <p className="font-semibold">{opp.assigned_user?.full_name ?? '_______________'}</p>
+                </div>
+                <div>
+                  <p className="font-semibold mb-12">Điều hành xác nhận</p>
+                  <p className="font-semibold">_______________</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1221,6 +1394,36 @@ function HField({ label, children }: { label: string; children: React.ReactNode 
     <div>
       {label && <label className="block text-xs text-gray-500 mb-1">{label}</label>}
       {children}
+    </div>
+  )
+}
+
+// ── Print helpers ──────────────────────────────────────────────────────────────
+function PSectionTitle({ children }: { children: React.ReactNode }) {
+  return <div className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">{children}</div>
+}
+function PField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex gap-2 mb-1">
+      <span className="text-gray-500 w-36 flex-shrink-0">{label}:</span>
+      <span className="font-medium">{value}</span>
+    </div>
+  )
+}
+function PRow2({ a, b }: { a: [string, string]; b: [string, string] }) {
+  return (
+    <div className="grid grid-cols-2 gap-4 mb-1">
+      <PField label={a[0]} value={a[1]} />
+      <PField label={b[0]} value={b[1]} />
+    </div>
+  )
+}
+function PRow3({ a, b, c }: { a: [string, string]; b: [string, string]; c: [string, string] }) {
+  return (
+    <div className="grid grid-cols-3 gap-3 mb-1">
+      <PField label={a[0]} value={a[1]} />
+      <PField label={b[0]} value={b[1]} />
+      <PField label={c[0]} value={c[1]} />
     </div>
   )
 }
