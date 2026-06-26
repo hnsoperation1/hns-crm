@@ -19,6 +19,7 @@ export default function DateInput({ value, onChange, className = '', placeholder
 
   const [open, setOpen]           = useState(false)
   const [alignRight, setAlignRight] = useState(false)
+  const [openUp, setOpenUp]       = useState(false)
   const [viewYear, setViewYear]   = useState(initYear)
   const [viewMonth, setViewMonth] = useState(initMonth)
   const ref = useRef<HTMLDivElement>(null)
@@ -81,6 +82,7 @@ export default function DateInput({ value, onChange, className = '', placeholder
           if (!open && ref.current) {
             const rect = ref.current.getBoundingClientRect()
             setAlignRight(rect.left + 256 > window.innerWidth - 16)
+            setOpenUp(window.innerHeight - rect.bottom < 300)
           }
           setOpen(o => !o)
         }}
@@ -93,7 +95,7 @@ export default function DateInput({ value, onChange, className = '', placeholder
 
       {/* Popup */}
       {open && (
-        <div className={`absolute top-full mt-2 z-[200] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden w-64 ${alignRight ? 'right-0' : 'left-0'}`}>
+        <div className={`absolute z-[200] bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden w-64 ${openUp ? 'bottom-full mb-2' : 'top-full mt-2'} ${alignRight ? 'right-0' : 'left-0'}`}>
           {/* Header gradient */}
           <div className="bg-gradient-to-br from-brand-600 to-brand-800 px-3 py-3">
             <div className="flex items-center justify-between">
