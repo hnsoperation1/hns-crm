@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones, Star, Building, Inbox, Loader2, CheckCircle2, Heart, Trash2 } from 'lucide-react'
+import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones, Star, Building, Inbox, Loader2, CheckCircle2, Heart, Trash2, BookUser } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/contexts/auth'
 import { getInitials } from '@/lib/utils'
@@ -93,6 +93,7 @@ export default function Sidebar() {
           <p className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1.5" style={{ color: '#4a8fa8' }}>
             Đơn hàng
           </p>
+          <NavLink href="/don-hang-cua-toi" label="Đơn hàng của tôi" icon={BookUser} />
           <NavLink href="/don-hang-moi" label="Đơn hàng mới" icon={Inbox} />
           <NavLink href="/don-hang" label="Đang thực hiện" icon={Loader2} />
           <NavLink href="/don-hang-da-xong" label="Đã xong" icon={CheckCircle2} />
