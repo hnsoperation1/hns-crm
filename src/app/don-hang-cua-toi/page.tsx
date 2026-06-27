@@ -74,16 +74,23 @@ export default function DonHangCuaToiPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadData])
 
-  // Default: show orders relevant to current user
+  // Default: hiện đơn tôi tạo HOẶC tôi được assign
   useEffect(() => {
-    if (user) setFilterSaleTV(user.id)
+    if (user) {
+      setFilterSaleTV(user.id)
+      setFilterCreator(user.id)
+    }
   }, [user?.id])
 
   const filtered = rows.filter(r => {
     if (filterStage !== 'all' && r.stage !== filterStage) return false
     if (filterSource && r.source !== filterSource) return false
-    if (filterSaleTV && r.assigned_user?.id !== filterSaleTV) return false
-    if (filterCreator && r.creator?.id !== filterCreator) return false
+    // Sale TV và Người tạo dùng OR khi cả hai đều set
+    if (filterSaleTV || filterCreator) {
+      const matchSale = filterSaleTV ? r.assigned_user?.id === filterSaleTV : false
+      const matchCreator = filterCreator ? r.creator?.id === filterCreator : false
+      if (!matchSale && !matchCreator) return false
+    }
     return true
   })
 
@@ -135,10 +142,14 @@ export default function DonHangCuaToiPage() {
             {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
           </select>
 
+          <button onClick={() => { setFilterSaleTV(user?.id ?? ''); setFilterCreator(user?.id ?? '') }}
+            className="text-xs text-brand-600 hover:text-brand-800 px-2 py-1.5 rounded-lg hover:bg-brand-50 transition-colors font-semibold">
+            Của tôi
+          </button>
           {hasFilter && (
             <button onClick={() => { setFilterStage('all'); setFilterSource(''); setFilterSaleTV(''); setFilterCreator('') }}
               className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-              Xóa bộ lọc
+              Tất cả
             </button>
           )}
 
