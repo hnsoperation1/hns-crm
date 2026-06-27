@@ -43,6 +43,7 @@ export default function DonHangCuaToiPage() {
   const [filterSource, setFilterSource] = useState<string>('')
   const [filterSaleTV, setFilterSaleTV] = useState<string>('')
   const [filterCreator, setFilterCreator] = useState<string>('')
+  const [search, setSearch] = useState('')
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -78,16 +79,21 @@ export default function DonHangCuaToiPage() {
   const filtered = rows.filter(r => {
     if (filterStage !== 'all' && r.stage !== filterStage) return false
     if (filterSource && r.source !== filterSource) return false
-    // Sale TV và Người tạo dùng OR khi cả hai đều set
     if (filterSaleTV || filterCreator) {
       const matchSale = filterSaleTV ? r.assigned_user?.id === filterSaleTV : false
       const matchCreator = filterCreator ? r.creator?.id === filterCreator : false
       if (!matchSale && !matchCreator) return false
     }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      const inTitle = r.title.toLowerCase().includes(q)
+      const inContact = r.contact?.name?.toLowerCase().includes(q) || r.contact?.company?.toLowerCase().includes(q)
+      if (!inTitle && !inContact) return false
+    }
     return true
   })
 
-  const hasFilter = filterStage !== 'all' || filterSource || filterSaleTV || filterCreator
+  const hasFilter = filterStage !== 'all' || filterSource || filterSaleTV || filterCreator || search
 
   const cols = ['Đơn hàng', 'Giai đoạn', 'Nguồn', 'Điểm đến', 'Ngày đi', 'Ngày về', 'Còn lại', 'Giá trị']
 
@@ -114,6 +120,13 @@ export default function DonHangCuaToiPage() {
 
         {/* Dropdowns */}
         <div className="flex items-center gap-2 flex-wrap">
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Tìm tên đơn, khách hàng..."
+            className="text-xs border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-400 min-w-[220px]"
+          />
           {/* Nguồn */}
           <select value={filterSource} onChange={e => setFilterSource(e.target.value)}
             className="text-xs border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-400 min-w-[130px]">
@@ -136,7 +149,7 @@ export default function DonHangCuaToiPage() {
           </select>
 
           {hasFilter && (
-            <button onClick={() => { setFilterStage('all'); setFilterSource(''); setFilterSaleTV(''); setFilterCreator('') }}
+            <button onClick={() => { setFilterStage('all'); setFilterSource(''); setFilterSaleTV(''); setFilterCreator(''); setSearch('') }}
               className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
               Xóa bộ lọc
             </button>
