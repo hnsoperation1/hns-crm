@@ -106,8 +106,8 @@ export default function Sidebar() {
               CSKH
             </p>
             <NavLink href="/cskh" label="Issues" icon={Headphones} />
-            <NavLink href="/danh-gia" label="Đánh giá KH" icon={Star} />
-            <NavLink href="/the-cham-soc" label="Thẻ chăm sóc" icon={Heart} />
+            <NavLink href="/danh-gia" label="Đánh giá của KH" icon={Star} />
+            <NavLink href="/the-cham-soc" label="Thẻ CSKH" icon={Heart} />
           </div>
         )}
 
