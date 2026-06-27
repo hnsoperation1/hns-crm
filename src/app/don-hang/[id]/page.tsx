@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2,
@@ -49,6 +49,10 @@ const LOG_FILTERS: { key: LogFilter; label: string }[] = [
 export default function OppDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const fromMyOrders = searchParams.get('from') === 'don-hang-cua-toi'
+  const backHref = fromMyOrders ? '/don-hang-cua-toi' : '/don-hang'
+  const backLabel = fromMyOrders ? 'Đơn hàng của tôi' : 'Đơn hàng'
   const supabase = createClient()
   const { user: currentUser } = useAuth()
   const isSaleTV = currentUser?.is_sale_tv === true
@@ -428,7 +432,6 @@ export default function OppDetailPage() {
       next_step: newLogNextStep.trim() || null,
       next_step_due: newLogNextDue || null,
       stage_at_log: opp.stage,
-      created_by: currentUser?.id,
     }).select('*, user:users(id,full_name)').single()
     if (inserted) {
       setAllLogs(prev => [inserted as LogDetail, ...prev])
@@ -475,7 +478,7 @@ export default function OppDetailPage() {
       <div className="p-12 text-center">
         <div className="text-5xl mb-4">🔍</div>
         <div className="text-lg font-semibold text-gray-700 mb-2">Không tìm thấy đơn hàng</div>
-        <Link href="/don-hang" className="text-accent-500 hover:underline text-sm">← Quay lại Đơn hàng</Link>
+        <Link href={backHref} className="text-accent-500 hover:underline text-sm">← Quay lại {backLabel}</Link>
       </div>
     )
   }
@@ -523,13 +526,13 @@ export default function OppDetailPage() {
         <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-3">
           <Link href="/" className="hover:text-gray-600">Tổng quan</Link>
           <span>/</span>
-          <Link href="/don-hang" className="hover:text-gray-600">Đơn hàng</Link>
+          <Link href={backHref} className="hover:text-gray-600">{backLabel}</Link>
           <span>/</span>
           <span className="text-gray-700 font-medium truncate">{opp.title}</span>
         </div>
 
         <div className="flex items-start gap-3">
-          <Link href="/don-hang" className="mt-1 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors flex-shrink-0">
+          <Link href={backHref} className="mt-1 p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors flex-shrink-0">
             <ArrowLeft size={18} />
           </Link>
           <div className="flex-1 min-w-0">

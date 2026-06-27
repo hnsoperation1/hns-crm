@@ -39,7 +39,7 @@ const ORG_TYPE_LABELS: Record<OrgType, string> = {
 }
 
 const EMPTY_CONTACT_FORM = {
-  name: '', phone: '', email: '',
+  name: '', phone: '', email: '', job_title: '',
   company: '', tax_code: '', city: '', company_address: '',
   source: 'test' as LeadSource, lead_score: 'new' as LeadScore,
   destination: '', departure_date: '', return_date: '', opp_title: '',
@@ -242,6 +242,7 @@ function ContactsTab() {
           tax_code: taxCode || null,
           phone: form.phone.trim() || null,
           email: form.email.trim() || null,
+          job_title: form.job_title.trim() || null,
           source: form.source,
           lead_score: form.lead_score,
           organization_ids: orgId ? [orgId] : [],
@@ -361,6 +362,7 @@ function ContactsTab() {
                       </div>
                       <div>
                         <div className="font-semibold text-gray-900 group-hover/name:text-brand-600 transition-colors">{contact.name}</div>
+                        {(contact as any).job_title && <div className="text-xs text-brand-600 font-medium">{(contact as any).job_title}</div>}
                         {contact.company && <div className="text-xs text-gray-400">{contact.company}</div>}
                       </div>
                     </Link>
@@ -427,6 +429,11 @@ function ContactsTab() {
                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inputCls()} />
                 </Field>
               </div>
+
+              <Field label="Chức vụ">
+                <input type="text" placeholder="VD: Trưởng phòng hành chính, Giám đốc..." value={form.job_title}
+                  onChange={e => setForm(f => ({ ...f, job_title: e.target.value }))} className={inputCls()} />
+              </Field>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
