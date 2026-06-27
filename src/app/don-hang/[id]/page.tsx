@@ -10,6 +10,7 @@ import {
   ClipboardList, UserPlus, Loader2, FileText, Save, Eye, Printer, Trash2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import DateInput from '@/components/DateInput'
 import {
   STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS,
   formatVND, formatDate, getInitials, daysSince, daysUntil,
@@ -35,11 +36,12 @@ type LogDetail = ActivityLog & {
 
 const PIPELINE: OppStage[] = ['stage_1', 'stage_2', 'stage_3', 'stage_4', 'stage_5']
 
-type LogFilter = 'all' | 'stage_change' | 'sale_update'
+type LogFilter = 'all' | 'stage_change' | 'sale_update' | 'note'
 const LOG_FILTERS: { key: LogFilter; label: string }[] = [
   { key: 'all', label: 'Tất cả' },
   { key: 'stage_change', label: 'Chuyển giai đoạn' },
   { key: 'sale_update', label: 'Cập nhật sale' },
+  { key: 'note', label: 'Ghi chú' },
 ]
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -160,6 +162,14 @@ export default function OppDetailPage() {
   const [newTask, setNewTask] = useState({ title: '', due_date: '', assigned_to: '' })
   const [advancingStage, setAdvancingStage] = useState(false)
   const [markingLost, setMarkingLost] = useState(false)
+
+  // Add log form
+  const [newLogText, setNewLogText] = useState('')
+  const [newLogDate, setNewLogDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [newLogType, setNewLogType] = useState<'sale_update' | 'note'>('sale_update')
+  const [newLogNextStep, setNewLogNextStep] = useState('')
+  const [newLogNextDue, setNewLogNextDue] = useState('')
+  const [submittingLog, setSubmittingLog] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -404,6 +414,31 @@ export default function OppDetailPage() {
     } else {
       setOpp(o => o ? { ...o, stage: nextStage as OppStage, stage_updated_at: new Date().toISOString() } : o)
     }
+  }
+
+  async function saveLog() {
+    if (!opp || !newLogText.trim() || submittingLog) return
+    setSubmittingLog(true)
+    const { data: inserted } = await supabase.from('activity_logs').insert({
+      opportunity_id: id,
+      user_id: currentUser?.id,
+      log_type: newLogType,
+      log_date: newLogDate || new Date().toISOString().slice(0, 10),
+      description: newLogText.trim(),
+      next_step: newLogNextStep.trim() || null,
+      next_step_due: newLogNextDue || null,
+      stage_at_log: opp.stage,
+      created_by: currentUser?.id,
+    }).select('*, user:users(id,full_name)').single()
+    if (inserted) {
+      setAllLogs(prev => [inserted as LogDetail, ...prev])
+      setNewLogText('')
+      setNewLogNextStep('')
+      setNewLogNextDue('')
+      setNewLogDate(new Date().toISOString().slice(0, 10))
+      setNewLogType('sale_update')
+    }
+    setSubmittingLog(false)
   }
 
   async function deleteOpp() {
@@ -1135,20 +1170,43 @@ export default function OppDetailPage() {
                   Thêm log hoạt động
                 </div>
                 <textarea
+                  value={newLogText}
+                  onChange={e => setNewLogText(e.target.value)}
                   className="w-full text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white placeholder-gray-400 shadow-sm"
                   placeholder="Ghi lại kết quả cuộc gọi, thông tin mới từ khách, vấn đề phát sinh..."
                   rows={3}
                 />
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    value={newLogNextStep}
+                    onChange={e => setNewLogNextStep(e.target.value)}
+                    placeholder="Bước tiếp theo (tuỳ chọn)..."
+                    className="flex-1 text-sm border border-amber-200 bg-amber-50 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-300 placeholder-amber-300"
+                  />
+                  {newLogNextStep && (
+                    <div className="w-40">
+                      <DateInput value={newLogNextDue} onChange={setNewLogNextDue} placeholder="Hạn chót" />
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-center justify-between mt-3 gap-2 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <input type="date" className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white shadow-sm" />
-                    <select className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-600 shadow-sm">
+                    <div className="w-40">
+                      <DateInput value={newLogDate} onChange={setNewLogDate} />
+                    </div>
+                    <select
+                      value={newLogType}
+                      onChange={e => setNewLogType(e.target.value as 'sale_update' | 'note')}
+                      className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-600 shadow-sm">
                       <option value="sale_update">Cập nhật sale</option>
-                      <option value="stage_change">Chuyển giai đoạn</option>
                       <option value="note">Ghi chú</option>
                     </select>
                   </div>
-                  <button className="bg-accent-500 hover:bg-accent-600 text-white px-5 py-1.5 rounded-lg text-sm font-semibold transition-colors shadow-sm">
+                  <button
+                    onClick={saveLog}
+                    disabled={!newLogText.trim() || submittingLog}
+                    className="bg-accent-500 hover:bg-accent-600 disabled:opacity-50 text-white px-5 py-1.5 rounded-lg text-sm font-semibold transition-colors shadow-sm flex items-center gap-2">
+                    {submittingLog ? <Loader2 size={13} className="animate-spin" /> : null}
                     Lưu log
                   </button>
                 </div>
