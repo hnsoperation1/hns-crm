@@ -261,10 +261,10 @@ export default function DanhGiaPage() {
   const isSuperAdmin = currentUser?.is_super_admin === true || currentUser?.email === SUPER_ADMIN_EMAIL
   const [list, setList] = useState<FeedbackRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'all' | 'poor' | 'destination' | 'summary'>('all')
+  const [tab, setTab] = useState<'all' | 'poor' | 'destination' | 'summary'>('destination')
   const [selectedOppSummary, setSelectedOppSummary] = useState<string | null>(null)
   const [summarySearch, setSummarySearch] = useState('')
-  const [destView, setDestView] = useState<'chart' | 'grid'>('chart')
+  const [destView, setDestView] = useState<'chart' | 'grid'>('grid')
   const [destSearch, setDestSearch] = useState('')
   const [dateFrom, setDateFrom] = useState(() => `${new Date().getFullYear()}-01-01`)
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10))
