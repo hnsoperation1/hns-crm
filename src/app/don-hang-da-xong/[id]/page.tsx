@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Building2, Phone, Mail, CalendarDays, DollarSign, FileText } from 'lucide-react'
+import { ArrowLeft, Building2, Phone, Mail, CalendarDays, DollarSign, FileText, Star } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useTopbar } from '@/contexts/topbar'
 import { formatVND, formatDate, getInitials } from '@/lib/utils'
@@ -25,6 +25,23 @@ type IntakeInfo = {
   guide_name: string | null; guide_phone: string | null
   itinerary: string | null; other_notes: string | null
   sale_price: number | null; commission: number | null; vat_required: boolean | null
+}
+
+type FeedbackRow = {
+  id: string; respondent_name: string | null; phone: string | null
+  group_name: string | null; submitted_at: string
+  overall_comment: string | null; is_satisfied: boolean | null
+  will_return: boolean | null; next_destination: string | null
+  rating_guide_attitude: string | null; rating_guide_skill: string | null
+  rating_hotel: string | null; rating_transport_quality: string | null
+  rating_staff_attitude: string | null; rating_restaurant_food: string | null
+}
+
+const RATING_CLS: Record<string, string> = {
+  'Rất tốt': 'bg-emerald-100 text-emerald-700',
+  'Tốt': 'bg-blue-100 text-blue-700',
+  'Trung bình': 'bg-amber-100 text-amber-700',
+  'Kém': 'bg-red-100 text-red-500',
 }
 
 type ServiceRow = {
@@ -57,22 +74,25 @@ export default function DaXongDetailPage() {
   const [opp, setOpp] = useState<OppInfo | null>(null)
   const [intake, setIntake] = useState<IntakeInfo | null>(null)
   const [services, setServices] = useState<ServiceRow[]>([])
+  const [feedbacks, setFeedbacks] = useState<FeedbackRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'services' | 'info'>('services')
+  const [tab, setTab] = useState<'services' | 'info' | 'feedback'>('services')
 
   useEffect(() => {
     setBreadcrumb('Chi tiết đơn đã xong')
     async function load() {
-      const [{ data: oppData }, { data: intakeData }, { data: svcData }] = await Promise.all([
+      const [{ data: oppData }, { data: intakeData }, { data: svcData }, { data: fbData }] = await Promise.all([
         supabase.from('opportunities')
           .select('id, title, description, tour_date, tour_end_date, estimated_value, actual_value, contact:contacts(name, company, phone, email), assigned_user:users!assigned_to(full_name)')
           .eq('id', id).single(),
         supabase.from('tour_intake').select('*').eq('opportunity_id', id).maybeSingle(),
         supabase.from('tour_services').select('*').eq('opportunity_id', id).order('sort_order').order('created_at'),
+        supabase.from('feedback').select('id, respondent_name, phone, group_name, submitted_at, overall_comment, is_satisfied, will_return, next_destination, rating_guide_attitude, rating_guide_skill, rating_hotel, rating_transport_quality, rating_staff_attitude, rating_restaurant_food').eq('opportunity_id', id).order('submitted_at', { ascending: false }),
       ])
       setOpp(oppData as OppInfo | null)
       setIntake(intakeData as IntakeInfo | null)
       setServices((svcData ?? []) as ServiceRow[])
+      setFeedbacks((fbData ?? []) as FeedbackRow[])
       setLoading(false)
     }
     load()
@@ -145,6 +165,15 @@ export default function DaXongDetailPage() {
           <button onClick={() => setTab('info')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === 'info' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>
             <FileText size={14} /> Thông tin đoàn
+          </button>
+          <button onClick={() => setTab('feedback')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === 'feedback' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>
+            <Star size={14} /> Đánh giá của KH
+            {feedbacks.length > 0 && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${tab === 'feedback' ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                {feedbacks.length}
+              </span>
+            )}
           </button>
         </div>
 
@@ -266,6 +295,80 @@ export default function DaXongDetailPage() {
             </div>
           )}
         </div>
+        )}
+
+        {/* Đánh giá của KH */}
+        {tab === 'feedback' && (
+          feedbacks.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-12 text-center text-gray-400 text-sm">
+              Chưa có đánh giá nào từ khách hàng
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {feedbacks.map(fb => {
+                const ratings = [
+                  fb.rating_restaurant_food, fb.rating_guide_attitude, fb.rating_guide_skill,
+                  fb.rating_hotel, fb.rating_transport_quality, fb.rating_staff_attitude,
+                ].filter(Boolean) as string[]
+                const scoreMap: Record<string, number> = { 'Kém': 1, 'Trung bình': 2, 'Tốt': 3, 'Rất tốt': 4 }
+                const avg = ratings.length ? ratings.reduce((s, r) => s + (scoreMap[r] ?? 0), 0) / ratings.length : null
+                const overall = avg === null ? null : avg >= 3.5 ? 'Rất tốt' : avg >= 2.5 ? 'Tốt' : avg >= 1.5 ? 'Trung bình' : 'Kém'
+                return (
+                  <div key={fb.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div>
+                        <div className="font-semibold text-gray-900">{fb.respondent_name ?? 'Ẩn danh'}</div>
+                        <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
+                          {fb.phone && <span><Phone size={10} className="inline mr-1" />{fb.phone}</span>}
+                          {fb.group_name && <span>· Đoàn: {fb.group_name}</span>}
+                          <span>· {new Date(fb.submitted_at).toLocaleDateString('vi-VN')}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {overall && <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${RATING_CLS[overall]}`}>{overall}</span>}
+                        {fb.is_satisfied !== null && (
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${fb.is_satisfied ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
+                            {fb.is_satisfied ? '✓ Hài lòng' : '✗ Không hài lòng'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      {[
+                        { label: 'Ẩm thực', val: fb.rating_restaurant_food },
+                        { label: 'HDV thái độ', val: fb.rating_guide_attitude },
+                        { label: 'HDV nghiệp vụ', val: fb.rating_guide_skill },
+                        { label: 'Khách sạn', val: fb.rating_hotel },
+                        { label: 'Phương tiện', val: fb.rating_transport_quality },
+                        { label: 'Nhân viên TV', val: fb.rating_staff_attitude },
+                      ].filter(x => x.val).map(({ label, val }) => (
+                        <div key={label} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-2.5 py-1.5">
+                          <span className="text-gray-500">{label}</span>
+                          <span className={`font-semibold px-1.5 py-0.5 rounded-full text-[11px] ${RATING_CLS[val!] ?? ''}`}>{val}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {fb.overall_comment && (
+                      <p className="text-sm text-gray-700 italic bg-gray-50 rounded-xl px-3 py-2 mb-2">"{fb.overall_comment}"</p>
+                    )}
+
+                    <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
+                      {fb.will_return !== null && (
+                        <span className={fb.will_return ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
+                          {fb.will_return ? '↩ Sẽ quay lại' : '↩ Không quay lại'}
+                        </span>
+                      )}
+                      {fb.next_destination && (
+                        <span className="text-brand-600 font-medium">· Quan tâm: {fb.next_destination}</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
         )}
 
       </div>
