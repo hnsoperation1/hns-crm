@@ -50,8 +50,8 @@ export default function OppDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const fromMyOrders = searchParams.get('from') === 'don-hang-cua-toi'
-  const backHref = fromMyOrders ? '/don-hang-cua-toi' : '/don-hang'
+  const fromMyOrders = searchParams.get('from') === 'tat-ca-don-hang'
+  const backHref = fromMyOrders ? '/tat-ca-don-hang' : '/don-hang'
   const backLabel = fromMyOrders ? 'Đơn hàng của tôi' : 'Đơn hàng'
   const supabase = createClient()
   const { user: currentUser } = useAuth()

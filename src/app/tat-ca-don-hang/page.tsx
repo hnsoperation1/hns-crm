@@ -62,7 +62,7 @@ export default function DonHangCuaToiPage() {
   }, [])
 
   useEffect(() => {
-    setBreadcrumb('Đơn hàng của tôi')
+    setBreadcrumb('Tất cả đơn hàng')
     return () => setBreadcrumb(null)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -74,13 +74,6 @@ export default function DonHangCuaToiPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadData])
 
-  // Default: hiện đơn tôi tạo HOẶC tôi được assign
-  useEffect(() => {
-    if (user) {
-      setFilterSaleTV(user.id)
-      setFilterCreator(user.id)
-    }
-  }, [user?.id])
 
   const filtered = rows.filter(r => {
     if (filterStage !== 'all' && r.stage !== filterStage) return false
@@ -142,14 +135,10 @@ export default function DonHangCuaToiPage() {
             {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
           </select>
 
-          <button onClick={() => { setFilterSaleTV(user?.id ?? ''); setFilterCreator(user?.id ?? '') }}
-            className="text-xs text-brand-600 hover:text-brand-800 px-2 py-1.5 rounded-lg hover:bg-brand-50 transition-colors font-semibold">
-            Của tôi
-          </button>
           {hasFilter && (
             <button onClick={() => { setFilterStage('all'); setFilterSource(''); setFilterSaleTV(''); setFilterCreator('') }}
               className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-              Tất cả
+              Xóa bộ lọc
             </button>
           )}
 
@@ -185,7 +174,7 @@ export default function DonHangCuaToiPage() {
               const isPast = daysLeft !== null && daysLeft < 0
               const isUrgent = daysLeft !== null && daysLeft > 0 && daysLeft <= 3
               return (
-                <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/don-hang/${r.id}?from=don-hang-cua-toi`)}>
+                <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/don-hang/${r.id}?from=tat-ca-don-hang`)}>
                   <td className="px-5 py-3.5">
                     <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{r.title}</div>
                     <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
