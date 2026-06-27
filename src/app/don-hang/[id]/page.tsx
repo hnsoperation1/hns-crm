@@ -75,6 +75,7 @@ export default function OppDetailPage() {
   const supabase = createClient()
   const { user: currentUser } = useAuth()
   const isSaleTV = currentUser?.is_sale_tv === true
+  const isSuperAdmin = currentUser?.is_super_admin === true
 
   const [opp, setOpp] = useState<OppDetail | null>(null)
   const [allLogs, setAllLogs] = useState<LogDetail[]>([])
@@ -90,8 +91,19 @@ export default function OppDetailPage() {
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
-  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake' | 'services' | 'feedback'>('services')
+  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake' | 'services' | 'feedback' | 'admin'>('services')
   const [feedbacks, setFeedbacks] = useState<FeedbackRow[]>([])
+
+  type AdminForm = {
+    title: string; description: string; source: string; stage: string
+    stage_updated_at: string; lost_reason: string
+    estimated_value: string; actual_value: string
+    tour_date: string; tour_end_date: string; deadline: string
+    assigned_to: string; created_by: string; contact_id: string
+  }
+  const [adminForm, setAdminForm] = useState<AdminForm | null>(null)
+  const [savingAdmin, setSavingAdmin] = useState(false)
+  const [adminSaved, setAdminSaved] = useState(false)
 
   // Tour services
   type ServiceRow = {
@@ -218,13 +230,32 @@ export default function OppDetailPage() {
           .eq('opportunity_id', id)
           .order('submitted_at', { ascending: false }),
       ])
-      setOpp(oppData as OppDetail | null)
+      const oppObj = oppData as OppDetail | null
+      setOpp(oppObj)
       setAllLogs((logsData ?? []) as LogDetail[])
       setTasks(tasksData ?? [])
       const users = (usersData ?? []) as UserMin[]
       setAllUsers(users)
       setSaleUsers(users.filter(u => u.is_sale_tv))
       setFeedbacks((fbData ?? []) as FeedbackRow[])
+      if (oppObj) {
+        setAdminForm({
+          title: oppObj.title ?? '',
+          description: oppObj.description ?? '',
+          source: oppObj.source ?? '',
+          stage: oppObj.stage ?? '',
+          stage_updated_at: oppObj.stage_updated_at ? oppObj.stage_updated_at.slice(0, 10) : '',
+          lost_reason: oppObj.lost_reason ?? '',
+          estimated_value: oppObj.estimated_value?.toString() ?? '',
+          actual_value: oppObj.actual_value?.toString() ?? '',
+          tour_date: oppObj.tour_date ?? '',
+          tour_end_date: oppObj.tour_end_date ?? '',
+          deadline: oppObj.deadline ?? '',
+          assigned_to: oppObj.assigned_to ?? '',
+          created_by: oppObj.created_by ?? '',
+          contact_id: oppObj.contact_id ?? '',
+        })
+      }
       setLoading(false)
 
       // Load tour_intake
@@ -490,6 +521,34 @@ export default function OppDetailPage() {
     setOpp(o => o ? { ...o, stage: 'lost' as OppStage } : o)
   }
 
+  async function saveAdminForm() {
+    if (!adminForm || savingAdmin) return
+    if (!confirm('Bạn có chắc muốn lưu thay đổi trực tiếp vào database không?\n\nHành động này không thể hoàn tác.')) return
+    setSavingAdmin(true)
+    const payload: Record<string, unknown> = {
+      title: adminForm.title.trim() || null,
+      description: adminForm.description.trim() || null,
+      source: adminForm.source || null,
+      stage: adminForm.stage || null,
+      stage_updated_at: adminForm.stage_updated_at || null,
+      lost_reason: adminForm.lost_reason.trim() || null,
+      estimated_value: adminForm.estimated_value ? Number(adminForm.estimated_value) : null,
+      actual_value: adminForm.actual_value ? Number(adminForm.actual_value) : null,
+      tour_date: adminForm.tour_date || null,
+      tour_end_date: adminForm.tour_end_date || null,
+      deadline: adminForm.deadline || null,
+      assigned_to: adminForm.assigned_to || null,
+      created_by: adminForm.created_by || null,
+      contact_id: adminForm.contact_id || null,
+    }
+    const { error } = await supabase.from('opportunities').update(payload).eq('id', id)
+    setSavingAdmin(false)
+    if (error) { alert('Lỗi: ' + error.message); return }
+    setAdminSaved(true)
+    setTimeout(() => setAdminSaved(false), 2500)
+    setOpp(o => o ? { ...o, ...payload, stage: payload.stage as OppStage } : o)
+  }
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -727,6 +786,16 @@ export default function OppDetailPage() {
                   </span>
                 )}
               </button>
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setMainTab('admin')}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                    mainTab === 'admin' ? 'bg-red-500 text-white shadow-sm' : 'text-red-400 hover:bg-red-50'
+                  }`}
+                >
+                  <Pencil size={15} /> Toàn bộ các trường
+                </button>
+              )}
             </div>
 
             {/* ══════════ DỊCH VỤ TAB ══════════ */}
@@ -1414,6 +1483,128 @@ export default function OppDetailPage() {
               )
             })()}
 
+            {/* ══════════ ADMIN TAB ══════════ */}
+            {mainTab === 'admin' && isSuperAdmin && adminForm && (
+            <div className="bg-white rounded-2xl border-2 border-red-200 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-red-100 bg-red-50">
+                <div>
+                  <h3 className="font-bold text-red-800 text-sm">Chỉnh sửa toàn bộ trường — Super Admin</h3>
+                  <p className="text-xs text-red-500 mt-0.5">Thay đổi trực tiếp vào database. Cẩn thận khi sửa.</p>
+                </div>
+                <button onClick={saveAdminForm} disabled={savingAdmin}
+                  className={`flex items-center gap-1.5 px-4 py-2 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-60 ${adminSaved ? 'bg-emerald-500' : 'bg-red-500 hover:bg-red-600'}`}>
+                  {savingAdmin ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                  {adminSaved ? 'Đã lưu ✓' : 'Lưu thay đổi'}
+                </button>
+              </div>
+
+              <div className="p-5 space-y-5">
+                {/* Meta read-only */}
+                <div className="grid grid-cols-2 gap-3 p-3 bg-gray-50 rounded-xl text-xs text-gray-500">
+                  <div><span className="font-semibold text-gray-400 uppercase tracking-wide text-[10px]">ID</span><p className="font-mono text-gray-700 mt-0.5 text-[11px]">{opp.id}</p></div>
+                  <div><span className="font-semibold text-gray-400 uppercase tracking-wide text-[10px]">Ngày tạo</span><p className="text-gray-700 mt-0.5">{new Date(opp.created_at).toLocaleString('vi-VN')}</p></div>
+                  <div><span className="font-semibold text-gray-400 uppercase tracking-wide text-[10px]">Cập nhật lần cuối</span><p className="text-gray-700 mt-0.5">{new Date(opp.updated_at).toLocaleString('vi-VN')}</p></div>
+                  <div><span className="font-semibold text-gray-400 uppercase tracking-wide text-[10px]">Contact ID</span>
+                    <input value={adminForm.contact_id} onChange={e => setAdminForm(f => f ? {...f, contact_id: e.target.value} : f)}
+                      className="font-mono text-[11px] border border-gray-200 rounded-lg px-2 py-1 w-full mt-0.5 focus:outline-none focus:ring-1 focus:ring-red-300 bg-white" />
+                  </div>
+                </div>
+
+                {/* Thông tin cơ bản */}
+                <ASection label="Thông tin cơ bản">
+                  <AField label="Tên đơn hàng">
+                    <input value={adminForm.title} onChange={e => setAdminForm(f => f ? {...f, title: e.target.value} : f)}
+                      className={aCls} placeholder="Tên đơn hàng..." />
+                  </AField>
+                  <AField label="Mô tả / Điểm đến">
+                    <input value={adminForm.description} onChange={e => setAdminForm(f => f ? {...f, description: e.target.value} : f)}
+                      className={aCls} placeholder="Mô tả..." />
+                  </AField>
+                  <div className="grid grid-cols-2 gap-3">
+                    <AField label="Nguồn">
+                      <select value={adminForm.source} onChange={e => setAdminForm(f => f ? {...f, source: e.target.value} : f)} className={aCls}>
+                        <option value="">— Chọn —</option>
+                        {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    </AField>
+                    <AField label="Giai đoạn">
+                      <select value={adminForm.stage} onChange={e => setAdminForm(f => f ? {...f, stage: e.target.value} : f)} className={aCls}>
+                        <option value="">— Chọn —</option>
+                        {(['stage_1','stage_2','stage_3','stage_4','stage_5','lost','cancelled'] as const).map(s => (
+                          <option key={s} value={s}>{STAGE_LABELS[s] ?? s}</option>
+                        ))}
+                      </select>
+                    </AField>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <AField label="Ngày chuyển giai đoạn">
+                      <DateInput value={adminForm.stage_updated_at} onChange={v => setAdminForm(f => f ? {...f, stage_updated_at: v} : f)} />
+                    </AField>
+                    <AField label="Lý do mất đơn">
+                      <input value={adminForm.lost_reason} onChange={e => setAdminForm(f => f ? {...f, lost_reason: e.target.value} : f)}
+                        className={aCls} placeholder="Lý do mất đơn (nếu có)..." />
+                    </AField>
+                  </div>
+                </ASection>
+
+                {/* Tài chính */}
+                <ASection label="Tài chính">
+                  <div className="grid grid-cols-2 gap-3">
+                    <AField label="Giá trị ước tính (VNĐ)">
+                      <input type="number" value={adminForm.estimated_value} onChange={e => setAdminForm(f => f ? {...f, estimated_value: e.target.value} : f)}
+                        className={aCls} placeholder="0" />
+                    </AField>
+                    <AField label="Doanh thu thực tế (VNĐ)">
+                      <input type="number" value={adminForm.actual_value} onChange={e => setAdminForm(f => f ? {...f, actual_value: e.target.value} : f)}
+                        className={aCls} placeholder="0" />
+                    </AField>
+                  </div>
+                </ASection>
+
+                {/* Ngày tháng */}
+                <ASection label="Ngày tháng">
+                  <div className="grid grid-cols-3 gap-3">
+                    <AField label="Ngày đi">
+                      <DateInput value={adminForm.tour_date} onChange={v => setAdminForm(f => f ? {...f, tour_date: v} : f)} />
+                    </AField>
+                    <AField label="Ngày về">
+                      <DateInput value={adminForm.tour_end_date} onChange={v => setAdminForm(f => f ? {...f, tour_end_date: v} : f)} />
+                    </AField>
+                    <AField label="Deadline">
+                      <DateInput value={adminForm.deadline} onChange={v => setAdminForm(f => f ? {...f, deadline: v} : f)} />
+                    </AField>
+                  </div>
+                </ASection>
+
+                {/* Người phụ trách */}
+                <ASection label="Người phụ trách">
+                  <div className="grid grid-cols-2 gap-3">
+                    <AField label="Sale TV (assigned_to)">
+                      <select value={adminForm.assigned_to} onChange={e => setAdminForm(f => f ? {...f, assigned_to: e.target.value} : f)} className={aCls}>
+                        <option value="">— Chưa giao —</option>
+                        {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                      </select>
+                    </AField>
+                    <AField label="Người tạo (created_by)">
+                      <select value={adminForm.created_by} onChange={e => setAdminForm(f => f ? {...f, created_by: e.target.value} : f)} className={aCls}>
+                        <option value="">— Chưa xác định —</option>
+                        {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                      </select>
+                    </AField>
+                  </div>
+                </ASection>
+
+                <div className="flex justify-end pt-1">
+                  <button onClick={saveAdminForm} disabled={savingAdmin}
+                    className={`flex items-center gap-2 px-6 py-2.5 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-60 ${adminSaved ? 'bg-emerald-500' : 'bg-red-500 hover:bg-red-600'}`}>
+                    {savingAdmin ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    {adminSaved ? 'Đã lưu ✓' : 'Lưu thay đổi'}
+                  </button>
+                </div>
+              </div>
+            </div>
+            )}
+
             {/* ══════════ ĐÁNH GIÁ KH TAB ══════════ */}
             {mainTab === 'feedback' && (
               feedbacks.length === 0 ? (
@@ -1655,6 +1846,25 @@ export default function OppDetailPage() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+const aCls = 'w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 bg-white'
+
+function ASection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs font-bold text-red-400 uppercase tracking-wider mb-2">{label}</div>
+      <div className="bg-red-50/40 border border-red-100 rounded-xl p-3 space-y-3">{children}</div>
+    </div>
+  )
+}
+function AField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      {children}
     </div>
   )
 }
