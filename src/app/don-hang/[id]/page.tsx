@@ -7,7 +7,7 @@ import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2,
   MessageSquare, Plus, CheckSquare, Square,
   Clock, CalendarDays, DollarSign, User, Pencil, CheckCircle2, X,
-  ClipboardList, UserPlus, Loader2, FileText, Save, Eye, Printer, Trash2,
+  ClipboardList, UserPlus, Loader2, FileText, Save, Eye, Printer, Trash2, Star,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import DateInput from '@/components/DateInput'
@@ -17,6 +17,25 @@ import {
 } from '@/lib/utils'
 import type { OppStage, LogType, Opportunity, Contact, ActivityLog } from '@/types'
 import { useAuth } from '@/contexts/auth'
+
+// ─── Feedback type ───────────────────────────────────────────────────────────
+
+type FeedbackRow = {
+  id: string; respondent_name: string | null; phone: string | null
+  group_name: string | null; submitted_at: string
+  overall_comment: string | null; is_satisfied: boolean | null
+  will_return: boolean | null; next_destination: string | null
+  rating_guide_attitude: string | null; rating_guide_skill: string | null
+  rating_hotel: string | null; rating_transport_quality: string | null
+  rating_staff_attitude: string | null; rating_restaurant_food: string | null
+}
+
+const RATING_CLS: Record<string, string> = {
+  'Rất tốt': 'bg-emerald-100 text-emerald-700',
+  'Tốt': 'bg-blue-100 text-blue-700',
+  'Trung bình': 'bg-amber-100 text-amber-700',
+  'Kém': 'bg-red-100 text-red-500',
+}
 
 // ─── Local types for Supabase joins ──────────────────────────────────────────
 
@@ -50,9 +69,9 @@ export default function OppDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const fromMyOrders = searchParams.get('from') === 'tat-ca-don-hang'
-  const backHref = fromMyOrders ? '/tat-ca-don-hang' : '/don-hang'
-  const backLabel = fromMyOrders ? 'Đơn hàng của tôi' : 'Đơn hàng'
+  const fromParam = searchParams.get('from')
+  const backHref = fromParam === 'don-hang-dang-lam' ? '/don-hang-dang-lam' : '/don-hang'
+  const backLabel = fromParam === 'don-hang-dang-lam' ? 'Đang thực hiện' : 'Tất cả đơn hàng'
   const supabase = createClient()
   const { user: currentUser } = useAuth()
   const isSaleTV = currentUser?.is_sale_tv === true
@@ -71,7 +90,8 @@ export default function OppDetailPage() {
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
-  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake' | 'services'>('services')
+  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake' | 'services' | 'feedback'>('services')
+  const [feedbacks, setFeedbacks] = useState<FeedbackRow[]>([])
 
   // Tour services
   type ServiceRow = {
@@ -177,7 +197,7 @@ export default function OppDetailPage() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: oppData }, { data: logsData }, { data: tasksData }, { data: usersData }] = await Promise.all([
+      const [{ data: oppData }, { data: logsData }, { data: tasksData }, { data: usersData }, { data: fbData }] = await Promise.all([
         supabase.from('opportunities')
           .select('*, contact:contacts(id,name,phone,email,company,tax_code,organization_ids,source,lead_score,created_by,created_at), assigned_user:users!assigned_to(id,full_name), creator:users!created_by(id,full_name)')
           .eq('id', id)
@@ -193,6 +213,10 @@ export default function OppDetailPage() {
         supabase.from('users')
           .select('id, full_name, is_sale_tv, is_active')
           .eq('is_active', true),
+        supabase.from('feedback')
+          .select('id, respondent_name, phone, group_name, submitted_at, overall_comment, is_satisfied, will_return, next_destination, rating_guide_attitude, rating_guide_skill, rating_hotel, rating_transport_quality, rating_staff_attitude, rating_restaurant_food')
+          .eq('opportunity_id', id)
+          .order('submitted_at', { ascending: false }),
       ])
       setOpp(oppData as OppDetail | null)
       setAllLogs((logsData ?? []) as LogDetail[])
@@ -200,6 +224,7 @@ export default function OppDetailPage() {
       const users = (usersData ?? []) as UserMin[]
       setAllUsers(users)
       setSaleUsers(users.filter(u => u.is_sale_tv))
+      setFeedbacks((fbData ?? []) as FeedbackRow[])
       setLoading(false)
 
       // Load tour_intake
@@ -688,6 +713,19 @@ export default function OppDetailPage() {
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${mainTab === 'tasks' ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
                   {tasks.length + addedTasks.length}
                 </span>
+              </button>
+              <button
+                onClick={() => setMainTab('feedback')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  mainTab === 'feedback' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <Star size={15} /> Đánh giá KH
+                {feedbacks.length > 0 && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${mainTab === 'feedback' ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    {feedbacks.length}
+                  </span>
+                )}
               </button>
             </div>
 
@@ -1375,6 +1413,77 @@ export default function OppDetailPage() {
                 </div>
               )
             })()}
+
+            {/* ══════════ ĐÁNH GIÁ KH TAB ══════════ */}
+            {mainTab === 'feedback' && (
+              feedbacks.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-12 text-center text-gray-400 text-sm">
+                  Chưa có đánh giá nào từ khách hàng
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {feedbacks.map(fb => {
+                    const ratings = [
+                      fb.rating_restaurant_food, fb.rating_guide_attitude, fb.rating_guide_skill,
+                      fb.rating_hotel, fb.rating_transport_quality, fb.rating_staff_attitude,
+                    ].filter(Boolean) as string[]
+                    const scoreMap: Record<string, number> = { 'Kém': 1, 'Trung bình': 2, 'Tốt': 3, 'Rất tốt': 4 }
+                    const avg = ratings.length ? ratings.reduce((s, r) => s + (scoreMap[r] ?? 0), 0) / ratings.length : null
+                    const overall = avg === null ? null : avg >= 3.5 ? 'Rất tốt' : avg >= 2.5 ? 'Tốt' : avg >= 1.5 ? 'Trung bình' : 'Kém'
+                    return (
+                      <div key={fb.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div>
+                            <div className="font-semibold text-gray-900">{fb.respondent_name ?? 'Ẩn danh'}</div>
+                            <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
+                              {fb.phone && <span>{fb.phone}</span>}
+                              {fb.group_name && <span>· Đoàn: {fb.group_name}</span>}
+                              <span>· {new Date(fb.submitted_at).toLocaleDateString('vi-VN')}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {overall && <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${RATING_CLS[overall]}`}>{overall}</span>}
+                            {fb.is_satisfied !== null && (
+                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${fb.is_satisfied ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
+                                {fb.is_satisfied ? '✓ Hài lòng' : '✗ Không hài lòng'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          {[
+                            { label: 'Ẩm thực', val: fb.rating_restaurant_food },
+                            { label: 'HDV thái độ', val: fb.rating_guide_attitude },
+                            { label: 'HDV nghiệp vụ', val: fb.rating_guide_skill },
+                            { label: 'Khách sạn', val: fb.rating_hotel },
+                            { label: 'Phương tiện', val: fb.rating_transport_quality },
+                            { label: 'Nhân viên TV', val: fb.rating_staff_attitude },
+                          ].filter(x => x.val).map(({ label, val }) => (
+                            <div key={label} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-2.5 py-1.5">
+                              <span className="text-gray-500">{label}</span>
+                              <span className={`font-semibold px-1.5 py-0.5 rounded-full text-[11px] ${RATING_CLS[val!] ?? ''}`}>{val}</span>
+                            </div>
+                          ))}
+                        </div>
+                        {fb.overall_comment && (
+                          <p className="text-sm text-gray-700 italic bg-gray-50 rounded-xl px-3 py-2 mb-2">"{fb.overall_comment}"</p>
+                        )}
+                        <div className="flex items-center gap-3 text-xs text-gray-400">
+                          {fb.will_return !== null && (
+                            <span className={fb.will_return ? 'text-emerald-600 font-medium' : 'text-gray-400'}>
+                              {fb.will_return ? '↩ Sẽ quay lại' : '↩ Không quay lại'}
+                            </span>
+                          )}
+                          {fb.next_destination && (
+                            <span className="text-brand-600 font-medium">· Quan tâm: {fb.next_destination}</span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            )}
 
           </div>
 

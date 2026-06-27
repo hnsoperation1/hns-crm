@@ -93,10 +93,10 @@ export default function Sidebar() {
           <p className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1.5" style={{ color: '#4a8fa8' }}>
             Đơn hàng
           </p>
-          <NavLink href="/tat-ca-don-hang" label="Tất cả đơn hàng" icon={BookUser} />
           <NavLink href="/don-hang-moi" label="Đơn hàng mới" icon={Inbox} />
-          <NavLink href="/don-hang" label="Đang thực hiện" icon={Loader2} />
+          <NavLink href="/don-hang-dang-lam" label="Đang thực hiện" icon={Loader2} />
           <NavLink href="/don-hang-da-xong" label="Đã xong" icon={CheckCircle2} />
+          <NavLink href="/don-hang" label="Tất cả đơn hàng" icon={BookUser} />
         </div>
 
         {/* CSKH section — chỉ hiện với cskh / admin / boss */}
