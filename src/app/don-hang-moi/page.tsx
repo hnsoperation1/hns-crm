@@ -18,7 +18,8 @@ type Row = {
   estimated_value: number | null
   created_at: string
   contact: { name: string; company?: string } | null
-  assigned_user: { full_name: string } | null
+  assigned_user: { id: string; full_name: string } | null
+  creator: { id: string; full_name: string } | null
 }
 
 type ContactOpt = { id: string; name: string; phone?: string | null; company?: string | null }
@@ -42,6 +43,9 @@ export default function DangLayPage() {
   const supabase = createClient()
   const [rows, setRows] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
+  const [filterSource, setFilterSource] = useState('')
+  const [filterSaleTV, setFilterSaleTV] = useState('')
+  const [filterCreator, setFilterCreator] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [contacts, setContacts] = useState<ContactOpt[]>([])
   const [users, setUsers] = useState<UserOpt[]>([])
@@ -59,7 +63,7 @@ export default function DangLayPage() {
     setLoading(true)
     const { data } = await supabase
       .from('opportunities')
-      .select('id, title, description, stage, source, estimated_value, created_at, contact:contacts(name, company), assigned_user:users!assigned_to(full_name)')
+      .select('id, title, description, stage, source, estimated_value, created_at, contact:contacts(name, company), assigned_user:users!assigned_to(id, full_name), creator:users!created_by(id, full_name)')
       .is('deleted_at', null)
       .in('stage', ['stage_1', 'stage_2'])
       .order('created_at', { ascending: false })
@@ -162,11 +166,46 @@ export default function DangLayPage() {
 
   const iField = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400'
 
+  const filtered = rows.filter(r => {
+    if (filterSource && r.source !== filterSource) return false
+    if (filterSaleTV && r.assigned_user?.id !== filterSaleTV) return false
+    if (filterCreator && r.creator?.id !== filterCreator) return false
+    return true
+  })
+  const hasFilter = !!filterSource || !!filterSaleTV || !!filterCreator
+
   const cols = ['Đơn hàng', 'Giai đoạn', 'Nguồn', 'Sale TV', 'Điểm đến', 'Giá trị ước tính', 'Ngày tạo']
 
   return (
     <>
-      <div className="overflow-y-auto bg-white" style={{ height: 'calc(100vh - 40px)' }}>
+      <div className="flex flex-col h-full">
+      {/* Filter bar */}
+      <div className="flex-shrink-0 px-5 py-3 border-b border-gray-100 bg-white flex items-center gap-2 flex-wrap">
+        <select value={filterSource} onChange={e => setFilterSource(e.target.value)}
+          className="text-xs border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-400 min-w-[130px]">
+          <option value="">Tất cả nguồn</option>
+          {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+        <select value={filterSaleTV} onChange={e => setFilterSaleTV(e.target.value)}
+          className="text-xs border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-400 min-w-[150px]">
+          <option value="">Tất cả Sale TV</option>
+          {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+        </select>
+        <select value={filterCreator} onChange={e => setFilterCreator(e.target.value)}
+          className="text-xs border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-400 min-w-[150px]">
+          <option value="">Tất cả người tạo</option>
+          {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+        </select>
+        {hasFilter && (
+          <button onClick={() => { setFilterSource(''); setFilterSaleTV(''); setFilterCreator('') }}
+            className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+            Xóa bộ lọc
+          </button>
+        )}
+        <span className="ml-auto text-xs text-gray-400">{filtered.length} đơn</span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto bg-white">
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10">
             <tr className="bg-gray-50 border-b border-gray-200">
@@ -190,17 +229,19 @@ export default function DangLayPage() {
                   ))}
                 </tr>
               ))
-            ) : rows.length === 0 ? (
+            ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-5 py-16 text-center">
                   <div className="text-gray-300 text-4xl mb-3">📋</div>
-                  <div className="text-gray-400 text-sm mb-4">Chưa có đơn nào đang lấy thông tin</div>
-                  <button onClick={openModal} className="inline-flex items-center gap-1.5 px-4 py-2 bg-accent-500 text-white text-sm font-semibold rounded-xl hover:bg-accent-600 transition-colors">
-                    <Plus size={15} /> Thêm đơn đầu tiên
-                  </button>
+                  <div className="text-gray-400 text-sm mb-4">{hasFilter ? 'Không có đơn nào khớp bộ lọc' : 'Chưa có đơn nào đang lấy thông tin'}</div>
+                  {!hasFilter && (
+                    <button onClick={openModal} className="inline-flex items-center gap-1.5 px-4 py-2 bg-accent-500 text-white text-sm font-semibold rounded-xl hover:bg-accent-600 transition-colors">
+                      <Plus size={15} /> Thêm đơn đầu tiên
+                    </button>
+                  )}
                 </td>
               </tr>
-            ) : rows.map(r => {
+            ) : filtered.map(r => {
               const sc = STAGE_COLORS[r.stage]
               return (
                 <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/don-hang-moi/${r.id}`)}>
@@ -231,6 +272,7 @@ export default function DangLayPage() {
             })}
           </tbody>
         </table>
+      </div>
       </div>
 
       {/* Modal thêm đơn */}
