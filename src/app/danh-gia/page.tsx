@@ -42,7 +42,14 @@ type FeedbackRow = {
   is_satisfied: boolean | null
   will_return: boolean | null
   next_destination: string | null
-  opportunity?: { title: string; tour_date: string | null } | null
+  opportunity?: { title: string; tour_date: string | null; stage: string | null } | null
+}
+
+function oppHref(opportunityId: string | null, stage: string | null | undefined) {
+  if (!opportunityId) return '#'
+  if (stage === 'stage_5') return `/don-hang-da-xong/${opportunityId}`
+  if (stage === 'stage_1' || stage === 'stage_2') return `/don-hang-moi/${opportunityId}`
+  return `/don-hang/${opportunityId}`
 }
 
 const RATING_FIELDS: { key: keyof FeedbackRow; label: string }[] = [
@@ -147,7 +154,7 @@ function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard, careC
                   {f.overall_comment && <p className="text-xs text-gray-800 mt-1 italic line-clamp-2">Đánh giá chung: "{f.overall_comment}"</p>}
                 </div>
                 {f.opportunity_id && (
-                  <Link href={`/don-hang/${f.opportunity_id}`} onClick={e => e.stopPropagation()}
+                  <Link href={oppHref(f.opportunity_id, f.opportunity?.stage)} onClick={e => e.stopPropagation()}
                     className="flex-shrink-0 text-xs text-brand-600 hover:underline flex items-center gap-0.5 mt-0.5">
                     <ExternalLink size={11} /> Đơn
                   </Link>
@@ -307,7 +314,7 @@ export default function DanhGiaPage() {
 
   const loadData = useCallback(() => {
     setLoading(true)
-    supabase.from('feedback').select('*, opportunity:opportunities(title, tour_date)').order('submitted_at', { ascending: false })
+    supabase.from('feedback').select('*, opportunity:opportunities(title, tour_date, stage)').order('submitted_at', { ascending: false })
       .then(({ data }) => { setList((data ?? []) as FeedbackRow[]); setLoading(false) })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -405,13 +412,14 @@ export default function DanhGiaPage() {
 
   // Tab "Theo đơn hàng" — group feedbacks by opportunity
   const oppGroups = useMemo(() => {
-    const map: Record<string, { id: string; title: string; tour_date: string | null; feedbacks: FeedbackRow[] }> = {}
+    const map: Record<string, { id: string; title: string; tour_date: string | null; stage: string | null; feedbacks: FeedbackRow[] }> = {}
     dateFiltered.forEach(f => {
       if (!f.opportunity_id) return
       if (!map[f.opportunity_id]) map[f.opportunity_id] = {
         id: f.opportunity_id,
         title: f.opportunity?.title ?? f.opportunity_id,
         tour_date: f.opportunity?.tour_date ?? null,
+        stage: f.opportunity?.stage ?? null,
         feedbacks: [],
       }
       map[f.opportunity_id].feedbacks.push(f)
@@ -859,7 +867,7 @@ export default function DanhGiaPage() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           {f.opportunity_id && (
-                            <Link href={`/don-hang/${f.opportunity_id}`} className="text-xs text-brand-600 hover:underline flex items-center gap-0.5 font-medium">
+                            <Link href={oppHref(f.opportunity_id, f.opportunity?.stage)} className="text-xs text-brand-600 hover:underline flex items-center gap-0.5 font-medium">
                               <ExternalLink size={11} /> Đơn
                             </Link>
                           )}
@@ -1132,7 +1140,7 @@ export default function DanhGiaPage() {
                     return (
                       <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-4 flex-shrink-0">
                         <div className="flex-1 min-w-0">
-                          <Link href={`/don-hang/${g.id}`} className="font-bold text-gray-900 hover:text-brand-600 transition-colors text-sm flex items-center gap-1.5">
+                          <Link href={oppHref(g.id, g.stage)} className="font-bold text-gray-900 hover:text-brand-600 transition-colors text-sm flex items-center gap-1.5">
                             {g.title} <ExternalLink size={12} className="text-gray-400" />
                           </Link>
                           <p className="text-xs text-gray-400 mt-0.5">{g.feedbacks.length} phản hồi</p>
@@ -1263,7 +1271,7 @@ export default function DanhGiaPage() {
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {expandedFeedback.opportunity_id && (
-                <Link href={`/don-hang/${expandedFeedback.opportunity_id}`} className="text-xs text-brand-600 hover:underline flex items-center gap-0.5 font-medium">
+                <Link href={oppHref(expandedFeedback.opportunity_id, expandedFeedback.opportunity?.stage)} className="text-xs text-brand-600 hover:underline flex items-center gap-0.5 font-medium">
                   <ExternalLink size={11} /> Đơn
                 </Link>
               )}
