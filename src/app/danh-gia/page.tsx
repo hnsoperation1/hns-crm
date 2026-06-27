@@ -268,7 +268,7 @@ export default function DanhGiaPage() {
   const isSuperAdmin = currentUser?.is_super_admin === true || currentUser?.email === SUPER_ADMIN_EMAIL
   const [list, setList] = useState<FeedbackRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'all' | 'poor' | 'destination' | 'summary'>('destination')
+  const [tab, setTab] = useState<'all' | 'poor' | 'destination' | 'summary'>('all')
   const [selectedOppSummary, setSelectedOppSummary] = useState<string | null>(null)
   const [summarySearch, setSummarySearch] = useState('')
   const [destView, setDestView] = useState<'chart' | 'grid'>('grid')
