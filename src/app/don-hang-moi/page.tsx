@@ -203,6 +203,10 @@ export default function DangLayPage() {
           </button>
         )}
         <span className="ml-auto text-xs text-gray-400">{filtered.length} đơn</span>
+        <button onClick={openModal}
+          className="flex items-center gap-1.5 px-3 py-2 bg-accent-500 hover:bg-accent-600 text-white text-xs font-semibold rounded-xl transition-colors">
+          <Plus size={13} strokeWidth={2.5} /> Thêm đơn
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto bg-white">
@@ -212,12 +216,7 @@ export default function DangLayPage() {
               {cols.map(h => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
-              <th className="px-5 py-3 text-right">
-                <button onClick={openModal}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-accent-500 hover:bg-accent-600 text-white text-xs font-semibold rounded-lg transition-colors ml-auto">
-                  <Plus size={13} strokeWidth={2.5} /> Thêm đơn
-                </button>
-              </th>
+              <th className="px-5 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
