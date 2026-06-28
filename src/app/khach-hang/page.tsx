@@ -297,12 +297,28 @@ function ContactsTab() {
   const filtered = contacts.filter(c => {
     if (!search) return true
     const q = search.toLowerCase()
+    const orgNames = (c.organization_ids ?? []).map(id => orgs.find(o => o.id === id)?.name ?? '').join(' ')
     return (
       c.name.toLowerCase().includes(q) ||
       (c.company ?? '').toLowerCase().includes(q) ||
+      orgNames.toLowerCase().includes(q) ||
       (c.phone ?? '').includes(q)
     )
   })
+
+  // Expand: mỗi contact × mỗi org thành 1 dòng riêng
+  const rows: { contact: Contact; orgName: string | null; orgId: string | null; rowKey: string }[] = []
+  for (const c of filtered) {
+    const ids = c.organization_ids ?? []
+    if (ids.length > 0) {
+      for (const orgId of ids) {
+        const org = orgs.find(o => o.id === orgId)
+        rows.push({ contact: c, orgName: org?.name ?? c.company ?? null, orgId, rowKey: `${c.id}-${orgId}` })
+      }
+    } else {
+      rows.push({ contact: c, orgName: c.company ?? null, orgId: null, rowKey: c.id })
+    }
+  }
 
   if (dataLoading) {
     return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-gray-300" size={28} /></div>
@@ -351,10 +367,10 @@ function ContactsTab() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {filtered.map(contact => {
+            {rows.map(({ contact, orgName, rowKey }) => {
               const currentOpp = opps.find(o => o.contact_id === contact.id && !['lost', 'cancelled', 'stage_5'].includes(o.stage))
               return (
-                <tr key={contact.id} className="hover:bg-gray-50/70 transition-colors">
+                <tr key={rowKey} className="hover:bg-gray-50/70 transition-colors">
                   <td className="px-5 py-3.5">
                     <Link href={`/khach-hang/${contact.id}`} className="flex items-center gap-3 group/name">
                       <div className="w-9 h-9 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-full flex items-center justify-center text-xs font-bold text-brand-700 flex-shrink-0">
@@ -363,7 +379,7 @@ function ContactsTab() {
                       <div>
                         <div className="font-semibold text-gray-900 group-hover/name:text-brand-600 transition-colors">{contact.name}</div>
                         {(contact as any).job_title && <div className="text-xs text-brand-600 font-medium">{(contact as any).job_title}</div>}
-                        {contact.company && <div className="text-xs text-gray-400">{contact.company}</div>}
+                        {orgName && <div className="text-xs text-gray-400">{orgName}</div>}
                       </div>
                     </Link>
                   </td>
@@ -390,7 +406,7 @@ function ContactsTab() {
                 </tr>
               )
             })}
-            {filtered.length === 0 && (
+            {rows.length === 0 && (
               <tr><td colSpan={7} className="px-5 py-12 text-center text-gray-400">
                 {contacts.length === 0 ? 'Chưa có liên hệ nào. Nhấn "Thêm liên hệ" để bắt đầu.' : 'Không tìm thấy liên hệ'}
               </td></tr>
