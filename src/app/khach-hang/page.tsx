@@ -304,7 +304,8 @@ function ContactsTab() {
   }
 
   function allOrgIdsFor(c: Contact) {
-    return [...new Set([...(c.organization_ids ?? []), ...(contactToOrgIds.get(c.id) ?? [])])]
+    const combined = (c.organization_ids ?? []).concat(Array.from(contactToOrgIds.get(c.id) ?? []))
+    return Array.from(new Set(combined))
   }
 
   const filtered = contacts.filter(c => {
