@@ -12,12 +12,13 @@ const ACTIVE_STAGES: OppStage[] = ['stage_1', 'stage_2', 'stage_3', 'stage_4', '
 
 const ROLE_LABELS: Record<string, string> = {
   boss: 'Giám đốc', admin: 'Quản trị viên', sale_admin: 'Sale Admin',
-  mkt: 'Marketing', cskh: 'CSKH', sale: 'Sale TV',
+  sale_op: 'Sale Điều hành', mkt: 'Marketing', cskh: 'CSKH', sale: 'Sale TV',
 }
 const ROLE_COLORS: Record<string, string> = {
   boss: 'bg-yellow-100 text-yellow-700',
   admin: 'bg-slate-100 text-slate-700',
   sale_admin: 'bg-brand-100 text-brand-700',
+  sale_op: 'bg-violet-100 text-violet-700',
   mkt: 'bg-pink-100 text-pink-700',
   cskh: 'bg-teal-100 text-teal-700',
   sale: 'bg-brand-100 text-brand-700',

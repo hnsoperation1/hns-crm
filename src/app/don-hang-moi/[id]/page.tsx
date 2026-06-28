@@ -410,7 +410,8 @@ export default function OppDetailPage() {
       support_ids: personnelForm.support_ids,
     }
     if (personnelForm.assigned_to) payload.assigned_to = personnelForm.assigned_to
-    const { error } = await supabase.from('opportunities').update(payload).eq('id', id)
+    const { data: updated, error } = await supabase.from('opportunities').update(payload).eq('id', id).select('id, assigned_to, operator_id, support_ids')
+    console.log('savePersonnel result:', { updated, error })
     if (error) { console.error('savePersonnel error:', error); setPersonnelSaving(false); return }
     setOpp(o => o ? {
       ...o,
