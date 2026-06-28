@@ -620,27 +620,14 @@ export default function OppDetailPage() {
             <ArrowLeft size={18} />
           </Link>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap mb-1.5">
-              <h1 className="text-xl font-bold text-gray-900">{opp.title}</h1>
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${sc.bg} ${sc.text}`}>
-                {STAGE_LABELS[opp.stage]}
-              </span>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${SOURCE_COLORS[opp.source]}`}>
-                {SOURCE_LABELS[opp.source]}
-              </span>
+            <h1 className="text-xl font-bold text-gray-900 mb-2">{opp.title}</h1>
+            <div className="flex flex-wrap gap-x-5 gap-y-1">
+              <span className="text-xs text-gray-400">Nguồn: <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SOURCE_COLORS[opp.source]}`}>{SOURCE_LABELS[opp.source]}</span></span>
+              {opp.description && <span className="text-xs text-gray-400">Điểm đến: <span className="text-gray-700 font-medium">{opp.description}</span></span>}
+              {isLost && <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />Đã mất đơn{opp.lost_reason ? ' · có ghi lý do' : ''}</span>}
             </div>
-            {opp.description && (
-              <p className="text-sm text-gray-500 max-w-2xl line-clamp-1">{opp.description}</p>
-            )}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {!isLost && stageIndex >= 0 && stageIndex < PIPELINE.length - 1 && (
-              <button onClick={advanceStage} disabled={advancingStage}
-                className="flex items-center gap-1.5 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors">
-                {advancingStage ? <Loader2 size={14} className="animate-spin" /> : <ArrowRight size={14} />}
-                {opp.stage === 'stage_4' ? 'Hoàn thành → Đã xong' : 'Chuyển giai đoạn'}
-              </button>
-            )}
             {!isLost && (
               <button onClick={markLost} disabled={markingLost}
                 className="px-3 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-60 text-sm font-medium transition-colors">
@@ -653,42 +640,6 @@ export default function OppDetailPage() {
             </button>
           </div>
         </div>
-
-        {/* Stage progress bar */}
-        {!isLost ? (
-          <div className="flex items-center mt-4 ml-10">
-            {PIPELINE.map((s, i) => {
-              const isActive = i === stageIndex
-              const isDone = i < stageIndex
-              const ss = STAGE_COLORS[s]
-              return (
-                <div key={s} className="flex items-center">
-                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-                    isActive ? `${ss.bg} ${ss.text} ring-2 ring-current ring-offset-1 shadow-sm`
-                    : isDone ? 'bg-emerald-50 text-emerald-600'
-                    : 'bg-gray-50 text-gray-300'
-                  }`}>
-                    {isDone ? <span className="text-emerald-500">✓</span> : (
-                      <span className={`w-1.5 h-1.5 rounded-full ${isActive ? ss.dot : 'bg-gray-300'}`} />
-                    )}
-                    {STAGE_LABELS[s].split(' · ')[0]}
-                    {isActive && <span className="opacity-70">· {daysInStage}N</span>}
-                  </div>
-                  {i < PIPELINE.length - 1 && (
-                    <div className={`w-6 h-0.5 ${isDone ? 'bg-emerald-300' : 'bg-gray-200'}`} />
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="mt-4 ml-10">
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-semibold">
-              <span className="w-2 h-2 rounded-full bg-red-500" />
-              Đã mất đơn · {opp.lost_reason ? 'có ghi lý do' : 'không rõ lý do'}
-            </span>
-          </div>
-        )}
 
         {/* Key stats strip */}
         <div className="flex items-center gap-4 mt-4 ml-10 flex-wrap">
