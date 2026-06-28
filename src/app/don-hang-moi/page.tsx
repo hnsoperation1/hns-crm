@@ -76,7 +76,7 @@ export default function DangLayPage() {
       .from('opportunities')
       .select('id, title, description, stage, source, estimated_value, created_at, contact:contacts(name, company), assigned_user:users!assigned_to(id, full_name), creator:users!created_by(id, full_name)')
       .is('deleted_at', null)
-      .in('stage', ['stage_1', 'stage_2'])
+      .in('stage', ['stage_0'])
       .order('created_at', { ascending: false })
     setRows((data ?? []) as unknown as Row[])
     setLoading(false)
@@ -118,7 +118,7 @@ export default function DangLayPage() {
       contact_id: form.contact_id,
       source: form.source,
       assigned_to: form.assigned_to || null,
-      stage: 'stage_1' as OppStage,
+      stage: 'stage_0' as OppStage,
       stage_updated_at: new Date().toISOString(),
       created_by: user!.id,
     })

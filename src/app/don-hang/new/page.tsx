@@ -15,7 +15,7 @@ import type { OppStage, LeadSource } from '@/types'
 import DateInput from '@/components/DateInput'
 
 const SALE_TV = USERS.filter(u => u.is_sale_tv && u.is_active)
-const STAGES: OppStage[] = ['stage_1', 'stage_2', 'stage_3', 'stage_4', 'stage_5']
+const STAGES: OppStage[] = ['stage_0', 'stage_1', 'stage_2', 'stage_3', 'stage_4', 'stage_5']
 const SOURCES: { value: LeadSource; label: string; desc: string }[] = [
   { value: 'mkt', label: 'Marketing', desc: 'Từ chiến dịch quảng cáo, form online' },
   { value: 'sale', label: 'Sale', desc: 'Sale tự tìm kiếm, cold call' },
@@ -39,7 +39,7 @@ interface FormData {
 
 const EMPTY: FormData = {
   title: '', description: '', contact_id: '', source: 'mkt',
-  assigned_to: '', stage: 'stage_1', estimated_value: '', tour_date: '', deadline: '',
+  assigned_to: '', stage: 'stage_0', estimated_value: '', tour_date: '', deadline: '',
 }
 
 type Errors = Partial<Record<keyof FormData, string>>

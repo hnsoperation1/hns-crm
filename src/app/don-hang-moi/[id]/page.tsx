@@ -34,7 +34,7 @@ type LogDetail = ActivityLog & {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const PIPELINE: OppStage[] = ['stage_1', 'stage_2', 'stage_3', 'stage_4', 'stage_5']
+const PIPELINE: OppStage[] = ['stage_0', 'stage_1', 'stage_2', 'stage_3', 'stage_4', 'stage_5']
 
 type LogFilter = 'all' | 'stage_change' | 'sale_update'
 const LOG_FILTERS: { key: LogFilter; label: string }[] = [
@@ -431,7 +431,7 @@ export default function OppDetailPage() {
 
   const stageHistory: { stage: OppStage; startDate: string; endDate: string | null; isCurrent: boolean }[] = []
   let cursor = opp.created_at
-  let curStage: OppStage = 'stage_1'
+  let curStage: OppStage = 'stage_0'
   for (const chg of stageChanges) {
     stageHistory.push({ stage: curStage, startDate: cursor, endDate: chg.log_date, isCurrent: false })
     cursor = chg.log_date

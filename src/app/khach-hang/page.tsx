@@ -278,7 +278,7 @@ function ContactsTab() {
         organization_id: orgId,
         created_by: user!.id,
         source: form.source,
-        stage: 'stage_1',
+        stage: 'stage_0',
         stage_updated_at: new Date().toISOString().split('T')[0],
         updated_at: new Date().toISOString(),
       })

@@ -18,6 +18,7 @@ type OppWithRelations = Opportunity & {
 }
 
 const COLUMNS: { stage: OppStage; label: string }[] = [
+  { stage: 'stage_0', label: 'Mới tạo' },
   { stage: 'stage_1', label: 'GĐ1 · Tư vấn' },
   { stage: 'stage_2', label: 'GĐ2 · Báo giá' },
   { stage: 'stage_3', label: 'GĐ3 · Trước tour' },
@@ -27,12 +28,14 @@ const COLUMNS: { stage: OppStage; label: string }[] = [
 ]
 
 const GROUP_STAGES: Record<string, OppStage[]> = {
+  new: ['stage_0'],
   collecting: ['stage_1', 'stage_2'],
   processing: ['stage_3', 'stage_4'],
   done: ['stage_5'],
 }
 
 const GROUP_LABELS: Record<string, string> = {
+  new: 'Mới tạo',
   collecting: 'Đang lấy thông tin',
   processing: 'Đang thực hiện',
   done: 'Đã xong',

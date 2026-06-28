@@ -48,7 +48,7 @@ type FeedbackRow = {
 function oppHref(opportunityId: string | null, stage: string | null | undefined) {
   if (!opportunityId) return '#'
   if (stage === 'stage_5') return `/don-hang-da-xong/${opportunityId}`
-  if (stage === 'stage_1' || stage === 'stage_2') return `/don-hang-moi/${opportunityId}`
+  if (stage === 'stage_0') return `/don-hang-moi/${opportunityId}`
   return `/don-hang/${opportunityId}`
 }
 

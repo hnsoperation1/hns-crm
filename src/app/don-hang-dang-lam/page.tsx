@@ -45,7 +45,7 @@ export default function DangThucHienPage() {
         .from('opportunities')
         .select('id, title, description, stage, source, tour_date, tour_end_date, estimated_value, actual_value, contact:contacts(name, company), assigned_user:users!assigned_to(id, full_name), creator:users!created_by(id, full_name)')
         .is('deleted_at', null)
-        .in('stage', ['stage_3', 'stage_4'])
+        .in('stage', ['stage_1', 'stage_2', 'stage_3', 'stage_4'])
         .order('tour_date', { ascending: true }),
       supabase.from('users').select('id, full_name').eq('is_active', true).order('full_name'),
     ])

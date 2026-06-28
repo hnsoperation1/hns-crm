@@ -29,6 +29,7 @@ export function daysSince(dateStr: string): number {
 }
 
 export const STAGE_LABELS: Record<OppStage, string> = {
+  stage_0: 'Mới tạo',
   stage_1: 'GĐ1 · Tư vấn',
   stage_2: 'GĐ2 · Báo giá',
   stage_3: 'GĐ3 · Trước tour',
@@ -39,11 +40,12 @@ export const STAGE_LABELS: Record<OppStage, string> = {
 }
 
 export const STAGE_SHORT: Record<OppStage, string> = {
-  stage_1: 'GĐ1', stage_2: 'GĐ2', stage_3: 'GĐ3',
+  stage_0: 'Mới', stage_1: 'GĐ1', stage_2: 'GĐ2', stage_3: 'GĐ3',
   stage_4: 'GĐ4', stage_5: 'GĐ5', lost: 'Mất', cancelled: 'Hủy',
 }
 
 export const STAGE_COLORS: Record<OppStage, { bg: string; text: string; border: string; dot: string; side: string; col: string }> = {
+  stage_0: { bg: 'bg-slate-50',   text: 'text-slate-600',   border: 'border-slate-200',   dot: 'bg-slate-400',   side: 'border-l-slate-400',   col: 'bg-slate-400' },
   stage_1: { bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200',    dot: 'bg-blue-500',    side: 'border-l-blue-500',    col: 'bg-blue-500' },
   stage_2: { bg: 'bg-indigo-50',  text: 'text-indigo-700',  border: 'border-indigo-200',  dot: 'bg-indigo-500',  side: 'border-l-indigo-500',  col: 'bg-indigo-500' },
   stage_3: { bg: 'bg-violet-50',  text: 'text-violet-700',  border: 'border-violet-200',  dot: 'bg-violet-500',  side: 'border-l-violet-500',  col: 'bg-violet-500' },

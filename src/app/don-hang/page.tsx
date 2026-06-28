@@ -25,7 +25,7 @@ type Row = {
 
 type UserOpt = { id: string; full_name: string }
 
-const ALL_STAGES: OppStage[] = ['stage_1', 'stage_2', 'stage_3', 'stage_4', 'stage_5']
+const ALL_STAGES: OppStage[] = ['stage_0', 'stage_1', 'stage_2', 'stage_3', 'stage_4', 'stage_5']
 const SOURCES = Object.entries(SOURCE_LABELS) as [LeadSource, string][]
 
 export default function DonHangCuaToiPage() {
