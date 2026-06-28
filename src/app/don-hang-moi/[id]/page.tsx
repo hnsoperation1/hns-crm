@@ -402,6 +402,7 @@ export default function OppDetailPage() {
   }
 
   async function savePersonnel() {
+    console.log('savePersonnel called', { opp: !!opp, personnelForm })
     if (!opp) return
     setPersonnelSaving(true)
     const payload: Record<string, unknown> = {
