@@ -574,8 +574,13 @@ function OrganizationsTab() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [orgContacts, setOrgContacts] = useState<Contact[]>([])
+  const [addedContacts, setAddedContacts] = useState<Contact[]>([])
+  const [removedContactIds, setRemovedContactIds] = useState<string[]>([])
   const [newRows, setNewRows] = useState<NewContactRow[]>([])
   const [allContacts, setAllContacts] = useState<Contact[]>([])
+  const [contactSearch, setContactSearch] = useState('')
+  const [showContactDrop, setShowContactDrop] = useState(false)
+  const contactSearchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     Promise.all([
@@ -594,20 +599,42 @@ function OrganizationsTab() {
     setOrgContacts((data ?? []) as Contact[])
   }
 
+  function resetContactStates() {
+    setOrgContacts([]); setAddedContacts([]); setRemovedContactIds([])
+    setNewRows([]); setContactSearch(''); setShowContactDrop(false)
+  }
+
   function openAdd() {
     setEditingOrg(null); setForm({ ...EMPTY_ORG_FORM }); setErrors({}); setLookupError('')
-    setOrgContacts([]); setNewRows([]); setShowForm(true)
+    resetContactStates(); setShowForm(true)
   }
 
   function openEdit(org: Organization) {
     setEditingOrg(org)
     setForm({ name: org.name, tax_code: org.tax_code ?? '', type: org.type, city: org.city ?? '', address: org.address ?? '', phone: org.phone ?? '', email: org.email ?? '', website: org.website ?? '', note: org.note ?? '' })
-    setErrors({}); setLookupError(''); setNewRows([])
+    setErrors({}); setLookupError(''); resetContactStates()
     loadOrgContacts(org)
     setShowForm(true)
   }
 
-  function closePanel() { setShowForm(false); setEditingOrg(null); setErrors({}); setLookupError(''); setNewRows([]); setOrgContacts([]) }
+  function closePanel() {
+    setShowForm(false); setEditingOrg(null); setErrors({}); setLookupError('')
+    resetContactStates()
+  }
+
+  // IDs đã có trong panel (cũ + mới thêm, trừ đã xóa)
+  function linkedIds() {
+    const existing = orgContacts.filter(c => !removedContactIds.includes(c.id)).map(c => c.id)
+    return new Set([...existing, ...addedContacts.map(c => c.id)])
+  }
+
+  const contactDropResults = contactSearch.trim()
+    ? allContacts.filter(c => {
+        if (linkedIds().has(c.id)) return false
+        const q = contactSearch.toLowerCase()
+        return c.name.toLowerCase().includes(q) || (c.phone ?? '').includes(q) || (c.company ?? '').toLowerCase().includes(q)
+      }).slice(0, 8)
+    : []
 
   async function handleTaxLookup() {
     if (!form.tax_code.trim()) return
@@ -632,65 +659,62 @@ function OrganizationsTab() {
     if (!validate() || submitting) return
     setSubmitting(true)
     try {
+      // Tạo liên hệ mới từ newRows
+      const validRows = newRows.filter(r => r.name.trim())
+      const newContactIds: string[] = []
+      const orgName = form.name.trim()
+
       if (editingOrg) {
-        // Tạo các liên hệ mới từ newRows
-        const validRows = newRows.filter(r => r.name.trim())
-        let updatedContactIds = [...(editingOrg.contact_ids ?? [])]
         for (const row of validRows) {
           const { data: nc } = await supabase.from('contacts').insert({
-            name: row.name.trim(),
-            phone: row.phone.trim() || null,
-            email: row.email.trim() || null,
-            company: editingOrg.name,
-            source: 'test',
-            organization_ids: [editingOrg.id],
-            created_by: user!.id,
+            name: row.name.trim(), phone: row.phone.trim() || null, email: row.email.trim() || null,
+            company: orgName, source: 'test', organization_ids: [editingOrg.id], created_by: user!.id,
           }).select('id').single()
-          if (nc) updatedContactIds = [...updatedContactIds, nc.id]
+          if (nc) newContactIds.push(nc.id)
         }
-        const { data } = await supabase
-          .from('organizations')
-          .update({
-            name: form.name.trim(),
-            tax_code: form.tax_code.trim() || null,
-            type: form.type,
-            city: form.city.trim() || null,
-            address: form.address.trim() || null,
-            phone: form.phone.trim() || null,
-            email: form.email.trim() || null,
-            website: form.website.trim() || null,
-            note: form.note.trim() || null,
-            contact_ids: updatedContactIds,
-          })
-          .eq('id', editingOrg.id)
-          .select('*')
-          .single()
-        if (data) {
-          setOrgs(prev => prev.map(o => o.id === editingOrg.id ? data as Organization : o))
-          if (validRows.length > 0) {
-            const { data: freshContacts } = await supabase.from('contacts').select('*').order('created_at', { ascending: false })
-            if (freshContacts) setOrgContacts(freshContacts.filter(c => (data as Organization).contact_ids?.includes(c.id)) as Contact[])
-          }
+        // Gắn addedContacts vào organization_ids của họ
+        for (const c of addedContacts) {
+          const newOrgIds = [...(c.organization_ids ?? []), editingOrg.id].filter((v, i, a) => a.indexOf(v) === i)
+          await supabase.from('contacts').update({ organization_ids: newOrgIds, company: orgName }).eq('id', c.id)
         }
+        const baseIds = (editingOrg.contact_ids ?? []).filter(id => !removedContactIds.includes(id))
+        const updatedContactIds = [...baseIds, ...addedContacts.map(c => c.id), ...newContactIds]
+          .filter((v, i, a) => a.indexOf(v) === i)
+        const { data } = await supabase.from('organizations')
+          .update({ name: orgName, tax_code: form.tax_code.trim() || null, type: form.type,
+            city: form.city.trim() || null, address: form.address.trim() || null,
+            phone: form.phone.trim() || null, email: form.email.trim() || null,
+            website: form.website.trim() || null, note: form.note.trim() || null,
+            contact_ids: updatedContactIds })
+          .eq('id', editingOrg.id).select('*').single()
+        if (data) setOrgs(prev => prev.map(o => o.id === editingOrg.id ? data as Organization : o))
       } else {
-        const { data } = await supabase
-          .from('organizations')
-          .insert({
-            name: form.name.trim(),
-            tax_code: form.tax_code.trim() || null,
-            type: form.type,
-            city: form.city.trim() || null,
-            address: form.address.trim() || null,
-            phone: form.phone.trim() || null,
-            email: form.email.trim() || null,
-            website: form.website.trim() || null,
-            note: form.note.trim() || null,
-            contact_ids: [],
-            created_by: user!.id,
-          })
-          .select('*')
-          .single()
-        if (data) setOrgs(prev => [data as Organization, ...prev])
+        // Tạo org trước để có ID
+        const { data: newOrg } = await supabase.from('organizations').insert({
+          name: orgName, tax_code: form.tax_code.trim() || null, type: form.type,
+          city: form.city.trim() || null, address: form.address.trim() || null,
+          phone: form.phone.trim() || null, email: form.email.trim() || null,
+          website: form.website.trim() || null, note: form.note.trim() || null,
+          contact_ids: [], created_by: user!.id,
+        }).select('*').single()
+        if (newOrg) {
+          const org = newOrg as Organization
+          for (const row of validRows) {
+            const { data: nc } = await supabase.from('contacts').insert({
+              name: row.name.trim(), phone: row.phone.trim() || null, email: row.email.trim() || null,
+              company: orgName, source: 'test', organization_ids: [org.id], created_by: user!.id,
+            }).select('id').single()
+            if (nc) newContactIds.push(nc.id)
+          }
+          for (const c of addedContacts) {
+            const newOrgIds = [...(c.organization_ids ?? []), org.id].filter((v, i, a) => a.indexOf(v) === i)
+            await supabase.from('contacts').update({ organization_ids: newOrgIds, company: orgName }).eq('id', c.id)
+          }
+          const allIds = [...addedContacts.map(c => c.id), ...newContactIds]
+          const { data: updated } = await supabase.from('organizations')
+            .update({ contact_ids: allIds }).eq('id', org.id).select('*').single()
+          setOrgs(prev => [updated as Organization ?? org, ...prev])
+        }
       }
       closePanel()
     } finally {
@@ -890,76 +914,110 @@ function OrganizationsTab() {
               <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-3">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Danh sách liên hệ</p>
 
-                {/* Existing contacts */}
-                {orgContacts.length > 0 && (
-                  <div className="rounded-xl border border-gray-200 overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400">Họ tên</th>
-                          <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400">SĐT</th>
-                          <th className="text-left px-3 py-2 text-xs font-semibold text-gray-400">Email</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {orgContacts.map(c => (
-                          <tr key={c.id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2.5">
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full bg-brand-100 flex items-center justify-center text-[10px] font-bold text-brand-700 flex-shrink-0">
-                                  {getInitials(c.name)}
-                                </div>
-                                <span className="font-medium text-gray-800 text-xs">{c.name}</span>
-                              </div>
-                            </td>
-                            <td className="px-3 py-2.5 text-xs text-gray-500">{c.phone ?? '—'}</td>
-                            <td className="px-3 py-2.5 text-xs text-gray-500 truncate max-w-[140px]">{c.email ?? '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                {/* Search existing contacts */}
+                <div className="relative" ref={contactSearchRef}>
+                  <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2 bg-white focus-within:ring-2 focus-within:ring-brand-400">
+                    <Search size={13} className="text-gray-400 flex-shrink-0" />
+                    <input
+                      value={contactSearch}
+                      onChange={e => { setContactSearch(e.target.value); setShowContactDrop(true) }}
+                      onFocus={() => setShowContactDrop(true)}
+                      onBlur={() => setTimeout(() => setShowContactDrop(false), 150)}
+                      placeholder="Tìm liên hệ từ hệ thống..."
+                      className="flex-1 text-xs outline-none bg-transparent placeholder-gray-400"
+                    />
                   </div>
-                )}
+                  {showContactDrop && contactDropResults.length > 0 && (
+                    <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                      {contactDropResults.map(c => (
+                        <button key={c.id} onMouseDown={() => {
+                          setAddedContacts(prev => [...prev, c])
+                          setContactSearch('')
+                          setShowContactDrop(false)
+                        }} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-brand-50 transition-colors text-left border-b border-gray-100 last:border-0">
+                          <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center text-[10px] font-bold text-brand-700 flex-shrink-0">
+                            {getInitials(c.name)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-semibold text-gray-900 truncate">{c.name}</div>
+                            <div className="text-[10px] text-gray-400 truncate">{[c.phone, c.company].filter(Boolean).join(' · ')}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {showContactDrop && contactSearch.trim() && contactDropResults.length === 0 && (
+                    <div className="absolute z-20 top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-xs text-gray-400">
+                      Không tìm thấy liên hệ nào
+                    </div>
+                  )}
+                </div>
 
-                {/* New contact rows */}
+                {/* Existing contacts (from DB) */}
+                {orgContacts.filter(c => !removedContactIds.includes(c.id)).map(c => (
+                  <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-200 bg-white group">
+                    <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center text-[10px] font-bold text-brand-700 flex-shrink-0">
+                      {getInitials(c.name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-gray-900 truncate">{c.name}</div>
+                      <div className="text-[10px] text-gray-400 truncate">{[c.phone, c.email].filter(Boolean).join(' · ')}</div>
+                    </div>
+                    <button onClick={() => setRemovedContactIds(prev => [...prev, c.id])}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500 transition-all flex-shrink-0">
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
+
+                {/* Added contacts (from search) */}
+                {addedContacts.map(c => (
+                  <div key={c.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-brand-200 bg-brand-50/40 group">
+                    <div className="w-7 h-7 rounded-full bg-brand-200 flex items-center justify-center text-[10px] font-bold text-brand-700 flex-shrink-0">
+                      {getInitials(c.name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold text-gray-900 truncate">{c.name}</div>
+                      <div className="text-[10px] text-gray-400 truncate">{[c.phone, c.email].filter(Boolean).join(' · ')}</div>
+                    </div>
+                    <span className="text-[10px] text-brand-500 font-semibold flex-shrink-0">Mới thêm</span>
+                    <button onClick={() => setAddedContacts(prev => prev.filter(x => x.id !== c.id))}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-500 transition-all flex-shrink-0">
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
+
+                {/* New rows (tạo mới) */}
                 {newRows.length > 0 && (
-                  <div className="rounded-xl border border-brand-200 overflow-hidden bg-brand-50/30">
+                  <div className="rounded-xl border border-emerald-200 overflow-hidden bg-emerald-50/30">
+                    <div className="px-3 py-1.5 border-b border-emerald-200 text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Tạo liên hệ mới</div>
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-brand-200">
-                          <th className="text-left px-3 py-2 text-xs font-semibold text-brand-600">Họ tên *</th>
-                          <th className="text-left px-3 py-2 text-xs font-semibold text-brand-600">SĐT</th>
-                          <th className="text-left px-3 py-2 text-xs font-semibold text-brand-600">Email</th>
+                        <tr className="border-b border-emerald-100">
+                          <th className="text-left px-3 py-2 text-xs font-semibold text-emerald-600">Họ tên *</th>
+                          <th className="text-left px-3 py-2 text-xs font-semibold text-emerald-600">SĐT</th>
+                          <th className="text-left px-3 py-2 text-xs font-semibold text-emerald-600">Email</th>
                           <th className="w-8" />
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-brand-100">
+                      <tbody className="divide-y divide-emerald-100">
                         {newRows.map((row, i) => (
                           <tr key={i}>
                             <td className="px-2 py-2">
-                              <input
-                                autoFocus={i === newRows.length - 1}
-                                placeholder="Nguyễn Văn A"
-                                value={row.name}
+                              <input autoFocus={i === newRows.length - 1} placeholder="Nguyễn Văn A" value={row.name}
                                 onChange={e => setNewRows(rs => rs.map((r, j) => j === i ? { ...r, name: e.target.value } : r))}
-                                className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
-                              />
+                                className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white" />
                             </td>
                             <td className="px-2 py-2">
-                              <input
-                                placeholder="0901234567"
-                                value={row.phone}
+                              <input placeholder="0901234567" value={row.phone}
                                 onChange={e => setNewRows(rs => rs.map((r, j) => j === i ? { ...r, phone: e.target.value } : r))}
-                                className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
-                              />
+                                className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white" />
                             </td>
                             <td className="px-2 py-2">
-                              <input
-                                placeholder="email@cty.vn"
-                                value={row.email}
+                              <input placeholder="email@cty.vn" value={row.email}
                                 onChange={e => setNewRows(rs => rs.map((r, j) => j === i ? { ...r, email: e.target.value } : r))}
-                                className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
-                              />
+                                className="w-full px-2.5 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-white" />
                             </td>
                             <td className="px-2 py-2">
                               <button onClick={() => setNewRows(rs => rs.filter((_, j) => j !== i))}
@@ -974,21 +1032,21 @@ function OrganizationsTab() {
                   </div>
                 )}
 
-                {orgContacts.length === 0 && newRows.length === 0 && (
-                  <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
-                    <Users size={32} className="text-gray-200 mb-3" />
+                {/* Empty state */}
+                {orgContacts.filter(c => !removedContactIds.includes(c.id)).length === 0 &&
+                  addedContacts.length === 0 && newRows.length === 0 && (
+                  <div className="flex-1 flex flex-col items-center justify-center py-10 text-center">
+                    <Users size={28} className="text-gray-200 mb-3" />
                     <p className="text-sm text-gray-400 mb-1">Chưa có liên hệ nào</p>
-                    <p className="text-xs text-gray-300">Nhấn "+ Thêm liên hệ" để thêm</p>
+                    <p className="text-xs text-gray-300">Tìm từ hệ thống hoặc tạo mới bên dưới</p>
                   </div>
                 )}
 
-                {/* Add row button ở dưới cùng */}
+                {/* Tạo liên hệ mới */}
                 <button
                   onClick={() => setNewRows(r => [...r, { name: '', phone: '', email: '' }])}
-                  className="flex items-center gap-2 text-xs text-gray-400 hover:text-brand-600 py-2 px-3 rounded-lg hover:bg-brand-50 transition-colors border border-dashed border-gray-200 hover:border-brand-300 w-full justify-center"
-                >
-                  <Plus size={13} />
-                  Thêm liên hệ
+                  className="flex items-center gap-2 text-xs text-gray-400 hover:text-emerald-600 py-2 px-3 rounded-lg hover:bg-emerald-50 transition-colors border border-dashed border-gray-200 hover:border-emerald-300 w-full justify-center mt-auto">
+                  <Plus size={13} /> Tạo liên hệ mới
                 </button>
               </div>
             </div>
