@@ -52,7 +52,7 @@ export default function DonHangCuaToiPage() {
         .from('opportunities')
         .select('id, title, description, stage, source, tour_date, tour_end_date, estimated_value, created_by, contact:contacts(name, company), assigned_user:users!assigned_to(id, full_name), creator:users!created_by(id, full_name)')
         .is('deleted_at', null)
-        .in('stage', ALL_STAGES)
+        .not('stage', 'in', '(lost,cancelled)')
         .order('created_at', { ascending: false }),
       supabase.from('users').select('id, full_name').eq('is_active', true).order('full_name'),
     ])
