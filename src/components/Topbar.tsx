@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
-import { Bell, LogOut, ChevronDown, RotateCcw } from 'lucide-react'
+import { Bell, LogOut, ChevronDown, RotateCcw, UserCog } from 'lucide-react'
+import Link from 'next/link'
 import { useAuth } from '@/contexts/auth'
 import { useTopbar } from '@/contexts/topbar'
 import { getInitials } from '@/lib/utils'
@@ -85,7 +86,14 @@ export default function Topbar() {
           </button>
 
           {open && (
-            <div className="absolute right-0 top-full mt-1.5 w-44 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+            <div className="absolute right-0 top-full mt-1.5 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+              <Link href="/tai-khoan"
+                onClick={() => setOpen(false)}
+                className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                <UserCog size={14} />
+                Tài khoản
+              </Link>
+              <div className="border-t border-gray-100 my-1" />
               <button
                 onClick={() => { setOpen(false); logout() }}
                 className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-red-500 transition-colors"
