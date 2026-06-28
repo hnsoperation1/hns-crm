@@ -294,10 +294,23 @@ function ContactsTab() {
     }
   }
 
+  // Reverse map: contactId → Set<orgId> từ phía org (nguồn tin cậy, merge với contact.organization_ids)
+  const contactToOrgIds = new Map<string, Set<string>>()
+  for (const org of orgs) {
+    for (const cid of (org.contact_ids ?? [])) {
+      if (!contactToOrgIds.has(cid)) contactToOrgIds.set(cid, new Set())
+      contactToOrgIds.get(cid)!.add(org.id)
+    }
+  }
+
+  function allOrgIdsFor(c: Contact) {
+    return [...new Set([...(c.organization_ids ?? []), ...(contactToOrgIds.get(c.id) ?? [])])]
+  }
+
   const filtered = contacts.filter(c => {
     if (!search) return true
     const q = search.toLowerCase()
-    const orgNames = (c.organization_ids ?? []).map(id => orgs.find(o => o.id === id)?.name ?? '').join(' ')
+    const orgNames = allOrgIdsFor(c).map(id => orgs.find(o => o.id === id)?.name ?? '').join(' ')
     return (
       c.name.toLowerCase().includes(q) ||
       (c.company ?? '').toLowerCase().includes(q) ||
@@ -306,14 +319,14 @@ function ContactsTab() {
     )
   })
 
-  // Expand: mỗi contact × mỗi org thành 1 dòng riêng
+  // Expand: mỗi contact × mỗi org thành 1 dòng riêng (merge cả 2 chiều)
   const rows: { contact: Contact; orgName: string | null; orgId: string | null; rowKey: string }[] = []
   for (const c of filtered) {
-    const ids = c.organization_ids ?? []
+    const ids = allOrgIdsFor(c)
     if (ids.length > 0) {
       for (const orgId of ids) {
         const org = orgs.find(o => o.id === orgId)
-        rows.push({ contact: c, orgName: org?.name ?? c.company ?? null, orgId, rowKey: `${c.id}-${orgId}` })
+        rows.push({ contact: c, orgName: org?.name ?? null, orgId, rowKey: `${c.id}-${orgId}` })
       }
     } else {
       rows.push({ contact: c, orgName: c.company ?? null, orgId: null, rowKey: c.id })
