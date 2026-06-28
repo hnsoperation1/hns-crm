@@ -404,15 +404,13 @@ export default function OppDetailPage() {
   async function savePersonnel() {
     if (!opp) return
     setPersonnelSaving(true)
-    // Luôn update assigned_to trước
-    await supabase.from('opportunities').update({
-      assigned_to: personnelForm.assigned_to || opp.assigned_to,
-    }).eq('id', id)
-    // operator_id + support_ids chỉ update sau khi migration_personnel.sql đã chạy
-    await supabase.from('opportunities').update({
+    const payload: Record<string, unknown> = {
       operator_id: personnelForm.operator_id || null,
       support_ids: personnelForm.support_ids,
-    }).eq('id', id)
+    }
+    if (personnelForm.assigned_to) payload.assigned_to = personnelForm.assigned_to
+    const { error } = await supabase.from('opportunities').update(payload).eq('id', id)
+    if (error) { console.error('savePersonnel error:', error); setPersonnelSaving(false); return }
     setOpp(o => o ? {
       ...o,
       assigned_to: personnelForm.assigned_to || o.assigned_to,
