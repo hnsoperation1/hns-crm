@@ -352,11 +352,6 @@ export default function DangLayPage() {
                         className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50 rounded-lg transition-colors border border-brand-200 hover:border-brand-300">
                         <Eye size={12} /> Xem
                       </button>
-                      <button onClick={e => { e.stopPropagation(); router.push(`/don-hang-moi/${r.id}`) }}
-                        title="Mở trang chi tiết"
-                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300">
-                        <ChevronRight size={12} /> Chi tiết
-                      </button>
                     </div>
                   </td>
                 </tr>
