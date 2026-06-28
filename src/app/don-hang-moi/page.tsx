@@ -59,8 +59,10 @@ export default function DangLayPage() {
   const [newContactErrors, setNewContactErrors] = useState<{ name?: string; phone?: string }>({})
   const [savingContact, setSavingContact] = useState(false)
 
-  // Edit modal
+  // Slide-over xem/sửa
   const [showEditModal, setShowEditModal] = useState(false)
+  const [editMode, setEditMode] = useState(false)
+  const [viewRow, setViewRow] = useState<Row | null>(null)
   const [editId, setEditId] = useState('')
   const [editForm, setEditForm] = useState({ title: '', description: '', contact_id: '', source: 'mkt' as LeadSource, assigned_to: '', estimated_value: '' })
   const [editContactSearch, setEditContactSearch] = useState('')
@@ -169,8 +171,15 @@ export default function DangLayPage() {
     }
   }
 
-  async function openEdit(r: Row, e: React.MouseEvent) {
+  async function openSlideOver(r: Row, e: React.MouseEvent) {
     e.stopPropagation()
+    setViewRow(r)
+    setEditMode(false)
+    setShowEditModal(true)
+  }
+
+  async function enterEditMode() {
+    if (!viewRow) return
     if (contacts.length === 0) {
       const [{ data: c }, { data: u }] = await Promise.all([
         supabase.from('contacts').select('id, name, phone, company').is('deleted_at', null).order('name').limit(200),
@@ -179,9 +188,9 @@ export default function DangLayPage() {
       setContacts((c ?? []) as ContactOpt[])
       setUsers((u ?? []) as UserOpt[])
     }
+    const r = viewRow
     setEditId(r.id)
-    const contactName = r.contact?.name ?? ''
-    setEditContactSearch(contactName)
+    setEditContactSearch(r.contact?.name ?? '')
     setEditForm({
       title: r.title,
       description: r.description ?? '',
@@ -190,11 +199,10 @@ export default function DangLayPage() {
       assigned_to: r.assigned_user?.id ?? '',
       estimated_value: r.estimated_value ? String(r.estimated_value) : '',
     })
-    // Tìm contact_id từ contacts list
     const { data: fullOpp } = await supabase.from('opportunities').select('contact_id').eq('id', r.id).single()
     if (fullOpp) setEditForm(f => ({ ...f, contact_id: fullOpp.contact_id ?? '' }))
     setEditErrors({})
-    setShowEditModal(true)
+    setEditMode(true)
   }
 
   async function handleUpdate() {
@@ -213,7 +221,20 @@ export default function DangLayPage() {
       updated_at: new Date().toISOString(),
     }).eq('id', editId)
     setEditSaving(false)
-    if (!error) { setShowEditModal(false); loadData() }
+    if (!error) {
+      // Cập nhật viewRow để chế độ xem hiển thị đúng
+      const updatedUser = users.find(u => u.id === editForm.assigned_to)
+      setViewRow(prev => prev ? {
+        ...prev,
+        title: editForm.title.trim(),
+        description: editForm.description.trim() || null,
+        source: editForm.source,
+        estimated_value: editForm.estimated_value ? Number(editForm.estimated_value) : null,
+        assigned_user: updatedUser ? { id: updatedUser.id, full_name: updatedUser.full_name } : null,
+      } : prev)
+      setEditMode(false)
+      loadData()
+    }
   }
 
   const filteredEditContacts = contacts.filter(c =>
@@ -326,15 +347,15 @@ export default function DangLayPage() {
                   <td className="px-5 py-3.5 text-gray-400 whitespace-nowrap">{formatDate(r.created_at)}</td>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-                      <button onClick={e => { e.stopPropagation(); router.push(`/don-hang-moi/${r.id}`) }}
-                        title="Xem chi tiết"
+                      <button onClick={e => openSlideOver(r, e)}
+                        title="Xem nhanh"
                         className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50 rounded-lg transition-colors border border-brand-200 hover:border-brand-300">
                         <Eye size={12} /> Xem
                       </button>
-                      <button onClick={e => openEdit(r, e)}
-                        title="Sửa nhanh"
+                      <button onClick={e => { e.stopPropagation(); router.push(`/don-hang-moi/${r.id}`) }}
+                        title="Mở trang chi tiết"
                         className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300">
-                        <Pencil size={12} /> Sửa
+                        <ChevronRight size={12} /> Chi tiết
                       </button>
                     </div>
                   </td>
@@ -496,8 +517,8 @@ export default function DangLayPage() {
           </div>
         </div>
       )}
-      {/* Slide-over sửa đơn */}
-      {showEditModal && (
+      {/* Slide-over xem / sửa đơn */}
+      {showEditModal && viewRow && (
         <>
           <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setShowEditModal(false)} />
           <div className="fixed top-0 right-0 h-full w-[480px] bg-white shadow-2xl z-50 flex flex-col">
@@ -505,100 +526,128 @@ export default function DangLayPage() {
               className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full bg-white border border-gray-200 border-r-0 rounded-l-xl px-1.5 py-3 text-gray-400 hover:text-gray-700 hover:bg-gray-50 shadow-sm transition-colors">
               <ChevronRight size={16} />
             </button>
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 flex-shrink-0">
-              <div>
-                <h2 className="text-base font-bold text-gray-900">Sửa đơn hàng</h2>
-                <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[340px]">{editForm.title}</p>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-gray-900 truncate">{viewRow.title}</h2>
+                  {(() => { const sc = STAGE_COLORS[viewRow.stage]; return <span className={`flex-shrink-0 inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${sc.bg} ${sc.text}`}>{STAGE_LABELS[viewRow.stage]}</span> })()}
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">{viewRow.contact?.company ?? viewRow.contact?.name ?? '—'}</p>
               </div>
-              <button onClick={() => setShowEditModal(false)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+              <button onClick={() => setShowEditModal(false)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 flex-shrink-0 ml-2"><X size={18} /></button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-              {/* Tên đơn */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Tên đơn hàng <span className="text-red-500">*</span></label>
-                <input value={editForm.title} onChange={e => { setEditForm(f => ({ ...f, title: e.target.value })); setEditErrors(er => ({ ...er, title: '' })) }}
-                  className={`${iField} ${editErrors.title ? 'border-red-300 bg-red-50' : ''}`} autoFocus />
-                {editErrors.title && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {editErrors.title}</p>}
+            {/* Body */}
+            {!editMode ? (
+              /* ── Chế độ XEM ── */
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+                {[
+                  { label: 'Liên hệ', value: viewRow.contact?.name ?? '—' },
+                  { label: 'Nguồn', value: SOURCE_LABELS[viewRow.source as keyof typeof SOURCE_LABELS] ?? viewRow.source },
+                  { label: 'Sale phụ trách', value: viewRow.assigned_user?.full_name ?? <span className="text-amber-600 font-semibold text-xs bg-amber-50 px-2 py-0.5 rounded-full">Chờ phân công</span> },
+                  { label: 'Điểm đến / Mô tả', value: viewRow.description || <span className="text-gray-300">—</span> },
+                  { label: 'Giá trị ước tính', value: viewRow.estimated_value ? formatVND(viewRow.estimated_value) : <span className="text-gray-300">—</span> },
+                  { label: 'Ngày tạo', value: formatDate(viewRow.created_at) },
+                  { label: 'Người tạo', value: viewRow.creator?.full_name ?? '—' },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex gap-3">
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider w-36 flex-shrink-0 pt-0.5">{label}</span>
+                    <span className="text-sm text-gray-800">{value}</span>
+                  </div>
+                ))}
               </div>
-
-              {/* Liên hệ */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Liên hệ</label>
-                <div className="relative">
-                  <input value={editContactSearch}
-                    onChange={e => { setEditContactSearch(e.target.value); setEditForm(f => ({ ...f, contact_id: '' })); setEditContactDropOpen(true) }}
-                    onFocus={() => setEditContactDropOpen(true)}
-                    onBlur={() => setTimeout(() => setEditContactDropOpen(false), 150)}
-                    placeholder="Tìm tên, SĐT, công ty..."
-                    className={iField} />
-                  {editForm.contact_id && !editContactDropOpen && (
-                    <div className="mt-1.5 flex items-center gap-2 px-3 py-2 bg-brand-50 border border-brand-100 rounded-xl text-sm text-brand-700 font-medium">
-                      <div className="w-6 h-6 bg-brand-200 rounded-full flex items-center justify-center text-[10px] font-bold text-brand-700 flex-shrink-0">
-                        {getInitials(contacts.find(c => c.id === editForm.contact_id)?.name ?? '')}
+            ) : (
+              /* ── Chế độ SỬA ── */
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Tên đơn hàng <span className="text-red-500">*</span></label>
+                  <input value={editForm.title} onChange={e => { setEditForm(f => ({ ...f, title: e.target.value })); setEditErrors(er => ({ ...er, title: '' })) }}
+                    className={`${iField} ${editErrors.title ? 'border-red-300 bg-red-50' : ''}`} autoFocus />
+                  {editErrors.title && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {editErrors.title}</p>}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Liên hệ</label>
+                  <div className="relative">
+                    <input value={editContactSearch}
+                      onChange={e => { setEditContactSearch(e.target.value); setEditForm(f => ({ ...f, contact_id: '' })); setEditContactDropOpen(true) }}
+                      onFocus={() => setEditContactDropOpen(true)}
+                      onBlur={() => setTimeout(() => setEditContactDropOpen(false), 150)}
+                      placeholder="Tìm tên, SĐT, công ty..." className={iField} />
+                    {editForm.contact_id && !editContactDropOpen && (
+                      <div className="mt-1.5 flex items-center gap-2 px-3 py-2 bg-brand-50 border border-brand-100 rounded-xl text-sm text-brand-700 font-medium">
+                        <div className="w-6 h-6 bg-brand-200 rounded-full flex items-center justify-center text-[10px] font-bold text-brand-700 flex-shrink-0">{getInitials(contacts.find(c => c.id === editForm.contact_id)?.name ?? '')}</div>
+                        <span className="truncate">{contacts.find(c => c.id === editForm.contact_id)?.name}</span>
+                        <button type="button" onClick={() => { setEditForm(f => ({ ...f, contact_id: '' })); setEditContactSearch('') }} className="ml-auto flex-shrink-0 text-brand-400 hover:text-brand-600"><X size={13} /></button>
                       </div>
-                      <span className="truncate">{contacts.find(c => c.id === editForm.contact_id)?.name}</span>
-                      <button type="button" onClick={() => { setEditForm(f => ({ ...f, contact_id: '' })); setEditContactSearch('') }} className="ml-auto flex-shrink-0 text-brand-400 hover:text-brand-600"><X size={13} /></button>
-                    </div>
-                  )}
-                  {editContactDropOpen && (
-                    <div className="absolute left-0 right-0 top-full mt-1 border border-gray-200 rounded-xl bg-white shadow-lg z-20 overflow-hidden max-h-48 overflow-y-auto">
-                      {filteredEditContacts.slice(0, 30).map(c => (
-                        <div key={c.id} onMouseDown={() => { setEditForm(f => ({ ...f, contact_id: c.id })); setEditContactSearch(c.name); setEditContactDropOpen(false) }}
-                          className={`flex items-center gap-2 px-3 py-2.5 cursor-pointer text-sm transition-colors ${editForm.contact_id === c.id ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
-                          <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600 flex-shrink-0">{getInitials(c.name)}</div>
-                          <div className="min-w-0">
-                            <div className="font-medium truncate">{c.name}</div>
-                            {(c.company || c.phone) && <div className="text-xs text-gray-400 truncate">{[c.phone, c.company].filter(Boolean).join(' · ')}</div>}
+                    )}
+                    {editContactDropOpen && (
+                      <div className="absolute left-0 right-0 top-full mt-1 border border-gray-200 rounded-xl bg-white shadow-lg z-20 overflow-hidden max-h-48 overflow-y-auto">
+                        {filteredEditContacts.slice(0, 30).map(c => (
+                          <div key={c.id} onMouseDown={() => { setEditForm(f => ({ ...f, contact_id: c.id })); setEditContactSearch(c.name); setEditContactDropOpen(false) }}
+                            className={`flex items-center gap-2 px-3 py-2.5 cursor-pointer text-sm transition-colors ${editForm.contact_id === c.id ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
+                            <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600 flex-shrink-0">{getInitials(c.name)}</div>
+                            <div className="min-w-0">
+                              <div className="font-medium truncate">{c.name}</div>
+                              {(c.company || c.phone) && <div className="text-xs text-gray-400 truncate">{[c.phone, c.company].filter(Boolean).join(' · ')}</div>}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      {filteredEditContacts.length === 0 && <div className="px-3 py-4 text-sm text-gray-400 text-center">Không tìm thấy</div>}
-                    </div>
-                  )}
+                        ))}
+                        {filteredEditContacts.length === 0 && <div className="px-3 py-4 text-sm text-gray-400 text-center">Không tìm thấy</div>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale phụ trách</label>
+                  <select value={editForm.assigned_to} onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))} className={iField}>
+                    <option value="">— Chọn Sale TV —</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nguồn</label>
+                  <select value={editForm.source} onChange={e => setEditForm(f => ({ ...f, source: e.target.value as LeadSource }))} className={iField}>
+                    {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Điểm đến / Mô tả</label>
+                  <textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                    rows={3} placeholder="Dịch vụ, điểm đến, số lượng khách..." className={`${iField} resize-none`} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Giá trị ước tính (VNĐ)</label>
+                  <input type="number" value={editForm.estimated_value} onChange={e => setEditForm(f => ({ ...f, estimated_value: e.target.value }))}
+                    placeholder="VD: 50000000" className={iField} />
                 </div>
               </div>
+            )}
 
-              {/* Sale TV */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale phụ trách</label>
-                <select value={editForm.assigned_to} onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))} className={iField}>
-                  <option value="">— Chọn Sale TV —</option>
-                  {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
-                </select>
-              </div>
-
-              {/* Nguồn */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nguồn</label>
-                <select value={editForm.source} onChange={e => setEditForm(f => ({ ...f, source: e.target.value as LeadSource }))} className={iField}>
-                  {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                </select>
-              </div>
-
-              {/* Điểm đến */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Điểm đến / Mô tả</label>
-                <textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
-                  rows={3} placeholder="Dịch vụ, điểm đến, số lượng khách, yêu cầu đặc biệt..."
-                  className={`${iField} resize-none`} />
-              </div>
-
-              {/* Giá trị ước tính */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Giá trị ước tính (VNĐ)</label>
-                <input type="number" value={editForm.estimated_value} onChange={e => setEditForm(f => ({ ...f, estimated_value: e.target.value }))}
-                  placeholder="VD: 50000000" className={iField} />
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-2 flex-shrink-0">
-              <button onClick={() => setShowEditModal(false)} className="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 font-medium">Huỷ</button>
-              <button onClick={handleUpdate} disabled={editSaving}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-sm font-semibold transition-colors">
-                {editSaving && <Loader2 size={13} className="animate-spin" />}
-                Lưu thay đổi
-              </button>
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
+              {!editMode ? (
+                <>
+                  <button onClick={() => router.push(`/don-hang-moi/${viewRow.id}`)}
+                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-brand-600 font-medium transition-colors">
+                    <Eye size={14} /> Mở trang chi tiết
+                  </button>
+                  <button onClick={enterEditMode}
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-accent-500 hover:bg-accent-600 text-white text-sm font-semibold transition-colors">
+                    <Pencil size={13} /> Sửa
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => setEditMode(false)} className="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 font-medium">Huỷ</button>
+                  <button onClick={handleUpdate} disabled={editSaving}
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-sm font-semibold transition-colors">
+                    {editSaving && <Loader2 size={13} className="animate-spin" />}
+                    Lưu thay đổi
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </>
