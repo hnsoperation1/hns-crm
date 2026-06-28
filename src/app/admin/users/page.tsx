@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, X, Search, ShieldCheck, Pencil, Trash2, ChevronDown } from 'lucide-react'
+import { Plus, X, Search, ShieldCheck, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react'
 import type { User, Role } from '@/types'
 import { getInitials } from '@/lib/utils'
 import { useAuth } from '@/contexts/auth'
@@ -384,6 +384,10 @@ export default function AdminUsersPage() {
         <>
           <div className="fixed inset-0 bg-black/20 z-40" onClick={closePanel} />
           <div className="fixed top-0 right-0 h-full w-[420px] bg-white shadow-2xl z-50 flex flex-col">
+            <button onClick={closePanel}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full bg-white border border-gray-200 border-r-0 rounded-l-xl px-1.5 py-3 text-gray-400 hover:text-gray-700 hover:bg-gray-50 shadow-sm transition-colors">
+              <ChevronRight size={16} />
+            </button>
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
               <h2 className="text-lg font-bold text-gray-900">
                 {editingUser ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới'}

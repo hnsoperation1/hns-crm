@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { Search, Plus, X, Loader2, Building2, Users, Globe, Phone, Mail, MapPin, Trash2, Pencil, RotateCcw } from 'lucide-react'
+import { Search, Plus, X, Loader2, Building2, Users, Globe, Phone, Mail, MapPin, Trash2, Pencil, RotateCcw, ChevronRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import DatePickerVN from '@/components/DatePickerVN'
 import { useAuth } from '@/contexts/auth'
@@ -434,6 +434,10 @@ function ContactsTab() {
         <>
           <div className="fixed inset-0 bg-black/30 z-40" onClick={() => { setShowForm(false); setErrors({}); setLookupError('') }} />
           <div className="fixed top-0 right-0 h-full w-[840px] bg-white shadow-2xl z-50 flex flex-col">
+            <button onClick={() => { setShowForm(false); setErrors({}); setLookupError('') }}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full bg-white border border-gray-200 border-r-0 rounded-l-xl px-1.5 py-3 text-gray-400 hover:text-gray-700 hover:bg-gray-50 shadow-sm transition-colors">
+              <ChevronRight size={16} />
+            </button>
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-200 flex-shrink-0">
               <h2 className="text-lg font-bold text-gray-900">Thêm liên hệ mới</h2>
               <button onClick={() => { setShowForm(false); setErrors({}); setLookupError('') }} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400">
@@ -879,6 +883,10 @@ function OrganizationsTab() {
         <>
           <div className="fixed inset-0 bg-black/30 z-40" onClick={closePanel} />
           <div className="fixed top-0 right-0 h-full w-[90vw] max-w-[1200px] bg-white shadow-2xl z-50 flex flex-col">
+            <button onClick={closePanel}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full bg-white border border-gray-200 border-r-0 rounded-l-xl px-1.5 py-3 text-gray-400 hover:text-gray-700 hover:bg-gray-50 shadow-sm transition-colors">
+              <ChevronRight size={16} />
+            </button>
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
               <h2 className="text-lg font-bold text-gray-900">{editingOrg ? 'Chỉnh sửa công ty' : 'Thêm công ty mới'}</h2>
               <button onClick={closePanel} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400"><X size={18} /></button>
