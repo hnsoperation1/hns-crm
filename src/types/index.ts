@@ -74,6 +74,8 @@ export interface Opportunity {
   organization?: Organization
   assigned_to: string
   assigned_user?: User
+  operator_id?: string | null
+  support_ids?: string[]
   created_by: string
   source: LeadSource
   campaign_id?: string

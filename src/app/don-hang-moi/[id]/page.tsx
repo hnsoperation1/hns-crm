@@ -25,6 +25,7 @@ type UserMin = { id: string; full_name: string; is_sale_tv?: boolean; is_active?
 type OppDetail = Opportunity & {
   contact: (Contact & { id: string }) | null
   assigned_user: UserMin | null
+  operator: UserMin | null
   creator: UserMin | null
 }
 
@@ -62,6 +63,10 @@ export default function OppDetailPage() {
   const [showReassign, setShowReassign] = useState(false)
   const [reassignTarget, setReassignTarget] = useState('')
   const [reassignSuccess, setReassignSuccess] = useState(false)
+  const [personnelEdit, setPersonnelEdit] = useState(false)
+  const [personnelForm, setPersonnelForm] = useState({ assigned_to: '', operator_id: '', support_ids: [] as string[] })
+  const [personnelSaving, setPersonnelSaving] = useState(false)
+  const [personnelSaved, setPersonnelSaved] = useState(false)
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
@@ -169,7 +174,7 @@ export default function OppDetailPage() {
     async function load() {
       const [{ data: oppData }, { data: logsData }, { data: tasksData }, { data: usersData }] = await Promise.all([
         supabase.from('opportunities')
-          .select('*, contact:contacts(id,name,phone,email,company,tax_code,organization_ids,source,lead_score,created_by,created_at), assigned_user:users!assigned_to(id,full_name), creator:users!created_by(id,full_name)')
+          .select('*, contact:contacts(id,name,phone,email,company,tax_code,organization_ids,source,lead_score,created_by,created_at), assigned_user:users!assigned_to(id,full_name), operator:users!operator_id(id,full_name), creator:users!created_by(id,full_name)')
           .eq('id', id)
           .single(),
         supabase.from('activity_logs')
@@ -394,6 +399,28 @@ export default function OppDetailPage() {
     })
     setMarkingLost(false)
     setOpp(o => o ? { ...o, stage: 'lost' as OppStage } : o)
+  }
+
+  async function savePersonnel() {
+    if (!opp) return
+    setPersonnelSaving(true)
+    await supabase.from('opportunities').update({
+      assigned_to: personnelForm.assigned_to || opp.assigned_to,
+      operator_id: personnelForm.operator_id || null,
+      support_ids: personnelForm.support_ids,
+    }).eq('id', id)
+    setOpp(o => o ? {
+      ...o,
+      assigned_to: personnelForm.assigned_to || o.assigned_to,
+      assigned_user: allUsers.find(u => u.id === (personnelForm.assigned_to || o.assigned_to)) ?? o.assigned_user,
+      operator_id: personnelForm.operator_id || null,
+      operator: personnelForm.operator_id ? (allUsers.find(u => u.id === personnelForm.operator_id) ?? null) : null,
+      support_ids: personnelForm.support_ids,
+    } : o)
+    setPersonnelSaving(false)
+    setPersonnelSaved(true)
+    setPersonnelEdit(false)
+    setTimeout(() => setPersonnelSaved(false), 2500)
   }
 
   if (loading) {
@@ -1274,6 +1301,138 @@ export default function OppDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Personnel Card */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="font-semibold text-gray-900 text-sm">Nhân sự</h3>
+                <div className="flex items-center gap-2">
+                  {personnelSaved && <span className="text-xs text-emerald-600 font-medium flex items-center gap-1"><CheckCircle2 size={11} />Đã lưu</span>}
+                  {personnelEdit ? (
+                    <>
+                      <button onClick={savePersonnel} disabled={personnelSaving}
+                        className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-60 transition-colors">
+                        {personnelSaving ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle2 size={10} />}
+                        Lưu
+                      </button>
+                      <button onClick={() => setPersonnelEdit(false)}
+                        className="px-2.5 py-1 text-xs text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                        Huỷ
+                      </button>
+                    </>
+                  ) : (
+                    <button onClick={() => {
+                      setPersonnelForm({
+                        assigned_to: opp.assigned_to ?? '',
+                        operator_id: opp.operator_id ?? '',
+                        support_ids: opp.support_ids ?? [],
+                      })
+                      setPersonnelEdit(true)
+                    }}
+                      className="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
+                      <Pencil size={10} /> Cập nhật
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="p-5 space-y-4">
+                {/* Sale tư vấn */}
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Sale tư vấn</div>
+                  {personnelEdit ? (
+                    <select value={personnelForm.assigned_to}
+                      onChange={e => setPersonnelForm(f => ({ ...f, assigned_to: e.target.value }))}
+                      className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-400 bg-white text-gray-700">
+                      <option value="">— Chưa chọn —</option>
+                      {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                    </select>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      {effectiveAssignedUser ? (
+                        <>
+                          <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center text-[10px] font-bold text-brand-700 flex-shrink-0">
+                            {getInitials(effectiveAssignedUser.full_name)}
+                          </div>
+                          <span className="text-sm text-gray-800 font-medium">{effectiveAssignedUser.full_name}</span>
+                        </>
+                      ) : <span className="text-xs text-gray-300 italic">Chưa phân công</span>}
+                    </div>
+                  )}
+                </div>
+                {/* Sale điều hành */}
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Sale điều hành</div>
+                  {personnelEdit ? (
+                    <select value={personnelForm.operator_id}
+                      onChange={e => setPersonnelForm(f => ({ ...f, operator_id: e.target.value }))}
+                      className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-400 bg-white text-gray-700">
+                      <option value="">— Chưa có —</option>
+                      {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                    </select>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      {opp.operator ? (
+                        <>
+                          <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center text-[10px] font-bold text-amber-700 flex-shrink-0">
+                            {getInitials(opp.operator.full_name)}
+                          </div>
+                          <span className="text-sm text-gray-800 font-medium">{opp.operator.full_name}</span>
+                        </>
+                      ) : <span className="text-xs text-gray-300 italic">Chưa có</span>}
+                    </div>
+                  )}
+                </div>
+                {/* Nhân sự hỗ trợ */}
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Nhân sự hỗ trợ</div>
+                  {personnelEdit ? (
+                    <div className="space-y-1.5">
+                      {personnelForm.support_ids.map(uid => {
+                        const u = allUsers.find(x => x.id === uid)
+                        return (
+                          <div key={uid} className="flex items-center justify-between bg-gray-50 rounded-lg px-2.5 py-1.5">
+                            <span className="text-xs text-gray-700">{u?.full_name ?? uid}</span>
+                            <button onClick={() => setPersonnelForm(f => ({ ...f, support_ids: f.support_ids.filter(x => x !== uid) }))}
+                              className="text-gray-300 hover:text-red-400 transition-colors">
+                              <X size={12} />
+                            </button>
+                          </div>
+                        )
+                      })}
+                      <select
+                        value=""
+                        onChange={e => {
+                          const val = e.target.value
+                          if (val && !personnelForm.support_ids.includes(val))
+                            setPersonnelForm(f => ({ ...f, support_ids: [...f.support_ids, val] }))
+                        }}
+                        className="w-full text-xs border border-dashed border-gray-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-400 bg-white text-gray-500">
+                        <option value="">+ Thêm nhân sự...</option>
+                        {allUsers.filter(u => !personnelForm.support_ids.includes(u.id)).map(u => (
+                          <option key={u.id} value={u.id}>{u.full_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {(opp.support_ids ?? []).length === 0
+                        ? <span className="text-xs text-gray-300 italic">Chưa có</span>
+                        : (opp.support_ids ?? []).map(uid => {
+                          const u = allUsers.find(x => x.id === uid)
+                          return (
+                            <div key={uid} className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500 flex-shrink-0">
+                                {u ? getInitials(u.full_name) : '?'}
+                              </div>
+                              <span className="text-sm text-gray-700">{u?.full_name ?? '—'}</span>
+                            </div>
+                          )
+                        })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
 
             {/* Contact */}
             {contact && (
