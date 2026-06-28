@@ -404,8 +404,12 @@ export default function OppDetailPage() {
   async function savePersonnel() {
     if (!opp) return
     setPersonnelSaving(true)
+    // Luôn update assigned_to trước
     await supabase.from('opportunities').update({
       assigned_to: personnelForm.assigned_to || opp.assigned_to,
+    }).eq('id', id)
+    // operator_id + support_ids chỉ update sau khi migration_personnel.sql đã chạy
+    await supabase.from('opportunities').update({
       operator_id: personnelForm.operator_id || null,
       support_ids: personnelForm.support_ids,
     }).eq('id', id)
