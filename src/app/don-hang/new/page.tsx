@@ -453,6 +453,7 @@ export default function NewOpportunityPage() {
 }
 
 const stageDescriptions: Record<OppStage, string> = {
+  stage_0: 'Đơn mới tạo, chưa bàn giao cho sale. Chỉ có thông tin cơ bản ban đầu.',
   stage_1: 'Giai đoạn tư vấn ban đầu — thu thập yêu cầu, khảo sát nhu cầu, xác định ngân sách.',
   stage_2: 'Đang lập phương án và báo giá chi tiết cho khách hàng.',
   stage_3: 'Đã chốt hợp đồng, đang chuẩn bị trước tour: đặt dịch vụ, thu cọc, gửi thông tin.',
