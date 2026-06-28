@@ -68,8 +68,8 @@ const LOG_FILTERS: { key: LogFilter; label: string }[] = [
 export default function OppDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const backHref = '/don-hang'
-  const backLabel = 'Tất cả đơn hàng'
+  const backHref = '/don-hang-dang-lam'
+  const backLabel = 'Đang thực hiện'
   const supabase = createClient()
   const { user: currentUser } = useAuth()
   const isSaleTV = currentUser?.is_sale_tv === true
