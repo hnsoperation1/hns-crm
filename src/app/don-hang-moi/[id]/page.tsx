@@ -412,11 +412,11 @@ export default function OppDetailPage() {
     setOpp(o => o ? {
       ...o,
       assigned_to: personnelForm.assigned_to || o.assigned_to,
-      assigned_user: allUsers.find(u => u.id === (personnelForm.assigned_to || o.assigned_to)) ?? o.assigned_user,
+      assigned_user: (allUsers.find(u => u.id === (personnelForm.assigned_to || o.assigned_to)) ?? o.assigned_user) as OppDetail['assigned_user'],
       operator_id: personnelForm.operator_id || null,
       operator: personnelForm.operator_id ? (allUsers.find(u => u.id === personnelForm.operator_id) ?? null) : null,
       support_ids: personnelForm.support_ids,
-    } : o)
+    } as OppDetail : o)
     setPersonnelSaving(false)
     setPersonnelSaved(true)
     setPersonnelEdit(false)
