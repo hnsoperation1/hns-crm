@@ -7,7 +7,7 @@ import { useTopbar } from '@/contexts/topbar'
 import { useAuth } from '@/contexts/auth'
 import { SOURCE_LABELS, SOURCE_COLORS, STAGE_LABELS, STAGE_COLORS, formatDate, formatVND, getInitials } from '@/lib/utils'
 import type { OppStage, LeadSource } from '@/types'
-import { Plus, X, Loader2, AlertTriangle } from 'lucide-react'
+import { Plus, X, Loader2, AlertTriangle, Eye, Pencil } from 'lucide-react'
 
 type Row = {
   id: string
@@ -58,6 +58,15 @@ export default function DangLayPage() {
   const [newContact, setNewContact] = useState({ name: '', phone: '', company: '' })
   const [newContactErrors, setNewContactErrors] = useState<{ name?: string; phone?: string }>({})
   const [savingContact, setSavingContact] = useState(false)
+
+  // Edit modal
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editId, setEditId] = useState('')
+  const [editForm, setEditForm] = useState({ title: '', description: '', contact_id: '', source: 'mkt' as LeadSource, assigned_to: '', estimated_value: '' })
+  const [editContactSearch, setEditContactSearch] = useState('')
+  const [editContactDropOpen, setEditContactDropOpen] = useState(false)
+  const [editSaving, setEditSaving] = useState(false)
+  const [editErrors, setEditErrors] = useState<Record<string, string>>({})
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -160,6 +169,57 @@ export default function DangLayPage() {
     }
   }
 
+  async function openEdit(r: Row, e: React.MouseEvent) {
+    e.stopPropagation()
+    if (contacts.length === 0) {
+      const [{ data: c }, { data: u }] = await Promise.all([
+        supabase.from('contacts').select('id, name, phone, company').is('deleted_at', null).order('name').limit(200),
+        supabase.from('users').select('id, full_name').eq('is_sale_tv', true).eq('is_active', true).order('full_name'),
+      ])
+      setContacts((c ?? []) as ContactOpt[])
+      setUsers((u ?? []) as UserOpt[])
+    }
+    setEditId(r.id)
+    const contactName = r.contact?.name ?? ''
+    setEditContactSearch(contactName)
+    setEditForm({
+      title: r.title,
+      description: r.description ?? '',
+      contact_id: '',
+      source: r.source as LeadSource,
+      assigned_to: r.assigned_user?.id ?? '',
+      estimated_value: r.estimated_value ? String(r.estimated_value) : '',
+    })
+    // Tìm contact_id từ contacts list
+    const { data: fullOpp } = await supabase.from('opportunities').select('contact_id').eq('id', r.id).single()
+    if (fullOpp) setEditForm(f => ({ ...f, contact_id: fullOpp.contact_id ?? '' }))
+    setEditErrors({})
+    setShowEditModal(true)
+  }
+
+  async function handleUpdate() {
+    const e: Record<string, string> = {}
+    if (!editForm.title.trim()) e.title = 'Bắt buộc'
+    setEditErrors(e)
+    if (Object.keys(e).length) return
+    setEditSaving(true)
+    const { error } = await supabase.from('opportunities').update({
+      title: editForm.title.trim(),
+      description: editForm.description.trim() || null,
+      contact_id: editForm.contact_id || null,
+      source: editForm.source,
+      assigned_to: editForm.assigned_to || null,
+      estimated_value: editForm.estimated_value ? Number(editForm.estimated_value) : null,
+      updated_at: new Date().toISOString(),
+    }).eq('id', editId)
+    setEditSaving(false)
+    if (!error) { setShowEditModal(false); loadData() }
+  }
+
+  const filteredEditContacts = contacts.filter(c =>
+    `${c.name} ${c.phone ?? ''} ${c.company ?? ''}`.toLowerCase().includes(editContactSearch.toLowerCase())
+  )
+
   const filteredContacts = contacts.filter(c =>
     `${c.name} ${c.phone ?? ''} ${c.company ?? ''}`.toLowerCase().includes(contactSearch.toLowerCase())
   )
@@ -174,7 +234,7 @@ export default function DangLayPage() {
   })
   const hasFilter = !!filterSource || !!filterSaleTV || !!filterCreator
 
-  const cols = ['Đơn hàng', 'Giai đoạn', 'Nguồn', 'Sale TV', 'Điểm đến', 'Giá trị ước tính', 'Ngày tạo']
+  const cols = ['Đơn hàng', 'Giai đoạn', 'Nguồn', 'Sale TV', 'Điểm đến', 'Giá trị ước tính', 'Ngày tạo', '']
 
   return (
     <>
@@ -216,7 +276,6 @@ export default function DangLayPage() {
               {cols.map(h => (
                 <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
-              <th className="px-5 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -265,7 +324,20 @@ export default function DangLayPage() {
                   <td className="px-5 py-3.5 text-gray-600">{r.description || <span className="text-gray-300">—</span>}</td>
                   <td className="px-5 py-3.5 text-right font-semibold text-gray-800">{r.estimated_value ? formatVND(r.estimated_value) : <span className="text-gray-300">—</span>}</td>
                   <td className="px-5 py-3.5 text-gray-400 whitespace-nowrap">{formatDate(r.created_at)}</td>
-                  <td />
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+                      <button onClick={e => { e.stopPropagation(); router.push(`/don-hang-moi/${r.id}`) }}
+                        title="Xem chi tiết"
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50 rounded-lg transition-colors border border-brand-200 hover:border-brand-300">
+                        <Eye size={12} /> Xem
+                      </button>
+                      <button onClick={e => openEdit(r, e)}
+                        title="Sửa nhanh"
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200 hover:border-gray-300">
+                        <Pencil size={12} /> Sửa
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               )
             })}
@@ -419,6 +491,91 @@ export default function DangLayPage() {
                 className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-sm font-semibold transition-colors">
                 {saving && <Loader2 size={13} className="animate-spin" />}
                 Tạo đơn
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal sửa nhanh */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm" onClick={() => setShowEditModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h3 className="font-bold text-gray-900">Sửa nhanh đơn hàng</h3>
+              <button onClick={() => setShowEditModal(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400"><X size={16} /></button>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              {/* Tên đơn */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Tên đơn hàng <span className="text-red-500">*</span></label>
+                <input value={editForm.title} onChange={e => { setEditForm(f => ({ ...f, title: e.target.value })); setEditErrors(er => ({ ...er, title: '' })) }}
+                  className={`${iField} ${editErrors.title ? 'border-red-300 bg-red-50' : ''}`} autoFocus />
+                {editErrors.title && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {editErrors.title}</p>}
+              </div>
+
+              {/* Liên hệ + Sale TV + Nguồn */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Liên hệ</label>
+                  <div className="relative">
+                    <input value={editContactSearch}
+                      onChange={e => { setEditContactSearch(e.target.value); setEditForm(f => ({ ...f, contact_id: '' })); setEditContactDropOpen(true) }}
+                      onFocus={() => setEditContactDropOpen(true)}
+                      onBlur={() => setTimeout(() => setEditContactDropOpen(false), 150)}
+                      placeholder="Tìm tên, SĐT..."
+                      className={iField} />
+                    {editContactDropOpen && (
+                      <div className="absolute left-0 right-0 top-full mt-1 border border-gray-200 rounded-xl bg-white shadow-lg z-20 overflow-hidden max-h-44 overflow-y-auto">
+                        {filteredEditContacts.slice(0, 30).map(c => (
+                          <div key={c.id} onMouseDown={() => { setEditForm(f => ({ ...f, contact_id: c.id })); setEditContactSearch(c.name); setEditContactDropOpen(false) }}
+                            className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm transition-colors ${editForm.contact_id === c.id ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
+                            <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold text-slate-600 flex-shrink-0">{getInitials(c.name)}</div>
+                            <div className="min-w-0">
+                              <div className="font-medium truncate">{c.name}</div>
+                              {c.company && <div className="text-xs text-gray-400 truncate">{c.company}</div>}
+                            </div>
+                          </div>
+                        ))}
+                        {filteredEditContacts.length === 0 && <div className="px-3 py-3 text-sm text-gray-400 text-center">Không tìm thấy</div>}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale phụ trách</label>
+                  <select value={editForm.assigned_to} onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))} className={iField}>
+                    <option value="">— Chọn Sale TV —</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nguồn</label>
+                  <select value={editForm.source} onChange={e => setEditForm(f => ({ ...f, source: e.target.value as LeadSource }))} className={iField}>
+                    {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Giá trị ước tính + Điểm đến */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Giá trị ước tính (VNĐ)</label>
+                  <input type="number" value={editForm.estimated_value} onChange={e => setEditForm(f => ({ ...f, estimated_value: e.target.value }))}
+                    placeholder="VD: 50000000" className={iField} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Điểm đến / Mô tả</label>
+                  <input value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                    placeholder="Hạ Long, Đà Nẵng..." className={iField} />
+                </div>
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+              <button onClick={() => setShowEditModal(false)} className="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 font-medium">Huỷ</button>
+              <button onClick={handleUpdate} disabled={editSaving}
+                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white text-sm font-semibold transition-colors">
+                {editSaving && <Loader2 size={13} className="animate-spin" />}
+                Lưu thay đổi
               </button>
             </div>
           </div>
