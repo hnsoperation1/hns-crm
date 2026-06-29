@@ -12,7 +12,7 @@ const ROLE_LABELS: Record<string, string> = {
   boss: 'Giám đốc',
   admin: 'Quản trị viên',
   sale_admin: 'Sale Admin',
-  sale_op: 'Sale Điều hành',
+  sale_op: 'Điều hành',
   mkt: 'Marketing',
   cskh: 'Chăm sóc KH',
   sale: 'Sale TV',

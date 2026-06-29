@@ -1423,10 +1423,7 @@ export default function OppDetailPage() {
             {mainTab === 'admin' && isSuperAdmin && adminForm && (
             <div className="bg-white rounded-2xl border-2 border-red-200 shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-5 py-3.5 border-b border-red-100 bg-red-50">
-                <div>
-                  <h3 className="font-bold text-red-800 text-sm">Chỉnh sửa toàn bộ trường — Super Admin</h3>
-                  <p className="text-xs text-red-500 mt-0.5">Thay đổi trực tiếp vào database. Cẩn thận khi sửa.</p>
-                </div>
+                <h3 className="font-bold text-red-800 text-sm">Chỉnh sửa</h3>
                 <button onClick={saveAdminForm} disabled={savingAdmin}
                   className={`flex items-center gap-1.5 px-4 py-2 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-60 ${adminSaved ? 'bg-emerald-500' : 'bg-red-500 hover:bg-red-600'}`}>
                   {savingAdmin ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
