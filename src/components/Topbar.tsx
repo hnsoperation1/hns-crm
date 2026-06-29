@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
-import { Bell, LogOut, ChevronDown, RotateCcw, UserCog } from 'lucide-react'
+import { Bell, LogOut, ChevronDown, RotateCcw, UserCog, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/auth'
 import { useTopbar } from '@/contexts/topbar'
@@ -83,7 +83,7 @@ export default function Topbar() {
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-semibold text-gray-800 leading-tight">{user.full_name}</span>
                 {user.is_super_admin && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black tracking-wide bg-gradient-to-r from-amber-400 to-orange-400 text-white leading-none">SA</span>
+                  <ShieldCheck size={13} className="text-amber-500 flex-shrink-0" />
                 )}
               </div>
               <div className="text-[11px] text-gray-400 leading-tight">{ROLE_LABELS[user.role] ?? user.role}</div>
