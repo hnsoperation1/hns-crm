@@ -71,7 +71,7 @@ export default function OppDetailPage() {
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
-  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake'>('activity')
+  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake'>('intake')
 
   // Tour intake
   type IntakeForm = {
@@ -563,7 +563,7 @@ export default function OppDetailPage() {
                   mainTab === 'intake' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
                 }`}
               >
-                <FileText size={15} /> Thông tin đoàn
+                <FileText size={15} /> Thông tin đơn hàng
               </button>
               <button
                 onClick={() => setMainTab('activity')}

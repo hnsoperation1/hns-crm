@@ -164,7 +164,7 @@ export default function DaXongDetailPage() {
           </button>
           <button onClick={() => setTab('info')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === 'info' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>
-            <FileText size={14} /> Thông tin đoàn
+            <FileText size={14} /> Thông tin đơn hàng
           </button>
           <button onClick={() => setTab('feedback')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === 'feedback' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}>
@@ -224,7 +224,7 @@ export default function DaXongDetailPage() {
         </div>
         )}
 
-        {/* Thông tin đoàn */}
+        {/* Thông tin đơn hàng */}
         {tab === 'info' && (
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-3">
