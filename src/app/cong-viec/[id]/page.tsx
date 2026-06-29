@@ -101,7 +101,7 @@ export default function CongViecDetailPage() {
   async function loadLogs() {
     const { data } = await supabase
       .from('task_logs')
-      .select('*, user:users!left(id,full_name)')
+      .select('*')
       .eq('task_id', id)
       .order('created_at', { ascending: false })
     setLogs((data ?? []) as TaskLog[])
@@ -139,9 +139,12 @@ export default function CongViecDetailPage() {
     const { data } = await supabase
       .from('task_logs')
       .insert({ task_id: id, user_id: currentUser?.id, type, content: content ?? null, meta: meta ?? null })
-      .select('*, user:users!left(id,full_name)')
+      .select('*')
       .single()
-    if (data) setLogs(prev => [data as TaskLog, ...prev])
+    if (data) {
+      const entry = { ...(data as TaskLog), user: currentUser ? { id: currentUser.id, full_name: currentUser.full_name } : null }
+      setLogs(prev => [entry, ...prev])
+    }
   }
 
   async function addSubtask() {
@@ -430,7 +433,7 @@ export default function CongViecDetailPage() {
               ) : (
                 <div className="space-y-0">
                   {logs.map((log, i) => {
-                    const userName = log.user?.full_name ?? 'Hệ thống'
+                    const userName = allUsers.find(u => u.id === log.user_id)?.full_name ?? log.user?.full_name ?? 'Hệ thống'
                     const isComment = log.type === 'comment'
                     const text = logText(log)
                     return (
