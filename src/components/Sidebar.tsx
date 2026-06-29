@@ -74,7 +74,7 @@ export default function Sidebar() {
   return (
     <aside className="w-52 flex-shrink-0 flex flex-col h-full" style={{ background: '#031c29' }}>
       {/* Logo */}
-      <div className="px-4 h-10 flex items-center flex-shrink-0" style={{ borderBottom: '1px solid rgba(239,94,47,0.4)' }}>
+      <div className="px-4 h-12 flex items-center flex-shrink-0" style={{ borderBottom: '1px solid rgba(239,94,47,0.4)' }}>
         <button onClick={() => window.location.reload()} className="font-black text-2xl tracking-wide cursor-pointer">
           <span style={{ color: '#ef5e2f' }}>HNS</span>
           <span style={{ color: '#2a9ac4' }}> CRM</span>
