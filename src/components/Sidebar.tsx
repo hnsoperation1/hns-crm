@@ -84,7 +84,7 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
         {navItems
-          .filter(item => !(item.href === '/giao-viec' && user?.is_sale_tv))
+          .filter(item => !(item.href === '/giao-viec' && user?.is_sale_tv && !['boss', 'admin', 'sale_admin'].includes(user?.role ?? '')))
           .filter(item => !(user?.role === 'cskh' && ['/giao-viec', '/nhan-vien'].includes(item.href)))
           .map(item => <NavLink key={item.href} {...item} />)}
 
