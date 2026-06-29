@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import {
-  Plus, Loader2, Check, ClipboardList, User, CalendarDays, Link2,
+  Plus, Loader2, Check, ClipboardList, User, CalendarDays, Link2, X, Search,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth'
@@ -26,6 +26,9 @@ export default function GiaoViecPage() {
   const [form, setForm] = useState({ title: '', opportunity_id: '', due_date: '', assigned_to: '', note: '' })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [oppSearch, setOppSearch] = useState('')
+  const [oppOpen, setOppOpen] = useState(false)
+  const oppRef = useRef<HTMLDivElement>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -47,6 +50,14 @@ export default function GiaoViecPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id])
 
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (oppRef.current && !oppRef.current.contains(e.target as Node)) setOppOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
   async function handleSubmit() {
     if (!form.title.trim()) return
     setSaving(true)
@@ -62,6 +73,7 @@ export default function GiaoViecPage() {
     if (!error && data) {
       setTasks(prev => [data, ...prev])
       setForm({ title: '', opportunity_id: '', due_date: '', assigned_to: '', note: '' })
+      setOppSearch('')
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     }
@@ -111,6 +123,60 @@ export default function GiaoViecPage() {
                   </div>
                 )}
 
+                {/* Order — combobox tìm kiếm */}
+                <div ref={oppRef}>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                    Đơn hàng <span className="text-gray-400 font-normal">(tuỳ chọn)</span>
+                  </label>
+                  {form.opportunity_id ? (
+                    <div className="flex items-center gap-2 border border-brand-300 bg-brand-50 rounded-xl px-3 py-2.5">
+                      <Link2 size={13} className="text-brand-500 flex-shrink-0" />
+                      <span className="text-sm font-medium text-brand-800 flex-1 truncate">
+                        {opps.find(o => o.id === form.opportunity_id)?.title}
+                      </span>
+                      <button onClick={() => { setForm(f => ({ ...f, opportunity_id: '' })); setOppSearch('') }}
+                        className="text-brand-400 hover:text-brand-700 flex-shrink-0">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <div className="relative">
+                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        <input
+                          type="text"
+                          placeholder="Tìm tên đơn hàng..."
+                          value={oppSearch}
+                          onChange={e => { setOppSearch(e.target.value); setOppOpen(true) }}
+                          onFocus={() => setOppOpen(true)}
+                          className="w-full text-sm border border-gray-200 rounded-xl pl-8 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white hover:border-gray-300 transition-colors"
+                        />
+                      </div>
+                      {oppOpen && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-52 overflow-y-auto">
+                          {(() => {
+                            const filtered = oppSearch.trim()
+                              ? opps.filter(o => o.title.toLowerCase().includes(oppSearch.toLowerCase()))
+                              : opps
+                            if (filtered.length === 0) return (
+                              <div className="px-3 py-4 text-xs text-gray-400 text-center">Không tìm thấy đơn hàng</div>
+                            )
+                            return filtered.map(o => (
+                              <button key={o.id} onMouseDown={() => {
+                                setForm(f => ({ ...f, opportunity_id: o.id }))
+                                setOppSearch('')
+                                setOppOpen(false)
+                              }} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors truncate">
+                                {o.title}
+                              </button>
+                            ))
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Title */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">
@@ -123,23 +189,6 @@ export default function GiaoViecPage() {
                     onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                     className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white hover:border-gray-300 transition-colors"
                   />
-                </div>
-
-                {/* Order */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                    Đơn hàng <span className="text-gray-400 font-normal">(tuỳ chọn)</span>
-                  </label>
-                  <select
-                    value={form.opportunity_id}
-                    onChange={e => setForm(f => ({ ...f, opportunity_id: e.target.value }))}
-                    className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white hover:border-gray-300 transition-colors text-gray-700"
-                  >
-                    <option value="">— Chọn đơn hàng —</option>
-                    {opps.map(o => (
-                      <option key={o.id} value={o.id}>{o.title}</option>
-                    ))}
-                  </select>
                 </div>
 
                 {/* Assignee */}
