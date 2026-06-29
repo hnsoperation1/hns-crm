@@ -89,7 +89,7 @@ export default function OppDetailPage() {
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
-  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake' | 'services' | 'feedback' | 'admin'>('intake')
+  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake' | 'requirements' | 'services' | 'feedback' | 'admin'>('tasks')
   const [feedbacks, setFeedbacks] = useState<FeedbackRow[]>([])
 
   type AdminForm = {
@@ -127,6 +127,11 @@ export default function OppDetailPage() {
   const [servicesLoaded, setServicesLoaded] = useState(false)
   const [savingServices, setSavingServices] = useState(false)
   const [servicesSaved, setServicesSaved] = useState(false)
+
+  const [requests, setRequests] = useState<ServiceRow[]>([])
+  const [requestsLoaded, setRequestsLoaded] = useState(false)
+  const [savingRequests, setSavingRequests] = useState(false)
+  const [requestsSaved, setRequestsSaved] = useState(false)
 
   // Tour intake (dùng chung, đọc/ghi tour_intake)
   type IntakeForm = {
@@ -329,6 +334,22 @@ export default function OppDetailPage() {
         sale_note: (s.sale_note as string) ?? '',
       })))
       setServicesLoaded(true)
+
+      // Load service_requests
+      const { data: reqData } = await supabase.from('service_requests')
+        .select('*').eq('opportunity_id', id).order('sort_order').order('created_at')
+      setRequests((reqData ?? []).map((s: Record<string, unknown>) => ({
+        id: s.id as string, category: (s.category as string) ?? '', name: (s.name as string) ?? '',
+        quantity: s.quantity?.toString() ?? '', unit: (s.unit as string) ?? '',
+        unit_price: s.unit_price?.toString() ?? '', total_price: s.total_price?.toString() ?? '',
+        supplier_name: (s.supplier_name as string) ?? '', details: (s.details as string) ?? '',
+        notes: (s.notes as string) ?? '', status: (s.status as string) ?? 'pending',
+        sort_order: (s.sort_order as number) ?? 0, include_in_quote: (s.include_in_quote as boolean) ?? true,
+        requirement_note: (s.requirement_note as string) ?? '',
+        sale_approved: s.sale_approved as boolean | null ?? null,
+        sale_note: (s.sale_note as string) ?? '',
+      })))
+      setRequestsLoaded(true)
     }
     load()
   }, [id])
@@ -363,6 +384,65 @@ export default function OppDetailPage() {
       await supabase.from('tour_services').delete().eq('id', row.id)
     }
     setServices(s => s.filter((_, i) => i !== idx))
+  }
+
+  function addRequestRow() {
+    const newRow: ServiceRow = {
+      id: `new-${Date.now()}`, category: '', name: '', quantity: '1', unit: '',
+      unit_price: '', total_price: '', supplier_name: '', details: '', notes: '',
+      status: 'pending', sort_order: requests.length, include_in_quote: true,
+      requirement_note: '', sale_approved: null, sale_note: '', _isNew: true,
+    }
+    setRequests(s => [...s, newRow])
+  }
+
+  function updateRequestRow(idx: number, field: keyof ServiceRow, value: string | boolean | null) {
+    setRequests(s => s.map((row, i) => {
+      if (i !== idx) return row
+      const updated = { ...row, [field]: value }
+      if (field === 'quantity' || field === 'unit_price') {
+        const q = parseFloat(field === 'quantity' ? value as string : updated.quantity) || 0
+        const p = parseFloat(field === 'unit_price' ? value as string : updated.unit_price) || 0
+        if (q > 0 && p > 0) updated.total_price = (q * p).toString()
+      }
+      return updated
+    }))
+  }
+
+  async function deleteRequestRow(idx: number) {
+    const row = requests[idx]
+    if (!row._isNew) await supabase.from('service_requests').delete().eq('id', row.id)
+    setRequests(s => s.filter((_, i) => i !== idx))
+  }
+
+  async function saveRequests() {
+    setSavingRequests(true)
+    setRequestsSaved(false)
+    for (const row of requests) {
+      const payload = {
+        opportunity_id: id,
+        category: row.category || null, name: row.name,
+        quantity: row.quantity ? Number(row.quantity) : null,
+        unit: row.unit || null,
+        unit_price: row.unit_price ? Number(row.unit_price) : null,
+        total_price: row.total_price ? Number(row.total_price) : null,
+        supplier_name: row.supplier_name || null, details: row.details || null,
+        notes: row.notes || null, status: row.status, sort_order: row.sort_order,
+        include_in_quote: row.include_in_quote, requirement_note: row.requirement_note || null,
+        sale_approved: row.sale_approved, sale_note: row.sale_note || null,
+      }
+      if (row._isNew) {
+        const { data, error } = await supabase.from('service_requests').insert(payload).select('id').single()
+        if (error) { alert('Lỗi lưu yêu cầu: ' + error.message); setSavingRequests(false); return }
+        if (data) setRequests(s => s.map(r => r.id === row.id ? { ...r, id: data.id, _isNew: false } : r))
+      } else {
+        const { error } = await supabase.from('service_requests').update(payload).eq('id', row.id)
+        if (error) { alert('Lỗi cập nhật yêu cầu: ' + error.message); setSavingRequests(false); return }
+      }
+    }
+    setSavingRequests(false)
+    setRequestsSaved(true)
+    setTimeout(() => setRequestsSaved(false), 2500)
   }
 
   async function saveServices() {
@@ -680,12 +760,36 @@ export default function OppDetailPage() {
 
             <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-2xl p-1 shadow-sm">
               <button
+                onClick={() => setMainTab('tasks')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  mainTab === 'tasks' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <ClipboardList size={15} /> Công việc
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${mainTab === 'tasks' ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                  {tasks.length + addedTasks.length}
+                </span>
+              </button>
+              <button
                 onClick={() => setMainTab('intake')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   mainTab === 'intake' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
                 }`}
               >
                 <FileText size={15} /> Thông tin đơn hàng
+              </button>
+              <button
+                onClick={() => setMainTab('requirements')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  mainTab === 'requirements' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <ClipboardList size={15} /> Yêu cầu DV
+                {requests.length > 0 && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${mainTab === 'requirements' ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    {requests.length}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setMainTab('services')}
@@ -712,17 +816,6 @@ export default function OppDetailPage() {
                 </span>
               </button>
               <button
-                onClick={() => setMainTab('tasks')}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                  mainTab === 'tasks' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <ClipboardList size={15} /> Công việc
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${mainTab === 'tasks' ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                  {tasks.length + addedTasks.length}
-                </span>
-              </button>
-              <button
                 onClick={() => setMainTab('feedback')}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   mainTab === 'feedback' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
@@ -746,6 +839,131 @@ export default function OppDetailPage() {
                 </button>
               )}
             </div>
+
+            {/* ══════════ YÊU CẦU DỊCH VỤ TAB ══════════ */}
+            {mainTab === 'requirements' && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+                <div>
+                  <h3 className="font-semibold text-gray-900 text-sm">Yêu cầu dịch vụ của khách</h3>
+                  {requests.length > 0 && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Ước tính: <span className="font-semibold text-gray-700">
+                        {new Intl.NumberFormat('vi-VN').format(
+                          requests.reduce((s, r) => s + (parseFloat(r.total_price) || 0), 0)
+                        )}đ
+                      </span>
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={addRequestRow}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-lg transition-colors">
+                    <Plus size={12} /> Thêm hạng mục
+                  </button>
+                  <button onClick={saveRequests} disabled={savingRequests}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition-colors ${requestsSaved ? 'bg-emerald-500' : 'bg-accent-500 hover:bg-accent-600'}`}>
+                    {savingRequests ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                    {requestsSaved ? 'Đã lưu' : 'Lưu'}
+                  </button>
+                </div>
+              </div>
+              {!requestsLoaded ? (
+                <div className="p-8 flex justify-center"><Loader2 size={20} className="animate-spin text-gray-300" /></div>
+              ) : requests.length === 0 ? (
+                <div className="p-12 text-center">
+                  <ClipboardList size={32} className="text-gray-200 mx-auto mb-3" />
+                  <p className="text-sm text-gray-400">Chưa có yêu cầu dịch vụ nào</p>
+                  <button onClick={addRequestRow} className="mt-3 text-xs text-accent-600 hover:underline font-medium">+ Thêm hạng mục đầu tiên</button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-24">Hạng mục</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold">Tên dịch vụ</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-36">Yêu cầu KH</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-14">SL</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-16">ĐV</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-24">Đơn giá</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-24">Thành tiền</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-24">NCC</th>
+                        <th className="px-3 py-2.5 text-left text-gray-400 font-semibold w-20">TT đặt</th>
+                        <th className="px-3 py-2.5 w-8"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {requests.map((row, i) => (
+                        <tr key={row.id} className="hover:bg-gray-50/50 group">
+                          <td className="px-2 py-1.5">
+                            <select value={row.category} onChange={e => updateRequestRow(i, 'category', e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400">
+                              <option value="">--</option>
+                              {Object.entries(CATEGORY_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                            </select>
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input value={row.name} onChange={e => updateRequestRow(i, 'name', e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="Tên dịch vụ..." />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input value={row.requirement_note} onChange={e => updateRequestRow(i, 'requirement_note', e.target.value)}
+                              className="w-full border border-amber-200 bg-amber-50 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-amber-400 placeholder:text-amber-300" placeholder="KH yêu cầu..." />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input type="number" value={row.quantity} onChange={e => updateRequestRow(i, 'quantity', e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="0" />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input value={row.unit} onChange={e => updateRequestRow(i, 'unit', e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="xe..." />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input type="number" value={row.unit_price} onChange={e => updateRequestRow(i, 'unit_price', e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="0" />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input type="number" value={row.total_price} onChange={e => updateRequestRow(i, 'total_price', e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400 font-semibold" placeholder="0" />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <input value={row.supplier_name} onChange={e => updateRequestRow(i, 'supplier_name', e.target.value)}
+                              className="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand-400" placeholder="NCC..." />
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <select value={row.status} onChange={e => updateRequestRow(i, 'status', e.target.value)}
+                              className={`w-full border border-gray-200 rounded-lg px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-brand-400 ${STATUS_LABELS[row.status]?.cls ?? ''}`}>
+                              {Object.entries(STATUS_LABELS).map(([v, { label }]) => <option key={v} value={v}>{label}</option>)}
+                            </select>
+                          </td>
+                          <td className="px-2 py-1.5">
+                            <button onClick={() => deleteRequestRow(i)}
+                              className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all p-1 rounded">
+                              <X size={13} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    {requests.length > 0 && (
+                      <tfoot>
+                        <tr className="border-t-2 border-gray-200 bg-gray-50">
+                          <td colSpan={6} className="px-3 py-2.5 text-xs font-bold text-gray-500 uppercase tracking-wider">{requests.length} hạng mục</td>
+                          <td className="px-3 py-2.5 text-xs font-bold text-gray-900">
+                            {new Intl.NumberFormat('vi-VN').format(
+                              requests.reduce((s, r) => s + (parseFloat(r.total_price) || 0), 0)
+                            )}đ
+                          </td>
+                          <td colSpan={3}></td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              )}
+            </div>
+            )}
 
             {/* ══════════ DỊCH VỤ TAB ══════════ */}
             {mainTab === 'services' && (
