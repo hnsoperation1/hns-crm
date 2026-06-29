@@ -55,7 +55,7 @@ export default function Topbar() {
   }, [])
 
   return (
-    <header className="h-10 flex-shrink-0 bg-white flex items-center px-5 gap-3" style={{ borderBottom: '1px solid #9dd5ec' }}>
+    <header className="h-12 flex-shrink-0 bg-white flex items-center px-5 gap-3" style={{ borderBottom: '1px solid #9dd5ec' }}>
       <div className="flex-1 min-w-0">
         {breadcrumb ?? <span className="text-sm font-semibold text-gray-700">{pageTitle}</span>}
       </div>
