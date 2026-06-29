@@ -1121,6 +1121,7 @@ export default function OppDetailPage() {
                             due_date: newTask.due_date || null,
                             assigned_to: newTask.assigned_to || null,
                             created_by: currentUser?.id,
+                            stage: 0,
                             is_done: false,
                           }).select('*').single()
                           if (!error && data) {

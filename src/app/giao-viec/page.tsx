@@ -56,6 +56,7 @@ export default function GiaoViecPage() {
       due_date: form.due_date || null,
       assigned_to: form.assigned_to || null,
       created_by: currentUser?.id,
+      stage: 0,
       is_done: false,
     }).select('*').single()
     if (!error && data) {
@@ -93,80 +94,7 @@ export default function GiaoViecPage() {
       ) : (
         <div className="grid grid-cols-3 gap-6">
 
-          {/* LEFT: Task list (2/3) */}
-          <div className="col-span-2 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-bold text-gray-900">Nhiệm vụ gần đây</h2>
-              <span className="text-xs text-gray-400">{tasks.length} nhiệm vụ</span>
-            </div>
-
-            {tasks.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-12 text-center">
-                <ClipboardList size={36} className="text-gray-200 mx-auto mb-3" />
-                <div className="text-sm font-semibold text-gray-400">Chưa có nhiệm vụ nào</div>
-                <div className="text-xs text-gray-300 mt-1">Tạo nhiệm vụ đầu tiên từ form bên phải</div>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {tasks.map(task => {
-                  const assigneeName = getUserName(task.assigned_to)
-                  const oppTitle = getOppTitle(task.opportunity_id)
-                  return (
-                    <div key={task.id} className={`bg-white rounded-2xl border shadow-sm transition-all ${task.is_done ? 'border-gray-100 opacity-60' : 'border-gray-200 hover:border-accent-200 hover:shadow-md'}`}>
-                      <div className="p-4 flex items-start gap-3">
-                        <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${task.is_done ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'}`}>
-                          {task.is_done && <Check size={10} className="text-white" strokeWidth={3} />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className={`text-sm font-semibold ${task.is_done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
-                            {task.title}
-                          </div>
-                          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                            {oppTitle && task.opportunity_id ? (
-                              <span className="flex items-center gap-1 text-xs text-gray-400">
-                                <Link2 size={10} />
-                                <Link href={`/don-hang/${task.opportunity_id}`} className="hover:text-accent-500 transition-colors truncate max-w-[180px]">
-                                  {oppTitle}
-                                </Link>
-                              </span>
-                            ) : task.opportunity_id ? (
-                              <span className="text-xs text-gray-400 truncate max-w-[180px]">{task.opportunity_id}</span>
-                            ) : null}
-                            {assigneeName && (
-                              <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                                <div className="w-4 h-4 rounded-full bg-brand-100 flex items-center justify-center text-[8px] font-bold text-brand-700 flex-shrink-0">
-                                  {getInitials(assigneeName)}
-                                </div>
-                                {assigneeName}
-                              </span>
-                            )}
-                            {!assigneeName && (
-                              <span className="flex items-center gap-1 text-xs text-gray-300">
-                                <User size={10} /> Chưa giao
-                              </span>
-                            )}
-                            {task.due_date && (
-                              <span className="flex items-center gap-1 text-xs text-amber-500">
-                                <CalendarDays size={10} />
-                                Hạn {formatDate(task.due_date)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {task.is_done && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex-shrink-0">
-                            Xong
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* RIGHT: Create form (1/3) */}
+          {/* LEFT: Create form (1/3) */}
           <div>
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden sticky top-5">
               <div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-accent-50 to-brand-50">
@@ -247,6 +175,80 @@ export default function GiaoViecPage() {
               </div>
             </div>
           </div>
+
+          {/* RIGHT: Task list (2/3) */}
+          <div className="col-span-2 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-gray-900">Nhiệm vụ gần đây</h2>
+              <span className="text-xs text-gray-400">{tasks.length} nhiệm vụ</span>
+            </div>
+
+            {tasks.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-12 text-center">
+                <ClipboardList size={36} className="text-gray-200 mx-auto mb-3" />
+                <div className="text-sm font-semibold text-gray-400">Chưa có nhiệm vụ nào</div>
+                <div className="text-xs text-gray-300 mt-1">Tạo nhiệm vụ đầu tiên từ form bên trái</div>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {tasks.map(task => {
+                  const assigneeName = getUserName(task.assigned_to)
+                  const oppTitle = getOppTitle(task.opportunity_id)
+                  return (
+                    <div key={task.id} className={`bg-white rounded-2xl border shadow-sm transition-all ${task.is_done ? 'border-gray-100 opacity-60' : 'border-gray-200 hover:border-accent-200 hover:shadow-md'}`}>
+                      <div className="p-4 flex items-start gap-3">
+                        <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${task.is_done ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'}`}>
+                          {task.is_done && <Check size={10} className="text-white" strokeWidth={3} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className={`text-sm font-semibold ${task.is_done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+                            {task.title}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                            {oppTitle && task.opportunity_id ? (
+                              <span className="flex items-center gap-1 text-xs text-gray-400">
+                                <Link2 size={10} />
+                                <Link href={`/don-hang/${task.opportunity_id}`} className="hover:text-accent-500 transition-colors truncate max-w-[180px]">
+                                  {oppTitle}
+                                </Link>
+                              </span>
+                            ) : task.opportunity_id ? (
+                              <span className="text-xs text-gray-400 truncate max-w-[180px]">{task.opportunity_id}</span>
+                            ) : null}
+                            {assigneeName && (
+                              <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                                <div className="w-4 h-4 rounded-full bg-brand-100 flex items-center justify-center text-[8px] font-bold text-brand-700 flex-shrink-0">
+                                  {getInitials(assigneeName)}
+                                </div>
+                                {assigneeName}
+                              </span>
+                            )}
+                            {!assigneeName && (
+                              <span className="flex items-center gap-1 text-xs text-gray-300">
+                                <User size={10} /> Chưa giao
+                              </span>
+                            )}
+                            {task.due_date && (
+                              <span className="flex items-center gap-1 text-xs text-amber-500">
+                                <CalendarDays size={10} />
+                                Hạn {formatDate(task.due_date)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {task.is_done && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex-shrink-0">
+                            Xong
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
         </div>
       )}
     </div>
