@@ -80,7 +80,12 @@ export default function Topbar() {
               {getInitials(user.full_name)}
             </div>
             <div className="text-left">
-              <div className="text-sm font-semibold text-gray-800 leading-tight">{user.full_name}</div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-semibold text-gray-800 leading-tight">{user.full_name}</span>
+                {user.is_super_admin && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black tracking-wide bg-gradient-to-r from-amber-400 to-orange-400 text-white leading-none">SA</span>
+                )}
+              </div>
               <div className="text-[11px] text-gray-400 leading-tight">{ROLE_LABELS[user.role] ?? user.role}</div>
             </div>
             <ChevronDown size={13} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
