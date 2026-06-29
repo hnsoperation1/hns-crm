@@ -146,13 +146,15 @@ export default function Sidebar() {
           <LogOut size={14} />
           Đăng xuất
         </button>
-        <Link href="/thung-rac"
-          className="mt-1 w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-white/10"
-          style={{ color: 'rgba(157,213,236,0.45)' }}
-        >
-          <Trash2 size={14} />
-          Thùng rác
-        </Link>
+        {user?.is_super_admin && (
+          <Link href="/thung-rac"
+            className="mt-1 w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-white/10"
+            style={{ color: 'rgba(157,213,236,0.45)' }}
+          >
+            <Trash2 size={14} />
+            Thùng rác
+          </Link>
+        )}
       </div>
     </aside>
   )
