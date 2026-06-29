@@ -1545,7 +1545,6 @@ export default function OppDetailPage() {
                             assigned_to: newTask.assigned_to || null,
                             created_by: currentUser?.id,
                             is_done: false,
-                            stage: 0,
                           }).select('*').single()
                           if (!error && data) {
                             setTasks(prev => [...prev, data])
