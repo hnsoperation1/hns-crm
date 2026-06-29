@@ -1365,7 +1365,7 @@ export default function OppDetailPage() {
                 </div>
                 {/* Sale điều hành */}
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Sale điều hành</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Điều hành</div>
                   {personnelEdit ? (
                     <select value={personnelForm.operator_id}
                       onChange={e => setPersonnelForm(f => ({ ...f, operator_id: e.target.value }))}
