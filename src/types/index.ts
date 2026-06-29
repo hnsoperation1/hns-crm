@@ -94,13 +94,14 @@ export interface Opportunity {
 
 export interface Task {
   id: string
-  opportunity_id: string
+  opportunity_id?: string | null
   stage: number
   title: string
+  status?: 'todo' | 'in_progress' | 'done'
   is_done: boolean
-  done_at?: string
-  due_date?: string
-  assigned_to?: string
+  done_at?: string | null
+  due_date?: string | null
+  assigned_to?: string | null
 }
 
 export type IssueStatus = 'open' | 'processing' | 'resolved'

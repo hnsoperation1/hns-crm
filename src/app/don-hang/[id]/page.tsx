@@ -196,9 +196,9 @@ export default function OppDetailPage() {
   const [intakeSaved, setIntakeSaved] = useState(false)
   const [showHandoverPreview, setShowHandoverPreview] = useState(false)
   const [taskDone, setTaskDone] = useState<Record<string, boolean>>({})
-  const [addedTasks, setAddedTasks] = useState<{ id: string; title: string; due_date: string; assigned_to: string }[]>([])
   const [showNewTask, setShowNewTask] = useState(false)
   const [newTask, setNewTask] = useState({ title: '', due_date: '', assigned_to: '' })
+  const [savingTask, setSavingTask] = useState(false)
   const [advancingStage, setAdvancingStage] = useState(false)
   const [markingLost, setMarkingLost] = useState(false)
 
@@ -767,7 +767,7 @@ export default function OppDetailPage() {
               >
                 <ClipboardList size={15} /> Công việc
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${mainTab === 'tasks' ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                  {tasks.length + addedTasks.length}
+                  {tasks.length}
                 </span>
               </button>
               <button
@@ -1493,19 +1493,12 @@ export default function OppDetailPage() {
 
             {/* ══════════ CÔNG VIỆC TAB ══════════ */}
             {mainTab === 'tasks' && (() => {
-              const allTasksCombined = [
-                ...tasks.map(t => ({
-                  id: t.id, title: t.title, due_date: t.due_date ?? '',
-                  assigned_to: taskAssignees[t.id] ?? t.assigned_to ?? '',
-                  is_done: taskDone[t.id] !== undefined ? taskDone[t.id] : t.is_done,
-                  stage: t.stage, isNew: false,
-                })),
-                ...addedTasks.map(t => ({
-                  id: t.id, title: t.title, due_date: t.due_date,
-                  assigned_to: t.assigned_to, is_done: taskDone[t.id] ?? false,
-                  stage: 99, isNew: true,
-                })),
-              ]
+              const allTasksCombined = tasks.map(t => ({
+                id: t.id, title: t.title, due_date: t.due_date ?? '',
+                assigned_to: taskAssignees[t.id] ?? t.assigned_to ?? '',
+                is_done: taskDone[t.id] !== undefined ? taskDone[t.id] : t.is_done,
+                stage: t.stage, isNew: false,
+              }))
               const doneCount = allTasksCombined.filter(t => t.is_done).length
               const pct = allTasksCombined.length > 0 ? Math.round((doneCount / allTasksCombined.length) * 100) : 0
 
@@ -1555,12 +1548,25 @@ export default function OppDetailPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => {
+                        <button onClick={async () => {
                           if (!newTask.title.trim()) return
-                          setAddedTasks(prev => [...prev, { id: `local-${Date.now()}`, ...newTask }])
-                          setNewTask({ title: '', due_date: '', assigned_to: '' })
-                          setShowNewTask(false)
-                        }} className="flex-1 bg-accent-500 hover:bg-accent-600 text-white py-2 rounded-xl text-sm font-bold transition-colors">
+                          setSavingTask(true)
+                          const { data, error } = await supabase.from('tasks').insert({
+                            opportunity_id: id,
+                            title: newTask.title.trim(),
+                            due_date: newTask.due_date || null,
+                            assigned_to: newTask.assigned_to || null,
+                            is_done: false,
+                            stage: 0,
+                          }).select('*').single()
+                          if (!error && data) {
+                            setTasks(prev => [...prev, data])
+                            setNewTask({ title: '', due_date: '', assigned_to: '' })
+                            setShowNewTask(false)
+                          }
+                          setSavingTask(false)
+                        }} disabled={savingTask} className="flex-1 bg-accent-500 hover:bg-accent-600 disabled:opacity-60 text-white py-2 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                          {savingTask ? <Loader2 size={13} className="animate-spin" /> : null}
                           Thêm nhiệm vụ
                         </button>
                         <button onClick={() => setShowNewTask(false)} className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">Huỷ</button>
@@ -1588,7 +1594,12 @@ export default function OppDetailPage() {
                           }`}>
                             <div className="p-4">
                               <div className="flex items-start gap-3 mb-3">
-                                <button onClick={() => setTaskDone(prev => ({ ...prev, [task.id]: !task.is_done }))}
+                                <button onClick={async () => {
+                                  const newDone = !task.is_done
+                                  setTaskDone(prev => ({ ...prev, [task.id]: newDone }))
+                                  setTasks(prev => prev.map(t => t.id === task.id ? { ...t, is_done: newDone } : t))
+                                  await supabase.from('tasks').update({ is_done: newDone, done_at: newDone ? new Date().toISOString() : null }).eq('id', task.id)
+                                }}
                                   className="mt-0.5 flex-shrink-0 transition-transform hover:scale-110">
                                   {task.is_done
                                     ? <CheckSquare size={18} className="text-emerald-500" />
@@ -1615,7 +1626,12 @@ export default function OppDetailPage() {
                                         <option value="">— Chưa giao —</option>
                                         {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
                                       </select>
-                                      <button onClick={() => { setTaskAssignees(prev => ({ ...prev, [task.id]: taskAssignSelect })); setOpenTaskAssign(null) }}
+                                      <button onClick={async () => {
+                                        setTaskAssignees(prev => ({ ...prev, [task.id]: taskAssignSelect }))
+                                        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, assigned_to: taskAssignSelect || undefined } : t))
+                                        setOpenTaskAssign(null)
+                                        await supabase.from('tasks').update({ assigned_to: taskAssignSelect || null }).eq('id', task.id)
+                                      }}
                                         className="flex items-center gap-1 bg-accent-500 hover:bg-accent-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex-shrink-0">
                                         <CheckCircle2 size={12} /> Lưu
                                       </button>

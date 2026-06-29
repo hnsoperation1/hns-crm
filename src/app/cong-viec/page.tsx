@@ -1,52 +1,84 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
-  ChevronRight, Clock, CalendarDays,
-  CheckCircle2, AlertCircle, Square,
-  Plus, MessageSquare, AlertTriangle, Sparkles,
+  ChevronLeft, ChevronRight, CalendarDays, Clock,
+  CheckCircle2, Square, CheckSquare, ClipboardList,
+  Link2, LayoutGrid, List, Calendar, Loader2, GripVertical, User,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth'
 import { useTopbar } from '@/contexts/topbar'
-import {
-  STAGE_LABELS, STAGE_COLORS, SOURCE_COLORS, SOURCE_LABELS,
-  formatVND, formatDate, daysSince, daysUntil,
-} from '@/lib/utils'
-import type { Opportunity, Task, ActivityLog, OppStage } from '@/types'
+import { formatDate, getInitials, daysUntil } from '@/lib/utils'
 
-const ACTIVE_STAGES: OppStage[] = ['stage_1', 'stage_2', 'stage_3', 'stage_4', 'stage_5']
+type TaskStatus = 'todo' | 'in_progress' | 'done'
+type ViewMode = 'kanban' | 'table' | 'calendar'
 
-export default function TasksPage() {
+type TaskRow = {
+  id: string
+  title: string
+  status: TaskStatus | null
+  is_done: boolean
+  done_at?: string | null
+  due_date?: string | null
+  assigned_to?: string | null
+  opportunity_id?: string | null
+  created_at: string
+  stage: number
+  opportunity?: { id: string; title: string } | null
+}
+
+type UserRow = { id: string; full_name: string; role: string }
+
+const COLS: { key: TaskStatus; label: string; text: string; bg: string; border: string; dot: string }[] = [
+  { key: 'todo',        label: 'Cần thực hiện',  text: 'text-sky-700',     bg: 'bg-sky-50',     border: 'border-sky-200',     dot: 'bg-sky-500' },
+  { key: 'in_progress', label: 'Đang thực hiện', text: 'text-blue-700',    bg: 'bg-blue-50',    border: 'border-blue-200',    dot: 'bg-blue-500' },
+  { key: 'done',        label: 'Đã hoàn thành',  text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200', dot: 'bg-emerald-500' },
+]
+
+const WEEKDAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật']
+
+function getStatus(t: TaskRow): TaskStatus {
+  return t.status ?? (t.is_done ? 'done' : 'todo')
+}
+
+export default function CongViecPage() {
   const { user: currentUser } = useAuth()
   const { setOnRefresh } = useTopbar()
   const supabase = createClient()
 
-  const [opps, setOpps] = useState<Opportunity[]>([])
-  const [logs, setLogs] = useState<ActivityLog[]>([])
-  const [tasks, setTasks] = useState<Task[]>([])
+  const [tasks, setTasks] = useState<TaskRow[]>([])
+  const [allUsers, setAllUsers] = useState<UserRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [view, setView] = useState<ViewMode>('kanban')
+  const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [dragOverCol, setDragOverCol] = useState<TaskStatus | null>(null)
+  const [calMonth, setCalMonth] = useState(() => {
+    const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1)
+  })
 
-  const today = new Date().toISOString().split('T')[0]
+  const isManager = ['boss', 'admin', 'sale_admin'].includes(currentUser?.role ?? '')
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     if (!currentUser?.id) { setLoading(false); return }
     setLoading(true)
-    Promise.all([
-      supabase.from('opportunities').select('*').is('deleted_at', null).eq('assigned_to', currentUser.id).in('stage', ACTIVE_STAGES),
-      supabase.from('activity_logs').select('*').order('log_date', { ascending: false }),
-      supabase.from('tasks').select('*'),
-    ]).then(([oppsRes, logsRes, tasksRes]) => {
-      const oppList = (oppsRes.data ?? []) as Opportunity[]
-      setOpps(oppList)
-      const oppIds = oppList.map(o => o.id)
-      setLogs(((logsRes.data ?? []) as ActivityLog[]).filter(l => oppIds.includes(l.opportunity_id)))
-      setTasks(((tasksRes.data ?? []) as Task[]).filter(t => oppIds.includes(t.opportunity_id)))
-      setLoading(false)
-    })
+    if (isManager) {
+      const [tasksRes, usersRes] = await Promise.all([
+        supabase.from('tasks').select('*, opportunity:opportunities!left(id,title)').order('due_date', { nullsFirst: false }).order('created_at'),
+        supabase.from('users').select('id,full_name,role').eq('is_active', true).order('full_name'),
+      ])
+      setTasks((tasksRes.data ?? []) as TaskRow[])
+      setAllUsers((usersRes.data ?? []) as UserRow[])
+    } else {
+      const { data } = await supabase
+        .from('tasks').select('*, opportunity:opportunities!left(id,title)')
+        .eq('assigned_to', currentUser.id).order('due_date', { nullsFirst: false })
+      setTasks((data ?? []) as TaskRow[])
+    }
+    setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.id])
+  }, [currentUser?.id, isManager])
 
   useEffect(() => {
     loadData()
@@ -55,296 +87,353 @@ export default function TasksPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id])
 
-  // Derived: opp status
-  const oppStatus = opps.map(opp => {
-    const oppLogs = logs
-      .filter(l => l.opportunity_id === opp.id)
-      .sort((a, b) => new Date(b.log_date).getTime() - new Date(a.log_date).getTime())
-    const last = oppLogs[0]
-    return {
-      opp,
-      lastLogDate: last?.log_date ?? null,
-      lastLogDesc: last?.description ?? null,
-      loggedToday: last?.log_date === today,
-      daysSinceLast: last ? daysSince(last.log_date) : null,
-    }
-  }).sort((a, b) => {
-    if (a.loggedToday !== b.loggedToday) return a.loggedToday ? 1 : -1
-    const da = a.opp.deadline ? daysUntil(a.opp.deadline) : 999
-    const db = b.opp.deadline ? daysUntil(b.opp.deadline) : 999
-    return da - db
-  })
+  async function updateStatus(taskId: string, newStatus: TaskStatus) {
+    const isDone = newStatus === 'done'
+    setTasks(prev => prev.map(t => t.id === taskId
+      ? { ...t, status: newStatus, is_done: isDone, done_at: isDone ? new Date().toISOString() : null }
+      : t))
+    await supabase.from('tasks').update({
+      status: newStatus, is_done: isDone,
+      done_at: isDone ? new Date().toISOString() : null,
+    }).eq('id', taskId)
+  }
 
-  // Derived: task groups
-  const taskGroups = opps.map(opp => {
-    const oppTasks = tasks.filter(t => t.opportunity_id === opp.id)
-    return { opp, pending: oppTasks.filter(t => !t.is_done), done: oppTasks.filter(t => t.is_done) }
-  }).filter(g => g.pending.length > 0)
+  function getUserName(uid: string | null | undefined) {
+    if (!uid) return null
+    return allUsers.find(u => u.id === uid)?.full_name ?? null
+  }
 
-  const urgentTasks = taskGroups
-    .flatMap(g => g.pending.map(t => ({ ...t, oppTitle: g.opp.title })))
-    .filter(t => t.due_date)
-    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+  // Calendar helpers
+  function calDays() {
+    const y = calMonth.getFullYear(), m = calMonth.getMonth()
+    const first = new Date(y, m, 1), last = new Date(y, m + 1, 0)
+    const dow = first.getDay()
+    const offset = dow === 0 ? 6 : dow - 1
+    const days: (Date | null)[] = Array(offset).fill(null)
+    for (let d = 1; d <= last.getDate(); d++) days.push(new Date(y, m, d))
+    while (days.length % 7 !== 0) days.push(null)
+    return days
+  }
 
-  const loggedTodayCount = oppStatus.filter(s => s.loggedToday).length
-  const pendingTaskCount = taskGroups.reduce((s, g) => s + g.pending.length, 0)
-  const nearestDeadline = [...opps].filter(o => o.deadline)
-    .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())[0]
+  function tasksForDay(date: Date) {
+    const s = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
+    return tasks.filter(t => t.due_date === s)
+  }
+
+  const pending = tasks.filter(t => !t.is_done)
+  const done = tasks.filter(t => t.is_done)
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto space-y-5">
+    <div className="flex flex-col h-full overflow-hidden">
 
-      {/* HEADER */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Nhiệm vụ hằng ngày</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
+      {/* ── View toggle + stats bar ── */}
+      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-5 h-11 flex items-center gap-4">
+        <div className="flex items-center gap-0.5 bg-gray-100 rounded-xl p-1">
+          {([
+            { k: 'kanban' as ViewMode, icon: LayoutGrid, label: 'Kanban' },
+            { k: 'table'  as ViewMode, icon: List,       label: 'Bảng' },
+            { k: 'calendar' as ViewMode, icon: Calendar, label: 'Lịch' },
+          ]).map(({ k, icon: Icon, label }) => (
+            <button key={k} onClick={() => setView(k)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${view === k ? 'bg-white shadow-sm text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
+              <Icon size={13} />{label}
+            </button>
+          ))}
         </div>
-
+        <div className="flex items-center gap-4 text-xs ml-auto">
+          <span className="text-gray-500">{tasks.length} công việc</span>
+          <span className="text-amber-600 font-medium">{pending.length} chờ</span>
+          <span className="text-emerald-600 font-medium">{done.length} xong</span>
+        </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-24 text-sm text-gray-400">Đang tải...</div>
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 size={24} className="animate-spin text-gray-300" />
+        </div>
       ) : (
-        <>
-          {/* SUMMARY CARDS */}
-          <div className="grid grid-cols-4 gap-4">
-            <SummaryCard label="Đang xử lý" value={`${opps.length} đơn`} sub="được giao" color="blue" icon="📋" />
-            <SummaryCard
-              label="Đã log hôm nay"
-              value={`${loggedTodayCount}/${opps.length}`}
-              sub={opps.length === 0 ? '—' : loggedTodayCount === opps.length ? '✓ Hoàn thành' : `Còn ${opps.length - loggedTodayCount} chưa log`}
-              color={opps.length > 0 && loggedTodayCount === opps.length ? 'green' : 'amber'}
-              icon={opps.length > 0 && loggedTodayCount === opps.length ? '✅' : '⏰'}
-            />
-            <SummaryCard
-              label="Việc chưa hoàn thành"
-              value={`${pendingTaskCount} task`}
-              sub={urgentTasks.length > 0 ? `${urgentTasks.length} có deadline` : 'Không có deadline gấp'}
-              color={pendingTaskCount > 0 ? 'violet' : 'green'}
-              icon="📝"
-            />
-            <SummaryCard
-              label="Deadline gần nhất"
-              value={nearestDeadline ? formatDate(nearestDeadline.deadline!) : '—'}
-              sub={nearestDeadline ? `Còn ${daysUntil(nearestDeadline.deadline!)} ngày` : 'Không có deadline'}
-              color={nearestDeadline && daysUntil(nearestDeadline.deadline!) <= 7 ? 'red' : 'gray'}
-              icon="📅"
-            />
-          </div>
+        <div className="flex-1 overflow-auto">
 
-          {/* MAIN CONTENT */}
-          <div className="grid grid-cols-3 gap-5">
-
-            {/* Left 2/3 */}
-            <div className="col-span-2 space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="font-bold text-gray-900">Đơn hàng cần theo dõi</h2>
-                <span className="text-xs text-gray-400">{opps.length} đơn đang xử lý</span>
-              </div>
-
-              {opps.length === 0 && (
-                <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center text-gray-400">
-                  <div className="text-4xl mb-3">🎉</div>
-                  <div className="font-medium">Không có đơn hàng đang xử lý</div>
-                </div>
-              )}
-
-              {oppStatus.map(({ opp, lastLogDate, lastLogDesc, loggedToday, daysSinceLast }) => {
-                const sc = STAGE_COLORS[opp.stage]
-                const deadline = opp.deadline ? daysUntil(opp.deadline) : null
-                const tourDays = opp.tour_date ? daysUntil(opp.tour_date) : null
-                const isUrgentLog = !loggedToday && (daysSinceLast === null || daysSinceLast >= 2)
+          {/* ══════════ KANBAN ══════════ */}
+          {view === 'kanban' && (
+            <div className="flex gap-4 p-5 h-full" style={{ minWidth: 700 }}>
+              {COLS.map(col => {
+                const colTasks = tasks.filter(t => getStatus(t) === col.key)
+                const isOver = dragOverCol === col.key && draggedId !== null
                 return (
-                  <div key={opp.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden hover:shadow-md transition-shadow ${isUrgentLog ? 'border-amber-200' : 'border-gray-200'}`}>
-                    <div className="p-4">
-                      <div className="flex items-start gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${sc.bg}`}>
-                          <div className={`w-3 h-3 rounded-full ${sc.dot}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-3 mb-1.5">
-                            <div>
-                              <div className="font-bold text-gray-900 leading-snug">{opp.title}</div>
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${sc.bg} ${sc.text}`}>{STAGE_LABELS[opp.stage]}</span>
-                              <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SOURCE_COLORS[opp.source]}`}>{SOURCE_LABELS[opp.source]}</span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-4 flex-wrap mb-3">
-                            {opp.estimated_value && <span className="text-xs font-bold text-gray-700">{formatVND(opp.estimated_value)}</span>}
-                            {tourDays !== null && (
-                              <span className={`text-xs flex items-center gap-1 ${tourDays <= 0 ? 'text-emerald-600 font-semibold' : tourDays <= 7 ? 'text-amber-600' : 'text-gray-500'}`}>
-                                <CalendarDays size={11} />
-                                Tour {formatDate(opp.tour_date!)}{tourDays > 0 ? ` · ${tourDays}N` : ' · Đang diễn ra'}
-                              </span>
-                            )}
-                            {deadline !== null && (
-                              <span className={`text-xs flex items-center gap-1 font-medium ${deadline < 0 ? 'text-red-600' : deadline <= 7 ? 'text-red-500' : deadline <= 14 ? 'text-amber-500' : 'text-gray-400'}`}>
-                                <Clock size={11} />
-                                Deadline {formatDate(opp.deadline!)} · còn {deadline}N
-                              </span>
-                            )}
-                          </div>
-
-                          <div className={`flex items-start gap-3 rounded-xl p-3 ${loggedToday ? 'bg-emerald-50 border border-emerald-100' : isUrgentLog ? 'bg-amber-50 border border-amber-100' : 'bg-gray-50 border border-gray-100'}`}>
-                            <div className="flex-shrink-0 mt-0.5">
-                              {loggedToday
-                                ? <CheckCircle2 size={16} className="text-emerald-500" />
-                                : <AlertCircle size={16} className={isUrgentLog ? 'text-amber-500' : 'text-gray-400'} />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              {loggedToday ? (
-                                <div>
-                                  <span className="text-xs font-bold text-emerald-700">Đã log hôm nay</span>
-                                  {lastLogDesc && <p className="text-xs text-emerald-600 mt-0.5 line-clamp-1 opacity-80">{lastLogDesc}</p>}
+                  <div key={col.key}
+                    className="flex flex-col flex-1 min-w-[200px]"
+                    onDragOver={e => { e.preventDefault(); setDragOverCol(col.key) }}
+                    onDragLeave={() => setDragOverCol(null)}
+                    onDrop={e => {
+                      e.preventDefault()
+                      if (draggedId) updateStatus(draggedId, col.key)
+                      setDraggedId(null); setDragOverCol(null)
+                    }}
+                  >
+                    {/* header */}
+                    <div className={`flex items-center gap-2 px-3 py-2.5 rounded-t-2xl border border-b-0 ${col.bg} ${col.border}`}>
+                      <div className={`w-2.5 h-2.5 rounded-full ${col.dot}`} />
+                      <span className={`text-xs font-bold ${col.text}`}>{col.label}</span>
+                      <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/70 ${col.text}`}>{colTasks.length}</span>
+                    </div>
+                    {/* body */}
+                    <div className={`flex-1 border rounded-b-2xl p-2 space-y-2 overflow-y-auto transition-all ${col.bg} ${col.border} ${isOver ? 'ring-2 ring-accent-400 ring-inset' : ''}`}
+                      style={{ minHeight: 200 }}>
+                      {colTasks.map(task => {
+                        const td = task.due_date ? daysUntil(task.due_date) : null
+                        const assignee = getUserName(task.assigned_to)
+                        const isDragging = draggedId === task.id
+                        return (
+                          <div key={task.id}
+                            draggable
+                            onDragStart={() => setDraggedId(task.id)}
+                            onDragEnd={() => { setDraggedId(null); setDragOverCol(null) }}
+                            className={`bg-white rounded-xl border border-gray-200 p-3 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing select-none ${isDragging ? 'opacity-30 scale-95' : ''} ${col.key === 'done' ? 'opacity-60' : ''}`}
+                          >
+                            <div className="flex items-start gap-1.5">
+                              <GripVertical size={12} className="text-gray-300 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <div className={`text-xs font-semibold leading-snug ${col.key === 'done' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                  {task.title}
                                 </div>
-                              ) : (
-                                <div>
-                                  <span className={`text-xs font-bold ${isUrgentLog ? 'text-amber-700' : 'text-gray-600'}`}>
-                                    {daysSinceLast === null ? 'Chưa có log nào'
-                                      : daysSinceLast === 0 ? 'Log gần nhất: hôm nay'
-                                      : `Log gần nhất: ${daysSinceLast} ngày trước (${formatDate(lastLogDate!)})`}
-                                  </span>
-                                  {lastLogDesc && <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{lastLogDesc}</p>}
+                                {task.opportunity && (
+                                  <Link href={`/don-hang/${task.opportunity.id}`} onClick={e => e.stopPropagation()}
+                                    className="flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-accent-500 mt-0.5 truncate">
+                                    <Link2 size={8} />{task.opportunity.title}
+                                  </Link>
+                                )}
+                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                  {assignee && isManager && (
+                                    <span className="flex items-center gap-1 text-[10px] bg-brand-50 text-brand-700 px-1.5 py-0.5 rounded-full font-medium">
+                                      <span className="w-3 h-3 rounded-full bg-brand-500 flex items-center justify-center text-[7px] text-white font-bold flex-shrink-0">
+                                        {getInitials(assignee)}
+                                      </span>
+                                      {assignee.split(' ').slice(-1)[0]}
+                                    </span>
+                                  )}
+                                  {task.due_date && (
+                                    <span className={`text-[10px] flex items-center gap-0.5 font-medium ${td !== null && td < 0 ? 'text-red-500' : td !== null && td <= 3 ? 'text-amber-500' : 'text-gray-400'}`}>
+                                      <CalendarDays size={8} />
+                                      {td !== null && td < 0 ? `Quá ${Math.abs(td)}N` : formatDate(task.due_date)}
+                                    </span>
+                                  )}
                                 </div>
-                              )}
+                              </div>
                             </div>
-                            <Link
-                              href={`/don-hang/${opp.id}`}
-                              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0 ${
-                                loggedToday ? 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200' : 'bg-accent-500 text-white hover:bg-accent-600'
-                              }`}
-                            >
-                              {loggedToday ? <><MessageSquare size={12} /> Xem log</> : <><Plus size={12} /> Thêm log</>}
-                            </Link>
                           </div>
+                        )
+                      })}
+                      {colTasks.length === 0 && (
+                        <div className="flex items-center justify-center h-20 text-[11px] text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
+                          Kéo thả vào đây
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 )
               })}
             </div>
+          )}
 
-            {/* Right 1/3 */}
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-bold text-gray-900">Công việc chưa hoàn thành</h2>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${pendingTaskCount > 0 ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-400'}`}>{pendingTaskCount}</span>
-                </div>
-                {taskGroups.length === 0 ? (
-                  <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-                    <div className="text-3xl mb-2">✅</div>
-                    <div className="text-sm font-semibold text-gray-700">Tất cả đã hoàn thành!</div>
-                    <div className="text-xs text-gray-400 mt-1">Không có công việc nào đang chờ</div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {taskGroups.map(({ opp, pending, done }) => {
-                      const sc = STAGE_COLORS[opp.stage]
+          {/* ══════════ TABLE ══════════ */}
+          {view === 'table' && (
+            <div className="p-5">
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-10">STT</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400">Tên công việc</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Đơn hàng</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-40">Nhóm công việc</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Tình trạng</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-32">Hạn hoàn thành</th>
+                      {isManager && <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Người thực hiện</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {tasks.map((task, i) => {
+                      const st = getStatus(task)
+                      const col = COLS.find(c => c.key === st)!
+                      const td = task.due_date ? daysUntil(task.due_date) : null
+                      const assignee = getUserName(task.assigned_to)
                       return (
-                        <div key={opp.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                          <div className={`px-4 py-3 border-b flex items-center justify-between ${sc.bg} ${sc.border}`}>
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${sc.dot}`} />
-                              <span className={`text-xs font-bold truncate ${sc.text}`}>{opp.title}</span>
+                        <tr key={task.id} className="hover:bg-gray-50/60 group">
+                          <td className="px-4 py-2.5 text-xs text-gray-400 font-mono">{i + 1}</td>
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => updateStatus(task.id, st === 'done' ? 'todo' : 'done')} className="flex-shrink-0">
+                                {task.is_done
+                                  ? <CheckCircle2 size={14} className="text-emerald-500" />
+                                  : <Square size={14} className="text-gray-300 hover:text-brand-400 transition-colors" />}
+                              </button>
+                              <span className={`text-xs font-medium ${task.is_done ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.title}</span>
                             </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                              <span className={`text-[11px] font-semibold ${sc.text} opacity-70`}>{done.length}/{done.length + pending.length}</span>
-                              <Link href={`/don-hang/${opp.id}`} className={`${sc.text} hover:opacity-70`}><ChevronRight size={14} /></Link>
-                            </div>
-                          </div>
-                          <div className="h-1 bg-gray-100">
-                            <div className={`h-1 ${sc.col} transition-all`} style={{ width: `${(done.length / (done.length + pending.length)) * 100}%` }} />
-                          </div>
-                          <div className="p-3 space-y-2">
-                            {pending.map(task => {
-                              const td = task.due_date ? daysUntil(task.due_date) : null
-                              return (
-                                <div key={task.id} className="flex items-start gap-2">
-                                  <Square size={14} className="text-gray-300 mt-0.5 flex-shrink-0" />
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-xs text-gray-700 leading-relaxed">{task.title}</div>
-                                    {task.due_date && (
-                                      <div className={`text-[11px] font-medium mt-0.5 ${td !== null && td < 0 ? 'text-red-600' : td !== null && td <= 7 ? 'text-amber-500' : 'text-gray-400'}`}>
-                                        {td !== null && td < 0 ? '⚠ ' : ''}Hạn: {formatDate(task.due_date)}{td !== null && td >= 0 && ` · ${td}N`}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            {task.opportunity
+                              ? <Link href={`/don-hang/${task.opportunity.id}`} className="text-xs text-gray-500 hover:text-accent-500 flex items-center gap-1 truncate max-w-[160px]">
+                                  <Link2 size={9} />{task.opportunity.title}
+                                </Link>
+                              : <span className="text-xs text-gray-300">—</span>}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <select value={st} onChange={e => updateStatus(task.id, e.target.value as TaskStatus)}
+                              className={`text-[11px] font-semibold px-2 py-1 rounded-lg border-0 focus:outline-none cursor-pointer ${col.bg} ${col.text}`}>
+                              {COLS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+                            </select>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            {task.is_done
+                              ? <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium"><CheckCircle2 size={11} />Hoàn thành</span>
+                              : td !== null
+                                ? <span className={`text-xs font-medium flex items-center gap-1 ${td < 0 ? 'text-red-600' : td <= 7 ? 'text-amber-600' : 'text-gray-500'}`}>
+                                    <Clock size={10} />{td < 0 ? `Quá ${Math.abs(td)}N` : `Còn ${td}N`}
+                                  </span>
+                                : <span className="text-xs text-gray-400">Chưa xong</span>}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            {task.due_date
+                              ? <span className={`text-xs font-medium ${td !== null && td < 0 ? 'text-red-600' : td !== null && td <= 7 ? 'text-amber-600' : 'text-gray-600'}`}>
+                                  {formatDate(task.due_date)}
+                                </span>
+                              : <span className="text-gray-300 text-xs">—</span>}
+                          </td>
+                          {isManager && (
+                            <td className="px-4 py-2.5">
+                              {assignee
+                                ? <span className="flex items-center gap-1.5 text-xs text-gray-700">
+                                    <span className="w-5 h-5 rounded-full bg-brand-100 flex items-center justify-center text-[9px] font-bold text-brand-700 flex-shrink-0">
+                                      {getInitials(assignee)}
+                                    </span>
+                                    {assignee}
+                                  </span>
+                                : <span className="text-xs text-gray-300">—</span>}
+                            </td>
+                          )}
+                        </tr>
                       )
                     })}
-                  </div>
-                )}
+                    {tasks.length === 0 && (
+                      <tr><td colSpan={isManager ? 7 : 6} className="px-4 py-16 text-center">
+                        <ClipboardList size={32} className="text-gray-200 mx-auto mb-2" />
+                        <div className="text-sm text-gray-400">Không có công việc nào</div>
+                      </td></tr>
+                    )}
+                  </tbody>
+                  {tasks.length > 0 && (
+                    <tfoot>
+                      <tr className="bg-gray-50 border-t-2 border-gray-200">
+                        <td colSpan={2} className="px-4 py-2 text-xs font-bold text-gray-500">
+                          Tổng {tasks.length} · {done.length} hoàn thành · {pending.length} chờ
+                        </td>
+                        <td colSpan={isManager ? 5 : 4} />
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ══════════ CALENDAR ══════════ */}
+          {view === 'calendar' && (
+            <div className="p-5">
+              {/* nav */}
+              <div className="flex items-center gap-2 mb-4">
+                <button onClick={() => setCalMonth(m => new Date(m.getFullYear(), m.getMonth()-1, 1))}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-600">
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="font-bold text-gray-900 text-sm w-32 text-center">
+                  Tháng {calMonth.getMonth()+1}/{calMonth.getFullYear()}
+                </span>
+                <button onClick={() => setCalMonth(m => new Date(m.getFullYear(), m.getMonth()+1, 1))}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-600">
+                  <ChevronRight size={16} />
+                </button>
+                <button onClick={() => setCalMonth(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1) })}
+                  className="ml-2 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600">
+                  Hôm nay
+                </button>
+                {/* legend */}
+                <div className="ml-auto flex items-center gap-3">
+                  {COLS.map(col => (
+                    <div key={col.key} className="flex items-center gap-1.5">
+                      <div className={`w-2 h-2 rounded-full ${col.dot}`} />
+                      <span className="text-[11px] text-gray-500">{col.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {urgentTasks.filter(t => { const d = t.due_date ? daysUntil(t.due_date) : null; return d !== null && d <= 14 }).length > 0 && (
-                <div className="bg-amber-50 rounded-2xl border border-amber-200 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-amber-200 flex items-center gap-2">
-                    <AlertTriangle size={14} className="text-amber-600" />
-                    <span className="text-sm font-bold text-amber-800">Deadline trong 14 ngày</span>
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                {/* weekday headers */}
+                <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
+                  {WEEKDAYS.map(d => (
+                    <div key={d} className={`px-2 py-2.5 text-center text-[11px] font-bold ${d === 'Chủ nhật' ? 'text-red-500' : 'text-gray-500'}`}>{d}</div>
+                  ))}
+                </div>
+                {/* day cells */}
+                <div className="grid grid-cols-7">
+                  {calDays().map((date, i) => {
+                    if (!date) return <div key={`e${i}`} className="border-r border-b border-gray-100 min-h-[110px] bg-gray-50/30" />
+                    const dayTasks = tasksForDay(date)
+                    const dateStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`
+                    const isToday = dateStr === todayStr
+                    const isSun = date.getDay() === 0
+                    return (
+                      <div key={dateStr} className={`border-r border-b border-gray-100 min-h-[110px] p-1.5 ${isSun ? 'bg-red-50/20' : ''}`}>
+                        <div className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-accent-500 text-white' : isSun ? 'text-red-500' : 'text-gray-700'}`}>
+                          {date.getDate()}
+                        </div>
+                        <div className="space-y-0.5">
+                          {dayTasks.slice(0, 3).map(task => {
+                            const col = COLS.find(c => c.key === getStatus(task))!
+                            return (
+                              <div key={task.id} className={`text-[10px] leading-tight px-1.5 py-0.5 rounded font-medium truncate ${col.bg} ${col.text}`}
+                                title={task.title}>
+                                {task.title}
+                              </div>
+                            )
+                          })}
+                          {dayTasks.length > 3 && (
+                            <div className="text-[10px] text-gray-400 px-1">+{dayTasks.length - 3}</div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Tasks without due date */}
+              {tasks.filter(t => !t.due_date).length > 0 && (
+                <div className="mt-4 bg-gray-50 rounded-2xl border border-gray-200 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <User size={13} className="text-gray-400" />
+                    <span className="text-xs font-bold text-gray-600">Chưa có deadline ({tasks.filter(t => !t.due_date).length})</span>
                   </div>
-                  <div className="p-3 space-y-2">
-                    {urgentTasks.filter(t => { const d = t.due_date ? daysUntil(t.due_date) : null; return d !== null && d <= 14 }).map(task => {
-                      const d = daysUntil(task.due_date!)
+                  <div className="flex flex-wrap gap-2">
+                    {tasks.filter(t => !t.due_date).map(task => {
+                      const col = COLS.find(c => c.key === getStatus(task))!
                       return (
-                        <div key={task.id} className="flex items-start gap-2 bg-white rounded-xl p-2.5 border border-amber-100">
-                          <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5 ${d <= 3 ? 'bg-red-500' : d <= 7 ? 'bg-amber-500' : 'bg-yellow-400'}`} />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-medium text-gray-700 line-clamp-1">{task.title}</div>
-                            <div className="text-[11px] text-gray-400">{task.oppTitle.split('–')[0].trim()}</div>
-                          </div>
-                          <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 ${d <= 3 ? 'bg-red-100 text-red-600' : d <= 7 ? 'bg-amber-100 text-amber-700' : 'bg-yellow-100 text-yellow-700'}`}>{d}N</span>
+                        <div key={task.id} className={`text-[11px] px-2.5 py-1 rounded-lg font-medium ${col.bg} ${col.text}`}>
+                          {task.title}
                         </div>
                       )
                     })}
                   </div>
                 </div>
               )}
-
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="px-4 py-3.5 border-b border-gray-100 flex items-center gap-2">
-                  <Sparkles size={14} className="text-sky-500" />
-                  <span className="text-sm font-bold text-gray-900">Ghi chú nhanh</span>
-                </div>
-                <div className="p-4">
-                  <textarea
-                    className="w-full text-sm border border-gray-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-sky-300 placeholder-gray-300 bg-gray-50"
-                    placeholder="Ghi chú nhắc nhở cá nhân cho hôm nay..."
-                    rows={3}
-                  />
-                  <button className="mt-2 w-full bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-semibold py-2 rounded-lg transition-colors">
-                    Lưu ghi chú
-                  </button>
-                </div>
-              </div>
             </div>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
+          )}
 
-function SummaryCard({ label, value, sub, color, icon }: { label: string; value: string; sub: string; color: string; icon: string }) {
-  const bg: Record<string, string> = { blue: 'bg-sky-50 border-sky-200', green: 'bg-emerald-50 border-emerald-200', amber: 'bg-amber-50 border-amber-200', violet: 'bg-violet-50 border-violet-200', red: 'bg-red-50 border-red-200', gray: 'bg-gray-50 border-gray-200' }
-  const tx: Record<string, string> = { blue: 'text-sky-700', green: 'text-emerald-700', amber: 'text-amber-700', violet: 'text-violet-700', red: 'text-red-700', gray: 'text-gray-600' }
-  return (
-    <div className={`rounded-2xl border p-4 ${bg[color] ?? bg.gray}`}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-gray-500">{label}</span>
-        <span className="text-xl">{icon}</span>
-      </div>
-      <div className={`text-2xl font-black mb-1 ${tx[color] ?? tx.gray}`}>{value}</div>
-      <div className="text-xs text-gray-400">{sub}</div>
+        </div>
+      )}
     </div>
   )
 }
