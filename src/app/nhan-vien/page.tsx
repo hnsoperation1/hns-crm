@@ -212,7 +212,7 @@ export default function StaffPage() {
                       {isTasksExpanded && (
                         <div className="mt-2 space-y-1.5">
                           {myTasks.map(task => {
-                            const opp = getOppById(task.opportunity_id)
+                            const opp = getOppById(task.opportunity_id ?? '')
                             return (
                               <div key={task.id} className="bg-brand-50 border border-brand-100 rounded-xl px-3 py-2">
                                 <div className="text-xs text-gray-700 font-medium leading-snug">{task.title}</div>
@@ -319,7 +319,7 @@ export default function StaffPage() {
 
                     <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                       {oppIds.map(oppId => {
-                        const opp = getOppById(oppId)
+                        const opp = getOppById(oppId ?? '')
                         const oppTasks = ALL_PENDING_TASKS.filter(t => t.opportunity_id === oppId)
                         if (!opp || oppTasks.length === 0) return null
                         const sc = STAGE_COLORS[opp.stage]
