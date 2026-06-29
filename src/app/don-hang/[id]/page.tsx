@@ -1619,17 +1619,17 @@ export default function OppDetailPage() {
                                   )}
                                 </div>
                               </div>
-                              {creatorUser && (
-                                <div className="ml-9 flex items-center gap-2 mb-1.5">
-                                  <span className="text-xs text-gray-400 font-medium flex-shrink-0">Người tạo:</span>
-                                  <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                              <div className="ml-9 flex items-center gap-2 mb-1.5">
+                                <span className="text-xs text-gray-400 font-medium flex-shrink-0">Người tạo:</span>
+                                {creatorUser ? (
+                                  <span className="flex items-center gap-1.5 text-xs text-gray-600">
                                     <div className="w-4 h-4 rounded-full bg-gray-200 flex items-center justify-center text-[8px] font-bold text-gray-600 flex-shrink-0">
                                       {getInitials(creatorUser.full_name)}
                                     </div>
                                     {creatorUser.full_name}
                                   </span>
-                                </div>
-                              )}
+                                ) : <span className="text-xs text-gray-300">—</span>}
+                              </div>
                               {!task.is_done && (
                                 <div className="ml-9 flex items-center gap-2">
                                   <span className="text-xs text-gray-400 font-medium flex-shrink-0">Người thực hiện:</span>

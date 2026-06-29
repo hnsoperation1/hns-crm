@@ -24,10 +24,13 @@ type TaskRow = {
   due_date?: string | null
   assigned_to?: string | null
   opportunity_id?: string | null
+  parent_id?: string | null
   created_at: string
   stage: number
   opportunity?: { id: string; title: string } | null
 }
+
+type SubSummary = { total: number; done: number }
 
 type UserRow = { id: string; full_name: string; role: string }
 
@@ -50,6 +53,7 @@ export default function CongViecPage() {
 
   const [tasks, setTasks] = useState<TaskRow[]>([])
   const [allUsers, setAllUsers] = useState<UserRow[]>([])
+  const [subSummary, setSubSummary] = useState<Record<string, SubSummary>>({})
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<ViewMode>('kanban')
   const [draggedId, setDraggedId] = useState<string | null>(null)
@@ -63,18 +67,35 @@ export default function CongViecPage() {
   const loadData = useCallback(async () => {
     if (!currentUser?.id) { setLoading(false); return }
     setLoading(true)
+    let topLevelTasks: TaskRow[] = []
     if (isManager) {
       const [tasksRes, usersRes] = await Promise.all([
-        supabase.from('tasks').select('*, opportunity:opportunities!left(id,title)').order('due_date', { nullsFirst: false }).order('created_at'),
+        supabase.from('tasks').select('*, opportunity:opportunities!left(id,title)').is('parent_id', null).order('due_date', { nullsFirst: false }).order('created_at'),
         supabase.from('users').select('id,full_name,role').eq('is_active', true).order('full_name'),
       ])
-      setTasks((tasksRes.data ?? []) as TaskRow[])
+      topLevelTasks = (tasksRes.data ?? []) as TaskRow[]
       setAllUsers((usersRes.data ?? []) as UserRow[])
     } else {
       const { data } = await supabase
         .from('tasks').select('*, opportunity:opportunities!left(id,title)')
+        .is('parent_id', null)
         .eq('assigned_to', currentUser.id).order('due_date', { nullsFirst: false })
-      setTasks((data ?? []) as TaskRow[])
+      topLevelTasks = (data ?? []) as TaskRow[]
+    }
+    setTasks(topLevelTasks)
+
+    // Load subtask summary for progress bars
+    const ids = topLevelTasks.map(t => t.id)
+    if (ids.length > 0) {
+      const { data: subs } = await supabase.from('tasks').select('parent_id,is_done').in('parent_id', ids)
+      const summary: Record<string, SubSummary> = {}
+      for (const s of subs ?? []) {
+        if (!s.parent_id) continue
+        if (!summary[s.parent_id]) summary[s.parent_id] = { total: 0, done: 0 }
+        summary[s.parent_id].total++
+        if (s.is_done) summary[s.parent_id].done++
+      }
+      setSubSummary(summary)
     }
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -196,30 +217,55 @@ export default function CongViecPage() {
                             <div className="flex items-start gap-1.5">
                               <GripVertical size={12} className="text-gray-300 mt-0.5 flex-shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <div className={`text-xs font-semibold leading-snug ${col.key === 'done' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                                <Link href={`/cong-viec/${task.id}`} onClick={e => e.stopPropagation()}
+                                  className={`text-xs font-semibold leading-snug hover:underline ${col.key === 'done' ? 'line-through text-gray-400' : 'text-gray-800 hover:text-accent-600'}`}>
                                   {task.title}
-                                </div>
-                                {task.opportunity && (
-                                  <Link href={`/don-hang/${task.opportunity.id}`} onClick={e => e.stopPropagation()}
-                                    className="flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-accent-500 mt-0.5 truncate">
-                                    <Link2 size={8} />{task.opportunity.title}
-                                  </Link>
-                                )}
-                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                </Link>
+                                <div className="mt-1.5 space-y-1">
+                                  {task.opportunity && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] text-gray-400 w-12 flex-shrink-0">Đơn hàng</span>
+                                      <Link href={`/don-hang/${task.opportunity.id}`} onClick={e => e.stopPropagation()}
+                                        className="flex items-center gap-0.5 text-[10px] text-gray-500 hover:text-accent-500 truncate">
+                                        <Link2 size={8} />{task.opportunity.title}
+                                      </Link>
+                                    </div>
+                                  )}
                                   {assignee && isManager && (
-                                    <span className="flex items-center gap-1 text-[10px] bg-brand-50 text-brand-700 px-1.5 py-0.5 rounded-full font-medium">
-                                      <span className="w-3 h-3 rounded-full bg-brand-500 flex items-center justify-center text-[7px] text-white font-bold flex-shrink-0">
-                                        {getInitials(assignee)}
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] text-gray-400 w-12 flex-shrink-0">Giao cho</span>
+                                      <span className="flex items-center gap-1 text-[10px] text-brand-700 font-medium">
+                                        <span className="w-3 h-3 rounded-full bg-brand-500 flex items-center justify-center text-[7px] text-white font-bold flex-shrink-0">
+                                          {getInitials(assignee)}
+                                        </span>
+                                        {assignee.split(' ').slice(-1)[0]}
                                       </span>
-                                      {assignee.split(' ').slice(-1)[0]}
-                                    </span>
+                                    </div>
                                   )}
                                   {task.due_date && (
-                                    <span className={`text-[10px] flex items-center gap-0.5 font-medium ${td !== null && td < 0 ? 'text-red-500' : td !== null && td <= 3 ? 'text-amber-500' : 'text-gray-400'}`}>
-                                      <CalendarDays size={8} />
-                                      {td !== null && td < 0 ? `Quá ${Math.abs(td)}N` : formatDate(task.due_date)}
-                                    </span>
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[9px] text-gray-400 w-12 flex-shrink-0">Hạn</span>
+                                      <span className={`text-[10px] flex items-center gap-0.5 font-medium ${td !== null && td < 0 ? 'text-red-500' : td !== null && td <= 3 ? 'text-amber-500' : 'text-gray-500'}`}>
+                                        <CalendarDays size={8} />
+                                        {td !== null && td < 0 ? `Quá ${Math.abs(td)} ngày` : formatDate(task.due_date)}
+                                      </span>
+                                    </div>
                                   )}
+                                  {subSummary[task.id] && (() => {
+                                    const { total, done } = subSummary[task.id]
+                                    const pct = Math.round(done / total * 100)
+                                    return (
+                                      <div className="pt-1">
+                                        <div className="flex items-center justify-between mb-0.5">
+                                          <span className="text-[9px] text-gray-400">Tiến độ</span>
+                                          <span className="text-[9px] font-bold text-gray-500">{done}/{total} · {pct}%</span>
+                                        </div>
+                                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                          <div className="h-1.5 bg-emerald-400 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                                        </div>
+                                      </div>
+                                    )
+                                  })()}
                                 </div>
                               </div>
                             </div>
@@ -249,6 +295,7 @@ export default function CongViecPage() {
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-400">Tên công việc</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Đơn hàng</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-40">Nhóm công việc</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-32">Tiến độ con</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Tình trạng</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-32">Hạn hoàn thành</th>
                       {isManager && <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Người thực hiện</th>}
@@ -270,7 +317,7 @@ export default function CongViecPage() {
                                   ? <CheckCircle2 size={14} className="text-emerald-500" />
                                   : <Square size={14} className="text-gray-300 hover:text-brand-400 transition-colors" />}
                               </button>
-                              <span className={`text-xs font-medium ${task.is_done ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.title}</span>
+                              <Link href={`/cong-viec/${task.id}`} className={`text-xs font-medium hover:underline ${task.is_done ? 'line-through text-gray-400' : 'text-gray-800 hover:text-accent-600'}`}>{task.title}</Link>
                             </div>
                           </td>
                           <td className="px-4 py-2.5">
@@ -279,6 +326,20 @@ export default function CongViecPage() {
                                   <Link2 size={9} />{task.opportunity.title}
                                 </Link>
                               : <span className="text-xs text-gray-300">—</span>}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            {subSummary[task.id] ? (() => {
+                              const { total, done } = subSummary[task.id]
+                              const pct = Math.round(done / total * 100)
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className="h-1.5 bg-emerald-400 rounded-full" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span className="text-[10px] font-bold text-gray-500 w-8 text-right">{pct}%</span>
+                                </div>
+                              )
+                            })() : <span className="text-gray-200 text-xs">—</span>}
                           </td>
                           <td className="px-4 py-2.5">
                             <select value={st} onChange={e => updateStatus(task.id, e.target.value as TaskStatus)}
@@ -318,7 +379,7 @@ export default function CongViecPage() {
                       )
                     })}
                     {tasks.length === 0 && (
-                      <tr><td colSpan={isManager ? 7 : 6} className="px-4 py-16 text-center">
+                      <tr><td colSpan={isManager ? 8 : 7} className="px-4 py-16 text-center">
                         <ClipboardList size={32} className="text-gray-200 mx-auto mb-2" />
                         <div className="text-sm text-gray-400">Không có công việc nào</div>
                       </td></tr>
@@ -330,7 +391,7 @@ export default function CongViecPage() {
                         <td colSpan={2} className="px-4 py-2 text-xs font-bold text-gray-500">
                           Tổng {tasks.length} · {done.length} hoàn thành · {pending.length} chờ
                         </td>
-                        <td colSpan={isManager ? 5 : 4} />
+                        <td colSpan={isManager ? 6 : 5} />
                       </tr>
                     </tfoot>
                   )}

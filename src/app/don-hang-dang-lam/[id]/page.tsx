@@ -77,7 +77,7 @@ export default function OppDetailPage() {
 
   const [opp, setOpp] = useState<OppDetail | null>(null)
   const [allLogs, setAllLogs] = useState<LogDetail[]>([])
-  const [tasks, setTasks] = useState<{ id: string; title: string; due_date?: string; assigned_to?: string; is_done: boolean; stage: number }[]>([])
+  const [tasks, setTasks] = useState<{ id: string; title: string; due_date?: string | null; assigned_to?: string | null; created_by?: string | null; is_done: boolean; stage: number; done_at?: string | null }[]>([])
   const [saleUsers, setSaleUsers] = useState<UserMin[]>([])
   const [allUsers, setAllUsers] = useState<UserMin[]>([])
   const [loading, setLoading] = useState(true)
@@ -1483,6 +1483,7 @@ export default function OppDetailPage() {
               const allTasksCombined = tasks.map(t => ({
                 id: t.id, title: t.title, due_date: t.due_date ?? '',
                 assigned_to: taskAssignees[t.id] ?? t.assigned_to ?? '',
+                created_by: t.created_by ?? null,
                 is_done: taskDone[t.id] !== undefined ? taskDone[t.id] : t.is_done,
                 stage: t.stage, isNew: false,
               }))
@@ -1575,6 +1576,7 @@ export default function OppDetailPage() {
                     <div className="space-y-2.5">
                       {allTasksCombined.map(task => {
                         const assigneeUser = task.assigned_to ? allUsers.find(u => u.id === task.assigned_to) : null
+                        const creatorUser = task.created_by ? allUsers.find(u => u.id === task.created_by) : null
                         const isAssigning = openTaskAssign === task.id
                         return (
                           <div key={task.id} className={`bg-white rounded-2xl border shadow-sm transition-all ${
@@ -1603,6 +1605,17 @@ export default function OppDetailPage() {
                                     </span>
                                   )}
                                 </div>
+                              </div>
+                              <div className="ml-9 flex items-center gap-2 mb-1.5">
+                                <span className="text-xs text-gray-400 font-medium flex-shrink-0">Người tạo:</span>
+                                {creatorUser ? (
+                                  <span className="flex items-center gap-1.5 text-xs text-gray-600">
+                                    <div className="w-4 h-4 rounded-full bg-gray-200 flex items-center justify-center text-[8px] font-bold text-gray-600 flex-shrink-0">
+                                      {getInitials(creatorUser.full_name)}
+                                    </div>
+                                    {creatorUser.full_name}
+                                  </span>
+                                ) : <span className="text-xs text-gray-300">—</span>}
                               </div>
                               {!task.is_done && (
                                 <div className="ml-9 flex items-center gap-2">
