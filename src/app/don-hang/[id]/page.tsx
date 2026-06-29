@@ -754,7 +754,7 @@ export default function OppDetailPage() {
 
       {/* ─── BODY ─────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto bg-gray-50/80">
-        <div className="p-5 max-w-[1100px] mx-auto">
+        <div className="p-5">
 
           <div className="space-y-4">
 
