@@ -51,6 +51,7 @@ export default function OppDetailPage() {
   const router = useRouter()
   const supabase = createClient()
   const { user: currentUser } = useAuth()
+  const canEditPersonnel = ['boss', 'admin', 'sale_admin'].includes(currentUser?.role ?? '')
 
   const [opp, setOpp] = useState<OppDetail | null>(null)
   const [allLogs, setAllLogs] = useState<LogDetail[]>([])
@@ -1312,7 +1313,7 @@ export default function OppDetailPage() {
                 <h3 className="font-semibold text-gray-900 text-sm">Nhân sự</h3>
                 <div className="flex items-center gap-2">
                   {personnelSaved && <span className="text-xs text-emerald-600 font-medium flex items-center gap-1"><CheckCircle2 size={11} />Đã lưu</span>}
-                  {personnelEdit ? (
+                  {canEditPersonnel && (personnelEdit ? (
                     <>
                       <button onClick={savePersonnel} disabled={personnelSaving}
                         className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-60 transition-colors">
@@ -1336,7 +1337,7 @@ export default function OppDetailPage() {
                       className="flex items-center gap-1 px-2.5 py-1 text-xs text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
                       <Pencil size={10} /> Cập nhật
                     </button>
-                  )}
+                  ))}
                 </div>
               </div>
               <div className="p-5 space-y-4">
