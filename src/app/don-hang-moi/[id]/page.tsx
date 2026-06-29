@@ -55,7 +55,7 @@ export default function OppDetailPage() {
 
   const [opp, setOpp] = useState<OppDetail | null>(null)
   const [allLogs, setAllLogs] = useState<LogDetail[]>([])
-  const [tasks, setTasks] = useState<{ id: string; title: string; due_date?: string; assigned_to?: string; is_done: boolean; stage: number }[]>([])
+  const [tasks, setTasks] = useState<{ id: string; title: string; due_date?: string | null; assigned_to?: string | null; is_done: boolean; stage: number; done_at?: string | null }[]>([])
   const [saleUsers, setSaleUsers] = useState<UserMin[]>([])
   const [allUsers, setAllUsers] = useState<UserMin[]>([])
   const [loading, setLoading] = useState(true)
@@ -68,7 +68,6 @@ export default function OppDetailPage() {
   const [personnelForm, setPersonnelForm] = useState({ assigned_to: '', operator_id: '', support_ids: [] as string[] })
   const [personnelSaving, setPersonnelSaving] = useState(false)
   const [personnelSaved, setPersonnelSaved] = useState(false)
-  const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
   const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake'>('tasks')
@@ -158,8 +157,7 @@ export default function OppDetailPage() {
     }
     setMealsSchedule(rows)
   }
-  const [taskDone, setTaskDone] = useState<Record<string, boolean>>({})
-  const [addedTasks, setAddedTasks] = useState<{ id: string; title: string; due_date: string; assigned_to: string }[]>([])
+  const [savingTask, setSavingTask] = useState(false)
   const [showNewTask, setShowNewTask] = useState(false)
   const [newTask, setNewTask] = useState({ title: '', due_date: '', assigned_to: '' })
   const [advancingStage, setAdvancingStage] = useState(false)
@@ -471,7 +469,7 @@ export default function OppDetailPage() {
   }
   stageHistory.push({ stage: curStage, startDate: cursor, endDate: null, isCurrent: true })
 
-  const doneTasks = tasks.filter(t => taskDone[t.id] !== undefined ? taskDone[t.id] : t.is_done).length
+  const doneTasks = tasks.filter(t => t.is_done).length
   const daysInStage = daysSince(opp.stage_updated_at)
   const daysToTour = opp.tour_date ? daysUntil(opp.tour_date) : null
   const daysToDeadline = opp.deadline ? daysUntil(opp.deadline) : null
@@ -565,7 +563,7 @@ export default function OppDetailPage() {
               >
                 <ClipboardList size={15} /> Công việc
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${mainTab === 'tasks' ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                  {tasks.length + addedTasks.length}
+                  {tasks.length}
                 </span>
               </button>
               <button
@@ -1065,28 +1063,15 @@ export default function OppDetailPage() {
 
             {/* ══════════ CÔNG VIỆC TAB ══════════ */}
             {mainTab === 'tasks' && (() => {
-              const allTasksCombined = [
-                ...tasks.map(t => ({
-                  id: t.id, title: t.title, due_date: t.due_date ?? '',
-                  assigned_to: taskAssignees[t.id] ?? t.assigned_to ?? '',
-                  is_done: taskDone[t.id] !== undefined ? taskDone[t.id] : t.is_done,
-                  stage: t.stage, isNew: false,
-                })),
-                ...addedTasks.map(t => ({
-                  id: t.id, title: t.title, due_date: t.due_date,
-                  assigned_to: t.assigned_to, is_done: taskDone[t.id] ?? false,
-                  stage: 99, isNew: true,
-                })),
-              ]
-              const doneCount = allTasksCombined.filter(t => t.is_done).length
-              const pct = allTasksCombined.length > 0 ? Math.round((doneCount / allTasksCombined.length) * 100) : 0
+              const doneCount = tasks.filter(t => t.is_done).length
+              const pct = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0
 
               return (
                 <div className="space-y-4">
                   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <span className="text-sm font-bold text-gray-900">{doneCount}/{allTasksCombined.length} nhiệm vụ hoàn thành</span>
+                        <span className="text-sm font-bold text-gray-900">{doneCount}/{tasks.length} nhiệm vụ hoàn thành</span>
                         <span className="text-xs text-gray-400 ml-2">({pct}%)</span>
                       </div>
                       <button onClick={() => setShowNewTask(true)}
@@ -1114,7 +1099,7 @@ export default function OppDetailPage() {
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 mb-1">Deadline</label>
-                          <input type="date" value={newTask.due_date} onChange={e => setNewTask(t => ({ ...t, due_date: e.target.value }))}
+                          <DateInput value={newTask.due_date} onChange={v => setNewTask(t => ({ ...t, due_date: v }))}
                             className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white" />
                         </div>
                         <div>
@@ -1127,20 +1112,33 @@ export default function OppDetailPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => {
+                        <button onClick={async () => {
                           if (!newTask.title.trim()) return
-                          setAddedTasks(prev => [...prev, { id: `local-${Date.now()}`, ...newTask }])
-                          setNewTask({ title: '', due_date: '', assigned_to: '' })
-                          setShowNewTask(false)
-                        }} className="flex-1 bg-accent-500 hover:bg-accent-600 text-white py-2 rounded-xl text-sm font-bold transition-colors">
-                          Thêm nhiệm vụ
+                          setSavingTask(true)
+                          const { data, error } = await supabase.from('tasks').insert({
+                            opportunity_id: id,
+                            title: newTask.title.trim(),
+                            due_date: newTask.due_date || null,
+                            assigned_to: newTask.assigned_to || null,
+                            created_by: currentUser?.id,
+                            is_done: false,
+                            stage: 0,
+                          }).select('*').single()
+                          if (!error && data) {
+                            setTasks(prev => [...prev, data as typeof tasks[0]])
+                            setNewTask({ title: '', due_date: '', assigned_to: '' })
+                            setShowNewTask(false)
+                          }
+                          setSavingTask(false)
+                        }} disabled={savingTask} className="flex-1 bg-accent-500 hover:bg-accent-600 text-white py-2 rounded-xl text-sm font-bold transition-colors disabled:opacity-60">
+                          {savingTask ? 'Đang lưu...' : 'Thêm nhiệm vụ'}
                         </button>
                         <button onClick={() => setShowNewTask(false)} className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50">Huỷ</button>
                       </div>
                     </div>
                   )}
 
-                  {allTasksCombined.length === 0 ? (
+                  {tasks.length === 0 ? (
                     <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-10 text-center">
                       <ClipboardList size={32} className="text-gray-200 mx-auto mb-3" />
                       <div className="text-sm font-semibold text-gray-400 mb-1">Chưa có nhiệm vụ nào</div>
@@ -1151,7 +1149,7 @@ export default function OppDetailPage() {
                     </div>
                   ) : (
                     <div className="space-y-2.5">
-                      {allTasksCombined.map(task => {
+                      {tasks.map(task => {
                         const assigneeUser = task.assigned_to ? allUsers.find(u => u.id === task.assigned_to) : null
                         const isAssigning = openTaskAssign === task.id
                         return (
@@ -1160,8 +1158,11 @@ export default function OppDetailPage() {
                           }`}>
                             <div className="p-4">
                               <div className="flex items-start gap-3 mb-3">
-                                <button onClick={() => setTaskDone(prev => ({ ...prev, [task.id]: !task.is_done }))}
-                                  className="mt-0.5 flex-shrink-0 transition-transform hover:scale-110">
+                                <button onClick={async () => {
+                                  const newDone = !task.is_done
+                                  setTasks(prev => prev.map(t => t.id === task.id ? { ...t, is_done: newDone, done_at: newDone ? new Date().toISOString() : null } : t))
+                                  await supabase.from('tasks').update({ is_done: newDone, done_at: newDone ? new Date().toISOString() : null }).eq('id', task.id)
+                                }} className="mt-0.5 flex-shrink-0 transition-transform hover:scale-110">
                                   {task.is_done
                                     ? <CheckSquare size={18} className="text-emerald-500" />
                                     : <Square size={18} className="text-gray-300 hover:text-brand-400" />}
@@ -1187,7 +1188,7 @@ export default function OppDetailPage() {
                                         <option value="">— Chưa giao —</option>
                                         {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
                                       </select>
-                                      <button onClick={() => { setTaskAssignees(prev => ({ ...prev, [task.id]: taskAssignSelect })); setOpenTaskAssign(null) }}
+                                      <button onClick={async () => { setTasks(prev => prev.map(t => t.id === task.id ? { ...t, assigned_to: taskAssignSelect || null } : t)); await supabase.from('tasks').update({ assigned_to: taskAssignSelect || null }).eq('id', task.id); setOpenTaskAssign(null) }}
                                         className="flex items-center gap-1 bg-accent-500 hover:bg-accent-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex-shrink-0">
                                         <CheckCircle2 size={12} /> Lưu
                                       </button>
@@ -1196,7 +1197,7 @@ export default function OppDetailPage() {
                                       </button>
                                     </div>
                                   ) : assigneeUser ? (
-                                    <button onClick={() => { setOpenTaskAssign(task.id); setTaskAssignSelect(task.assigned_to) }}
+                                    <button onClick={() => { setOpenTaskAssign(task.id); setTaskAssignSelect(task.assigned_to ?? '') }}
                                       className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-50 border border-brand-200 hover:bg-brand-100 transition-colors">
                                       <div className="w-5 h-5 rounded-full bg-brand-500 flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0">
                                         {getInitials(assigneeUser.full_name)}

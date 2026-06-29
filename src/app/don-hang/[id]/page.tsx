@@ -1556,6 +1556,7 @@ export default function OppDetailPage() {
                             title: newTask.title.trim(),
                             due_date: newTask.due_date || null,
                             assigned_to: newTask.assigned_to || null,
+                            created_by: currentUser?.id,
                             is_done: false,
                             stage: 0,
                           }).select('*').single()

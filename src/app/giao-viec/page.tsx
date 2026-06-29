@@ -55,6 +55,7 @@ export default function GiaoViecPage() {
       opportunity_id: form.opportunity_id || null,
       due_date: form.due_date || null,
       assigned_to: form.assigned_to || null,
+      created_by: currentUser?.id,
       is_done: false,
       stage: 0,
     }).select('*').single()
