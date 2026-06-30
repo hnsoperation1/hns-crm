@@ -41,7 +41,7 @@ const RATING_CLS: Record<string, string> = {
 
 // ─── Local types for Supabase joins ──────────────────────────────────────────
 
-type UserMin = { id: string; full_name: string; is_sale_tv?: boolean; is_active?: boolean }
+type UserMin = { id: string; full_name: string; role?: string; is_active?: boolean }
 
 type OppDetail = Opportunity & {
   contact: (Contact & { id: string }) | null
@@ -229,7 +229,7 @@ export default function OppDetailPage() {
           .eq('opportunity_id', id)
           .order('created_at', { ascending: true }),
         supabase.from('users')
-          .select('id, full_name, is_sale_tv, is_active')
+          .select('id, full_name, role, is_active')
           .eq('is_active', true),
         supabase.from('feedback')
           .select('id, respondent_name, phone, group_name, submitted_at, overall_comment, is_satisfied, will_return, next_destination, rating_guide_attitude, rating_guide_skill, rating_hotel, rating_transport_quality, rating_staff_attitude, rating_restaurant_food')
@@ -242,7 +242,7 @@ export default function OppDetailPage() {
       setTasks(tasksData ?? [])
       const users = (usersData ?? []) as UserMin[]
       setAllUsers(users)
-      setSaleUsers(users.filter(u => u.is_sale_tv))
+      setSaleUsers(users.filter(u => u.role === 'sale_tv'))
       setFeedbacks((fbData ?? []) as FeedbackRow[])
       if (oppObj) {
         setAdminForm({

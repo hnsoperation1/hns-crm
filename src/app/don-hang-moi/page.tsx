@@ -97,7 +97,7 @@ export default function DangLayPage() {
     setContactSearch('')
     const [{ data: c }, { data: u }] = await Promise.all([
       supabase.from('contacts').select('id, name, phone, company').is('deleted_at', null).order('name').limit(200),
-      supabase.from('users').select('id, full_name').eq('is_sale_tv', true).eq('is_active', true).order('full_name'),
+      supabase.from('users').select('id, full_name').eq('role', 'sale_tv').eq('is_active', true).order('full_name'),
     ])
     setContacts((c ?? []) as ContactOpt[])
     setUsers((u ?? []) as UserOpt[])
@@ -183,7 +183,7 @@ export default function DangLayPage() {
     if (contacts.length === 0) {
       const [{ data: c }, { data: u }] = await Promise.all([
         supabase.from('contacts').select('id, name, phone, company').is('deleted_at', null).order('name').limit(200),
-        supabase.from('users').select('id, full_name').eq('is_sale_tv', true).eq('is_active', true).order('full_name'),
+        supabase.from('users').select('id, full_name').eq('role', 'sale_tv').eq('is_active', true).order('full_name'),
       ])
       setContacts((c ?? []) as ContactOpt[])
       setUsers((u ?? []) as UserOpt[])
