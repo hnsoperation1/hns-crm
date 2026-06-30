@@ -77,7 +77,7 @@ export default function CongViecPage() {
   const [allUsers, setAllUsers] = useState<UserRow[]>([])
   const [subSummary, setSubSummary] = useState<Record<string, SubSummary>>({})
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState<ViewMode>('kanban')
+  const [view, setView] = useState<ViewMode>('table')
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragOverCol, setDragOverCol] = useState<TaskStatus | null>(null)
   const [calMonth, setCalMonth] = useState(() => {
