@@ -23,7 +23,12 @@ type Row = {
 }
 
 type ContactOpt = { id: string; name: string; phone?: string | null; company?: string | null }
-type UserOpt = { id: string; full_name: string }
+type UserOpt = { id: string; full_name: string; role?: string }
+
+const ROLE_LABELS: Record<string, string> = {
+  boss: 'Giám đốc', super_admin: 'Quản trị viên', admin: 'Quản trị viên',
+  sale_admin: 'Sale Admin', sale_tv: 'Sale TV', cskh: 'Chăm sóc KH', dieu_hanh: 'Điều hành',
+}
 
 const SOURCES: { value: LeadSource; label: string }[] = [
   { value: 'mkt', label: 'Marketing' }, { value: 'sale', label: 'Sale' },
@@ -97,10 +102,10 @@ export default function DangLayPage() {
     setContactSearch('')
     const [{ data: c }, { data: u }] = await Promise.all([
       supabase.from('contacts').select('id, name, phone, company').is('deleted_at', null).order('name').limit(200),
-      supabase.from('users').select('id, full_name').eq('role', 'sale_tv').eq('is_active', true).order('full_name'),
+      supabase.from('users').select('id, full_name, role').eq('is_active', true).order('full_name'),
     ])
     setContacts((c ?? []) as ContactOpt[])
-    setUsers((u ?? []) as UserOpt[])
+    setUsers(((u ?? []) as UserOpt[]).filter(u => u.role === 'sale_tv'))
   }
 
   async function handleSave() {
@@ -183,10 +188,10 @@ export default function DangLayPage() {
     if (contacts.length === 0) {
       const [{ data: c }, { data: u }] = await Promise.all([
         supabase.from('contacts').select('id, name, phone, company').is('deleted_at', null).order('name').limit(200),
-        supabase.from('users').select('id, full_name').eq('role', 'sale_tv').eq('is_active', true).order('full_name'),
+        supabase.from('users').select('id, full_name, role').eq('is_active', true).order('full_name'),
       ])
       setContacts((c ?? []) as ContactOpt[])
-      setUsers((u ?? []) as UserOpt[])
+      setUsers(((u ?? []) as UserOpt[]).filter(u => u.role === 'sale_tv'))
     }
     const r = viewRow
     setEditId(r.id)
@@ -270,12 +275,12 @@ export default function DangLayPage() {
         <select value={filterSaleTV} onChange={e => setFilterSaleTV(e.target.value)}
           className="text-xs border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-400 min-w-[150px]">
           <option value="">Tất cả Sale TV</option>
-          {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+          {users.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
         </select>
         <select value={filterCreator} onChange={e => setFilterCreator(e.target.value)}
           className="text-xs border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-400 min-w-[150px]">
           <option value="">Tất cả người tạo</option>
-          {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+          {users.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
         </select>
         {hasFilter && (
           <button onClick={() => { setFilterSource(''); setFilterSaleTV(''); setFilterCreator('') }}
@@ -444,7 +449,7 @@ export default function DangLayPage() {
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale phụ trách</label>
                   <select value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))} className={iField}>
                     <option value="">— Chọn Sale TV —</option>
-                    {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                    {users.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
                   </select>
                 </div>
 
@@ -598,7 +603,7 @@ export default function DangLayPage() {
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale phụ trách</label>
                   <select value={editForm.assigned_to} onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))} className={iField}>
                     <option value="">— Chọn Sale TV —</option>
-                    {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                    {users.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
                   </select>
                 </div>
                 <div>
