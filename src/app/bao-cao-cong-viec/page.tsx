@@ -241,15 +241,23 @@ export default function BaoCaoCongViecPage() {
                 {/* Task table */}
                 {isOpen && (
                   <div className="border-t border-gray-100 overflow-x-auto">
-                    <table className="w-full text-xs">
+                    <table className="w-full text-xs table-fixed">
+                      <colgroup>
+                        <col className="w-[13%]" />
+                        <col className="w-[24%]" />
+                        <col className="w-[10%]" />
+                        <col className="w-[24%]" />
+                        <col className="w-[24%]" />
+                        <col className="w-[5%]" />
+                      </colgroup>
                       <thead>
                         <tr className="bg-gray-50 border-b border-gray-100">
-                          <th className="px-5 py-2 text-left font-semibold text-gray-400 w-40">Đơn hàng</th>
-                          <th className="px-4 py-2 text-left font-semibold text-gray-400 w-48">Nội dung công việc</th>
-                          <th className="px-4 py-2 text-left font-semibold text-gray-400 w-32">Tình trạng</th>
+                          <th className="px-5 py-2 text-left font-semibold text-gray-400">Đơn hàng</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-400">Nội dung công việc</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-400">Tình trạng</th>
                           <th className="px-4 py-2 text-left font-semibold text-gray-400">Mô tả tình trạng</th>
-                          <th className="px-4 py-2 text-left font-semibold text-gray-400 w-48">Kế hoạch ngày mai</th>
-                          <th className="px-4 py-2 w-14"></th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-400">Bước tiếp theo</th>
+                          <th className="px-4 py-2"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -327,7 +335,7 @@ export default function BaoCaoCongViecPage() {
                                   type="text"
                                   value={tomorrowPlan[task.id] ?? ''}
                                   onChange={e => setTomorrowPlan(prev => ({ ...prev, [task.id]: e.target.value }))}
-                                  placeholder="Nhập kế hoạch..."
+                                  placeholder="Bước tiếp theo..."
                                   className="w-full text-xs text-gray-700 placeholder-gray-300 bg-transparent border-b border-dashed border-gray-200 focus:border-brand-400 focus:outline-none py-0.5 transition-colors"
                                 />
                               </td>
@@ -440,11 +448,11 @@ export default function BaoCaoCongViecPage() {
                 )}
 
                 <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Kế hoạch ngày mai</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Bước tiếp theo</p>
                   <textarea
                     value={tomorrowPlan[selectedTask.id] ?? ''}
                     onChange={e => setTomorrowPlan(prev => ({ ...prev, [selectedTask.id]: e.target.value }))}
-                    placeholder="Nhập kế hoạch ngày mai..."
+                    placeholder="Nhập bước tiếp theo..."
                     rows={3}
                     className="w-full text-xs text-gray-700 placeholder-gray-300 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none"
                   />
