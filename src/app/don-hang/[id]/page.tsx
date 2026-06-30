@@ -78,7 +78,7 @@ export default function OppDetailPage() {
 
   const [opp, setOpp] = useState<OppDetail | null>(null)
   const [allLogs, setAllLogs] = useState<LogDetail[]>([])
-  const [tasks, setTasks] = useState<{ id: string; title: string; due_date?: string | null; assigned_to?: string | null; created_by?: string | null; is_done: boolean; stage: number; done_at?: string | null }[]>([])
+  const [tasks, setTasks] = useState<{ id: string; title: string; due_date?: string | null; assigned_to?: string | null; created_by?: string | null; is_done: boolean; stage: number; done_at?: string | null; parent_id?: string | null }[]>([])
   const [saleUsers, setSaleUsers] = useState<UserMin[]>([])
   const [allUsers, setAllUsers] = useState<UserMin[]>([])
   const [loading, setLoading] = useState(true)
@@ -223,7 +223,7 @@ export default function OppDetailPage() {
           .eq('opportunity_id', id)
           .order('log_date', { ascending: false }),
         supabase.from('tasks')
-          .select('*')
+          .select('id,title,due_date,assigned_to,created_by,is_done,stage,done_at,parent_id')
           .eq('opportunity_id', id)
           .order('created_at', { ascending: true }),
         supabase.from('users')
@@ -1507,8 +1507,10 @@ export default function OppDetailPage() {
                 assigned_to: taskAssignees[t.id] ?? t.assigned_to ?? '',
                 created_by: t.created_by ?? null,
                 is_done: taskDone[t.id] !== undefined ? taskDone[t.id] : t.is_done,
-                stage: t.stage, isNew: false,
+                stage: t.stage, isNew: false, parent_id: t.parent_id ?? null,
               }))
+              const parentTasks = allTasksCombined.filter(t => !t.parent_id)
+              const subTasksOf = (pid: string) => allTasksCombined.filter(t => t.parent_id === pid)
               const doneCount = allTasksCombined.filter(t => t.is_done).length
               const pct = allTasksCombined.length > 0 ? Math.round((doneCount / allTasksCombined.length) * 100) : 0
 
@@ -1585,7 +1587,7 @@ export default function OppDetailPage() {
                     </div>
                   )}
 
-                  {allTasksCombined.length === 0 ? (
+                  {parentTasks.length === 0 ? (
                     <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-10 text-center">
                       <ClipboardList size={32} className="text-gray-200 mx-auto mb-3" />
                       <div className="text-sm font-semibold text-gray-400 mb-1">Chưa có nhiệm vụ nào</div>
@@ -1596,7 +1598,8 @@ export default function OppDetailPage() {
                     </div>
                   ) : (
                     <div className="space-y-2.5">
-                      {allTasksCombined.map(task => {
+                      {parentTasks.map(task => {
+                        const subs = subTasksOf(task.id)
                         const assigneeUser = task.assigned_to ? allUsers.find(u => u.id === task.assigned_to) : null
                         const creatorUser = task.created_by ? allUsers.find(u => u.id === task.created_by) : null
                         const isAssigning = openTaskAssign === task.id
@@ -1680,6 +1683,43 @@ export default function OppDetailPage() {
                                 </div>
                               )}
                             </div>
+
+                            {/* Subtasks */}
+                            {subs.length > 0 && (
+                              <div className="border-t border-gray-100 px-4 py-2 space-y-1.5 bg-gray-50/60 rounded-b-2xl">
+                                {subs.map(sub => {
+                                  const subDone = taskDone[sub.id] !== undefined ? taskDone[sub.id] : sub.is_done
+                                  return (
+                                    <div key={sub.id} className="flex items-center gap-2.5 py-1">
+                                      <button onClick={async () => {
+                                        const newDone = !subDone
+                                        setTaskDone(prev => ({ ...prev, [sub.id]: newDone }))
+                                        setTasks(prev => prev.map(t => t.id === sub.id ? { ...t, is_done: newDone } : t))
+                                        await supabase.from('tasks').update({ is_done: newDone, done_at: newDone ? new Date().toISOString() : null }).eq('id', sub.id)
+                                      }} className="flex-shrink-0">
+                                        {subDone
+                                          ? <CheckSquare size={14} className="text-emerald-500" />
+                                          : <Square size={14} className="text-gray-300 hover:text-brand-400" />}
+                                      </button>
+                                      <span className={`text-xs flex-1 ${subDone ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                                        {sub.title}
+                                      </span>
+                                      {sub.due_date && (
+                                        <span className="text-[10px] text-amber-500 flex-shrink-0">{formatDate(sub.due_date)}</span>
+                                      )}
+                                      {sub.assigned_to && (() => {
+                                        const u = allUsers.find(u => u.id === (taskAssignees[sub.id] ?? sub.assigned_to))
+                                        return u ? (
+                                          <div className="w-4 h-4 rounded-full bg-brand-500 flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" title={u.full_name}>
+                                            {getInitials(u.full_name)}
+                                          </div>
+                                        ) : null
+                                      })()}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
                           </div>
                         )
                       })}
