@@ -27,7 +27,7 @@ type UserOpt = { id: string; full_name: string; role?: string }
 
 const ROLE_LABELS: Record<string, string> = {
   boss: 'Giám đốc', super_admin: 'Quản trị viên', admin: 'Quản trị viên',
-  sale_admin: 'Sale Admin', sale_tv: 'Sale TV', cskh: 'Chăm sóc KH', dieu_hanh: 'Điều hành',
+  sale_admin: 'Sale Admin', sale: 'Sale TV', sale_tv: 'Sale TV', cskh: 'Chăm sóc KH', dieu_hanh: 'Điều hành', sale_op: 'Điều hành',
 }
 
 const SOURCES: { value: LeadSource; label: string }[] = [
@@ -105,7 +105,7 @@ export default function DangLayPage() {
       supabase.from('users').select('id, full_name, role').eq('is_active', true).order('full_name'),
     ])
     setContacts((c ?? []) as ContactOpt[])
-    setUsers(((u ?? []) as UserOpt[]).filter(u => u.role === 'sale_tv'))
+    setUsers(((u ?? []) as UserOpt[]).filter(u => u.role === 'sale'))
   }
 
   async function handleSave() {
@@ -191,7 +191,7 @@ export default function DangLayPage() {
         supabase.from('users').select('id, full_name, role').eq('is_active', true).order('full_name'),
       ])
       setContacts((c ?? []) as ContactOpt[])
-      setUsers(((u ?? []) as UserOpt[]).filter(u => u.role === 'sale_tv'))
+      setUsers(((u ?? []) as UserOpt[]).filter(u => u.role === 'sale'))
     }
     const r = viewRow
     setEditId(r.id)

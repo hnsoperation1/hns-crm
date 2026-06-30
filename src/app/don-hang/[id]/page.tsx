@@ -22,7 +22,7 @@ import { useAuth } from '@/contexts/auth'
 
 const ROLE_LABELS: Record<string, string> = {
   boss: 'Giám đốc', super_admin: 'Quản trị viên', admin: 'Quản trị viên',
-  sale_admin: 'Sale Admin', sale_tv: 'Sale TV', cskh: 'Chăm sóc KH', dieu_hanh: 'Điều hành',
+  sale_admin: 'Sale Admin', sale: 'Sale TV', sale_tv: 'Sale TV', cskh: 'Chăm sóc KH', dieu_hanh: 'Điều hành', sale_op: 'Điều hành',
 }
 
 // ─── Feedback type ───────────────────────────────────────────────────────────
@@ -247,7 +247,7 @@ export default function OppDetailPage() {
       setTasks(tasksData ?? [])
       const users = (usersData ?? []) as UserMin[]
       setAllUsers(users)
-      setSaleUsers(users.filter(u => u.role === 'sale_tv'))
+      setSaleUsers(users.filter(u => u.role === 'sale'))
       setFeedbacks((fbData ?? []) as FeedbackRow[])
       if (oppObj) {
         setAdminForm({
