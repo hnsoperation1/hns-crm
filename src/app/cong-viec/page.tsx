@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   ChevronLeft, ChevronRight, CalendarDays, Clock,
   CheckCircle2, Square, CheckSquare, ClipboardList,
-  Link2, LayoutGrid, List, Calendar, Loader2, GripVertical, User, Plus, X,
+  Link2, LayoutGrid, List, Calendar, Loader2, GripVertical, User, Plus, X, Search, Filter,
 } from 'lucide-react'
 import DateInput from '@/components/DateInput'
 import { createClient } from '@/lib/supabase/client'
@@ -86,6 +86,11 @@ export default function CongViecPage() {
   const [calView, setCalView] = useState<'month' | 'week' | 'day'>('month')
   const [calWeek, setCalWeek] = useState(() => getWeekStart(new Date()))
   const [calDay, setCalDay] = useState(() => new Date())
+
+  // Search & filter
+  const [search, setSearch] = useState('')
+  const [filterStatus, setFilterStatus] = useState<TaskStatus | ''>('')
+  const [filterAssignee, setFilterAssignee] = useState('')
 
   // Quick create modal
   const [createDraft, setCreateDraft] = useState<{ status: TaskStatus; due_date: string } | null>(null)
@@ -208,6 +213,14 @@ export default function CongViecPage() {
   const today = new Date()
   const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`
 
+  const hasFilter = search !== '' || filterStatus !== '' || filterAssignee !== ''
+  const filteredTasks = tasks.filter(t => {
+    if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false
+    if (filterStatus && getStatus(t) !== filterStatus) return false
+    if (filterAssignee && t.assigned_to !== filterAssignee) return false
+    return true
+  })
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
 
@@ -232,6 +245,47 @@ export default function CongViecPage() {
         </div>
       </div>
 
+      {/* ── Search & Filter bar ── */}
+      <div className="flex-shrink-0 bg-white border-b border-gray-100 px-5 py-2 flex items-center gap-2">
+        <div className="relative flex-1 max-w-xs">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <input
+            type="text" placeholder="Tìm công việc..." value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-7 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-400 bg-gray-50"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X size={11} />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Filter size={12} className="text-gray-400" />
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as TaskStatus | '')}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-400 text-gray-600">
+            <option value="">Tất cả trạng thái</option>
+            {COLS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+          </select>
+          {isManager && (
+            <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-400 text-gray-600">
+              <option value="">Tất cả người thực hiện</option>
+              {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+            </select>
+          )}
+          {hasFilter && (
+            <button onClick={() => { setSearch(''); setFilterStatus(''); setFilterAssignee('') }}
+              className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 px-2 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
+              <X size={11} /> Xóa lọc
+            </button>
+          )}
+        </div>
+        {hasFilter && (
+          <span className="text-xs text-gray-400 ml-auto">{filteredTasks.length}/{tasks.length} kết quả</span>
+        )}
+      </div>
+
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 size={24} className="animate-spin text-gray-300" />
@@ -243,7 +297,7 @@ export default function CongViecPage() {
           {view === 'kanban' && (
             <div className="flex gap-4 p-5 h-full" style={{ minWidth: 700 }}>
               {COLS.map(col => {
-                const colTasks = tasks.filter(t => getStatus(t) === col.key)
+                const colTasks = filteredTasks.filter(t => getStatus(t) === col.key)
                 const isOver = dragOverCol === col.key && draggedId !== null
                 return (
                   <div key={col.key}
@@ -383,7 +437,7 @@ export default function CongViecPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {tasks.map((task, i) => {
+                    {filteredTasks.map((task, i) => {
                       const st = getStatus(task)
                       const col = COLS.find(c => c.key === st)!
                       const td = task.due_date ? daysUntil(task.due_date) : null
@@ -459,18 +513,22 @@ export default function CongViecPage() {
                         </tr>
                       )
                     })}
-                    {tasks.length === 0 && (
+                    {filteredTasks.length === 0 && (
                       <tr><td colSpan={isManager ? 8 : 7} className="px-4 py-16 text-center">
                         <ClipboardList size={32} className="text-gray-200 mx-auto mb-2" />
-                        <div className="text-sm text-gray-400">Không có công việc nào</div>
+                        <div className="text-sm text-gray-400">
+                          {hasFilter ? 'Không tìm thấy công việc phù hợp' : 'Không có công việc nào'}
+                        </div>
                       </td></tr>
                     )}
                   </tbody>
-                  {tasks.length > 0 && (
+                  {filteredTasks.length > 0 && (
                     <tfoot>
                       <tr className="bg-gray-50 border-t-2 border-gray-200">
                         <td colSpan={2} className="px-4 py-2 text-xs font-bold text-gray-500">
-                          Tổng {tasks.length} · {done.length} hoàn thành · {pending.length} chờ
+                          {hasFilter
+                            ? `${filteredTasks.length} kết quả · ${filteredTasks.filter(t => t.is_done).length} xong`
+                            : `Tổng ${tasks.length} · ${done.length} hoàn thành · ${pending.length} chờ`}
                         </td>
                         <td colSpan={isManager ? 6 : 5} />
                       </tr>

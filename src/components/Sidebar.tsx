@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones, Star, Building, Inbox, Loader2, CheckCircle2, Heart, Trash2, BookUser } from 'lucide-react'
+import { LayoutDashboard, Kanban, Users, UserCheck, LogOut, ClipboardList, UserPlus, UserCog, Headphones, Star, Building, Inbox, Loader2, CheckCircle2, Heart, Trash2, BookUser, BarChart2 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '@/contexts/auth'
 import { getInitials } from '@/lib/utils'
@@ -108,6 +108,16 @@ export default function Sidebar() {
             <NavLink href="/cskh" label="Issues" icon={Headphones} />
             <NavLink href="/danh-gia" label="Đánh giá của KH" icon={Star} />
             <NavLink href="/the-cham-soc" label="Thẻ CSKH" icon={Heart} />
+          </div>
+        )}
+
+        {/* Báo cáo section — chỉ hiện với manager */}
+        {['boss', 'admin', 'sale_admin'].includes(user?.role ?? '') && (
+          <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(18,127,175,0.2)' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1.5" style={{ color: '#4a8fa8' }}>
+              Báo cáo
+            </p>
+            <NavLink href="/bao-cao/cong-viec" label="BC Công việc" icon={BarChart2} />
           </div>
         )}
 
