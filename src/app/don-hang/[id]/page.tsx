@@ -7,8 +7,9 @@ import {
   ArrowLeft, ArrowRight, Phone, Mail, Building2,
   MessageSquare, Plus, CheckSquare, Square,
   Clock, CalendarDays, DollarSign, User, Pencil, CheckCircle2, X,
-  ClipboardList, UserPlus, Loader2, FileText, Save, Eye, Printer, Trash2, Star,
+  ClipboardList, UserPlus, Loader2, FileText, Save, Eye, Printer, Trash2, Star, Paperclip,
 } from 'lucide-react'
+import Attachments from '@/components/Attachments'
 import { createClient } from '@/lib/supabase/client'
 import DateInput from '@/components/DateInput'
 import {
@@ -89,7 +90,7 @@ export default function OppDetailPage() {
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
-  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake' | 'requirements' | 'services' | 'feedback' | 'admin'>('tasks')
+  const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake' | 'requirements' | 'services' | 'feedback' | 'files' | 'admin'>('tasks')
   const [feedbacks, setFeedbacks] = useState<FeedbackRow[]>([])
 
   type AdminForm = {
@@ -827,6 +828,14 @@ export default function OppDetailPage() {
                     {feedbacks.length}
                   </span>
                 )}
+              </button>
+              <button
+                onClick={() => setMainTab('files')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  mainTab === 'files' ? 'bg-accent-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <Paperclip size={15} /> File
               </button>
               {isSuperAdmin && (
                 <button
@@ -1868,6 +1877,13 @@ export default function OppDetailPage() {
                   })}
                 </div>
               )
+            )}
+
+            {/* ══════════ FILE ĐÍNH KÈM TAB ══════════ */}
+            {mainTab === 'files' && (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+                <Attachments opportunityId={id} />
+              </div>
             )}
 
           </div>

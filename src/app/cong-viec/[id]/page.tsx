@@ -6,13 +6,14 @@ import Link from 'next/link'
 import {
   CheckCircle2, Circle, CalendarDays, User, ShoppingBag,
   Clock, Pencil, Check, X, Loader2, ChevronLeft, Plus, Square,
-  MessageSquare, Send, ArrowRight, ListTodo,
+  MessageSquare, Send, ArrowRight, ListTodo, Paperclip,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth'
 import { useTopbar } from '@/contexts/topbar'
 import DateInput from '@/components/DateInput'
 import { formatDate, getInitials, daysUntil } from '@/lib/utils'
+import Attachments from '@/components/Attachments'
 
 type TaskStatus = 'todo' | 'in_progress' | 'done'
 
@@ -94,7 +95,7 @@ export default function CongViecDetailPage() {
   const [sendingComment, setSendingComment] = useState(false)
   const commentRef = useRef<HTMLTextAreaElement>(null)
 
-  const [activeTab, setActiveTab] = useState<'tasks' | 'logs'>('tasks')
+  const [activeTab, setActiveTab] = useState<'tasks' | 'logs' | 'files'>('tasks')
 
   const isManager = ['boss', 'admin', 'sale_admin'].includes(currentUser?.role ?? '')
 
@@ -337,6 +338,12 @@ export default function CongViecDetailPage() {
                 </span>
               )}
             </button>
+            <button
+              onClick={() => setActiveTab('files')}
+              className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'files' ? 'border-brand-500 text-brand-600 bg-white' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
+              <Paperclip size={14} />
+              File đính kèm
+            </button>
           </div>
 
           {/* ── Tab: Nhiệm vụ ── */}
@@ -467,6 +474,13 @@ export default function CongViecDetailPage() {
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── Tab: File đính kèm ── */}
+          {activeTab === 'files' && (
+            <div className="p-5">
+              <Attachments taskId={id as string} />
             </div>
           )}
         </div>
