@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Paperclip, Upload, Trash2, Download, FileText, FileImage, File, Loader2, X } from 'lucide-react'
+import { Paperclip, Upload, Trash2, Download, FileText, FileImage, File, Loader2, X, ZoomIn } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadFile, getFileUrl, deleteFile, formatFileSize, getFileIcon, ALLOWED_MIME_TYPES, MAX_FILE_SIZE } from '@/lib/storage'
 import { useAuth } from '@/contexts/auth'
-import { getInitials } from '@/lib/utils'
 
 type Attachment = {
   id: string
@@ -23,7 +22,7 @@ type Props = {
   opportunityId?: string
 }
 
-function FileIcon({ mime }: { mime: string | null }) {
+function FileTypeIcon({ mime }: { mime: string | null }) {
   const type = getFileIcon(mime ?? '')
   if (type === 'pdf') return <FileText size={18} className="text-red-500" />
   if (type === 'image') return <FileImage size={18} className="text-blue-500" />
@@ -49,6 +48,7 @@ export default function Attachments({ taskId, opportunityId }: Props) {
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [preview, setPreview] = useState<{ url: string; mime: string; name: string } | null>(null)
 
   const isManager = ['boss', 'admin', 'sale_admin'].includes(user?.role ?? '')
 
@@ -75,7 +75,7 @@ export default function Attachments({ taskId, opportunityId }: Props) {
 
     for (const file of Array.from(files)) {
       if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-        setError(`Loại file không được hỗ trợ: ${file.name}`)
+        setError(`Loại file không hỗ trợ: ${file.name}`)
         continue
       }
       if (file.size > MAX_FILE_SIZE) {
@@ -115,15 +115,48 @@ export default function Attachments({ taskId, opportunityId }: Props) {
     setAttachments(prev => prev.filter(a => a.id !== att.id))
   }
 
+  async function handlePreview(att: Attachment) {
+    const url = await getFileUrl(att.file_path)
+    const mime = att.mime_type ?? ''
+    if (mime.startsWith('image/')) {
+      setPreview({ url, mime, name: att.file_name })
+    } else if (mime === 'application/pdf') {
+      window.open(url, '_blank')
+    } else {
+      window.open(url, '_blank')
+    }
+  }
+
   async function handleDownload(att: Attachment) {
     const url = await getFileUrl(att.file_path)
-    window.open(url, '_blank')
+    const a = document.createElement('a')
+    a.href = url
+    a.download = att.file_name
+    a.click()
   }
 
   const canDelete = (att: Attachment) => isManager || att.uploaded_by === user?.id
+  const isImage = (mime: string | null) => (mime ?? '').startsWith('image/')
 
   return (
     <div className="space-y-4">
+
+      {/* Lightbox preview */}
+      {preview && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setPreview(null)}>
+          <div className="relative max-w-4xl max-h-full" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setPreview(null)}
+              className="absolute -top-10 right-0 text-white/70 hover:text-white">
+              <X size={24} />
+            </button>
+            <p className="text-white/60 text-xs mb-2 truncate">{preview.name}</p>
+            <img src={preview.url} alt={preview.name}
+              className="max-w-full max-h-[80vh] rounded-xl object-contain shadow-2xl" />
+          </div>
+        </div>
+      )}
+
       {/* Upload area */}
       <div
         onDragOver={e => { e.preventDefault(); setDragOver(true) }}
@@ -168,28 +201,47 @@ export default function Attachments({ taskId, opportunityId }: Props) {
       ) : (
         <div className="space-y-2">
           {attachments.map(att => (
-            <div key={att.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group">
-              <FileIcon mime={att.mime_type} />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-800 truncate">{att.file_name}</p>
-                <div className="flex items-center gap-2 mt-0.5">
+            <div key={att.id}
+              className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group">
+
+              {/* Thumbnail hoặc icon */}
+              <div className="w-10 h-10 flex-shrink-0 rounded-lg overflow-hidden bg-white border border-gray-200 flex items-center justify-center cursor-pointer"
+                onClick={() => handlePreview(att)}>
+                {isImage(att.mime_type) ? (
+                  <ImageThumb path={att.file_path} name={att.file_name} />
+                ) : (
+                  <FileTypeIcon mime={att.mime_type} />
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handlePreview(att)}>
+                <p className="text-xs font-medium text-gray-800 truncate hover:text-brand-600">{att.file_name}</p>
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   {att.file_size && <span className="text-[10px] text-gray-400">{formatFileSize(att.file_size)}</span>}
-                  {att.uploader && (
-                    <span className="text-[10px] text-gray-400">
-                      · {att.uploader.full_name}
-                    </span>
-                  )}
+                  {att.uploader && <span className="text-[10px] text-gray-400">· {att.uploader.full_name}</span>}
                   <span className="text-[10px] text-gray-400">· {timeAgo(att.created_at)}</span>
                 </div>
               </div>
+
+              {/* Actions */}
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {isImage(att.mime_type) && (
+                  <button onClick={() => handlePreview(att)}
+                    className="p-1.5 rounded-lg hover:bg-white text-gray-400 hover:text-brand-600 transition-colors"
+                    title="Xem ảnh">
+                    <ZoomIn size={13} />
+                  </button>
+                )}
                 <button onClick={() => handleDownload(att)}
-                  className="p-1.5 rounded-lg hover:bg-white text-gray-500 hover:text-brand-600 transition-colors">
+                  className="p-1.5 rounded-lg hover:bg-white text-gray-400 hover:text-brand-600 transition-colors"
+                  title="Tải về">
                   <Download size={13} />
                 </button>
                 {canDelete(att) && (
                   <button onClick={() => handleDelete(att)}
-                    className="p-1.5 rounded-lg hover:bg-white text-gray-500 hover:text-red-500 transition-colors">
+                    className="p-1.5 rounded-lg hover:bg-white text-gray-400 hover:text-red-500 transition-colors"
+                    title="Xóa">
                     <Trash2 size={13} />
                   </button>
                 )}
@@ -200,4 +252,14 @@ export default function Attachments({ taskId, opportunityId }: Props) {
       )}
     </div>
   )
+}
+
+// Sub-component load ảnh thumbnail từ public URL
+function ImageThumb({ path, name }: { path: string; name: string }) {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    getFileUrl(path).then(setUrl)
+  }, [path])
+  if (!url) return <Loader2 size={14} className="animate-spin text-gray-300" />
+  return <img src={url} alt={name} className="w-full h-full object-cover" />
 }
