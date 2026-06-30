@@ -136,9 +136,11 @@ export default function CongViecDetailPage() {
   }
 
   async function addLog(type: string, meta?: Record<string, unknown>, content?: string) {
+    // Lưu _user_name vào meta để không phụ thuộc join hay RLS của bảng users
+    const logMeta = { ...(meta ?? {}), _user_name: currentUser?.full_name ?? null }
     const { data } = await supabase
       .from('task_logs')
-      .insert({ task_id: id, user_id: currentUser?.id, type, content: content ?? null, meta: meta ?? null })
+      .insert({ task_id: id, user_id: currentUser?.id, type, content: content ?? null, meta: logMeta })
       .select('*')
       .single()
     if (data) {
@@ -433,7 +435,10 @@ export default function CongViecDetailPage() {
               ) : (
                 <div className="space-y-0">
                   {logs.map((log, i) => {
-                    const userName = allUsers.find(u => u.id === log.user_id)?.full_name ?? log.user?.full_name ?? 'Hệ thống'
+                    const userName = (log.meta?._user_name as string | null)
+                      ?? allUsers.find(u => u.id === log.user_id)?.full_name
+                      ?? log.user?.full_name
+                      ?? 'Hệ thống'
                     const isComment = log.type === 'comment'
                     const text = logText(log)
                     return (

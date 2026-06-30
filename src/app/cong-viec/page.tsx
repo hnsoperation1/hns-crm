@@ -24,6 +24,7 @@ type TaskRow = {
   done_at?: string | null
   due_date?: string | null
   assigned_to?: string | null
+  created_by?: string | null
   opportunity_id?: string | null
   parent_id?: string | null
   created_at: string
@@ -106,10 +107,13 @@ export default function CongViecPage() {
       topLevelTasks = (tasksRes.data ?? []) as TaskRow[]
       setAllUsers((usersRes.data ?? []) as UserRow[])
     } else {
+      // Filter ở cả client lẫn server (RLS backup)
       const { data } = await supabase
         .from('tasks').select('*, opportunity:opportunities!left(id,title)')
         .is('parent_id', null)
-        .eq('assigned_to', currentUser.id).order('due_date', { nullsFirst: false })
+        .or(`assigned_to.eq.${currentUser.id},created_by.eq.${currentUser.id}`)
+        .order('due_date', { nullsFirst: false })
+        .order('created_at')
       topLevelTasks = (data ?? []) as TaskRow[]
     }
     setTasks(topLevelTasks)
@@ -294,6 +298,20 @@ export default function CongViecPage() {
                                       </Link>
                                     </div>
                                   )}
+                                  {isManager && (() => {
+                                    const creator = getUserName(task.created_by)
+                                    return creator ? (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[9px] text-gray-400 w-12 flex-shrink-0">Tạo bởi</span>
+                                        <span className="flex items-center gap-1 text-[10px] text-gray-600 font-medium">
+                                          <span className="w-3 h-3 rounded-full bg-gray-400 flex items-center justify-center text-[7px] text-white font-bold flex-shrink-0">
+                                            {getInitials(creator)}
+                                          </span>
+                                          {creator.split(' ').slice(-1)[0]}
+                                        </span>
+                                      </div>
+                                    ) : null
+                                  })()}
                                   {assignee && isManager && (
                                     <div className="flex items-center gap-1">
                                       <span className="text-[9px] text-gray-400 w-12 flex-shrink-0">Giao cho</span>
