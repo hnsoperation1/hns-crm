@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import { Star, ThumbsUp, ThumbsDown, Search, ExternalLink, X, MapPin, Users, Link2, CheckSquare, LayoutGrid, BarChart2, List, Table2, ChevronUp, ChevronDown, ChevronsUpDown, Maximize2, Minimize2, Heart, Send } from 'lucide-react'
+import { Star, ThumbsUp, ThumbsDown, Search, ExternalLink, X, MapPin, Users, ShoppingBag, ChevronRight, CheckSquare, LayoutGrid, BarChart2, List, Table2, ChevronUp, ChevronDown, ChevronsUpDown, Maximize2, Minimize2, Heart, Send } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils'
@@ -1227,7 +1227,7 @@ export default function DanhGiaPage() {
           </button>
           <button onClick={() => { setLinkModal(true); setOppSearch('') }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition-colors shadow-sm">
-            <Link2 size={14} /> Tìm đơn hàng liên quan
+            <ShoppingBag size={14} /> Tìm đơn hàng liên quan
           </button>
         </div>
       )}
@@ -1408,7 +1408,7 @@ export default function DanhGiaPage() {
                       <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-brand-700">{opp.title}</p>
                       {opp.tour_date && <p className="text-xs text-gray-400 mt-0.5">Tour: {formatDate(opp.tour_date)}</p>}
                     </div>
-                    <Link2 size={14} className="text-gray-300 group-hover:text-brand-500 flex-shrink-0 transition-colors" />
+                    <ChevronRight size={14} className="text-gray-300 group-hover:text-brand-500 flex-shrink-0 transition-colors" />
                   </div>
                 </button>
               ))}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import {
-  Plus, Loader2, Check, ClipboardList, User, CalendarDays, Link2, X, Search,
+  Plus, Loader2, Check, ClipboardList, User, CalendarDays, ShoppingBag, X, Search,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth'
@@ -130,7 +130,7 @@ export default function GiaoViecPage() {
                   </label>
                   {form.opportunity_id ? (
                     <div className="flex items-center gap-2 border border-brand-300 bg-brand-50 rounded-xl px-3 py-2.5">
-                      <Link2 size={13} className="text-brand-500 flex-shrink-0" />
+                      <ShoppingBag size={13} className="text-brand-500 flex-shrink-0" />
                       <span className="text-sm font-medium text-brand-800 flex-1 truncate">
                         {opps.find(o => o.id === form.opportunity_id)?.title}
                       </span>
@@ -256,7 +256,7 @@ export default function GiaoViecPage() {
                           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
                             {oppTitle && task.opportunity_id ? (
                               <span className="flex items-center gap-1 text-xs text-gray-400">
-                                <Link2 size={10} />
+                                <ShoppingBag size={10} />
                                 <Link href={`/don-hang/${task.opportunity_id}`} className="hover:text-accent-500 transition-colors truncate max-w-[180px]">
                                   {oppTitle}
                                 </Link>

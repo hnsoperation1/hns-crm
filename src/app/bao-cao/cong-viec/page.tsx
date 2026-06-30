@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
-  CheckCircle2, Clock, AlertCircle, User, Link2,
+  CheckCircle2, Clock, AlertCircle, User, ShoppingBag,
   ChevronDown, ChevronRight, Loader2, ClipboardList, X,
 } from 'lucide-react'
 import DateInput from '@/components/DateInput'
@@ -258,7 +258,7 @@ export default function BaoCaoCongViecPage() {
                             {task.opportunity && (
                               <Link href={`/don-hang/${task.opportunity.id}`}
                                 className="flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-accent-500 mt-0.5 truncate w-fit">
-                                <Link2 size={8} />{task.opportunity.title}
+                                <ShoppingBag size={8} />{task.opportunity.title}
                               </Link>
                             )}
                           </div>
