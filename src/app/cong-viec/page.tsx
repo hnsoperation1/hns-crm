@@ -429,9 +429,9 @@ export default function CongViecPage() {
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-10">STT</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-400">Tên công việc</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Đơn hàng</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-40">Nhóm công việc</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-32">Tiến độ con</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Tiến độ</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Tình trạng</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-28">Còn lại</th>
                       <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-32">Hạn hoàn thành</th>
                       {isManager && <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Người thực hiện</th>}
                     </tr>

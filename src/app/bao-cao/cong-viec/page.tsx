@@ -62,6 +62,7 @@ export default function BaoCaoCongViecPage() {
   const [loading, setLoading] = useState(true)
   const [filterEmployee, setFilterEmployee] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const [tomorrowPlan, setTomorrowPlan] = useState<Record<string, string>>({})
 
   const isManager = ['boss', 'admin', 'sale_admin'].includes(currentUser?.role ?? '')
 
@@ -240,39 +241,68 @@ export default function BaoCaoCongViecPage() {
 
                 {/* Task list */}
                 {isOpen && (
-                  <div className="border-t border-gray-100 divide-y divide-gray-50">
-                    {tasks.map(task => {
-                      const st = getStatus(task)
-                      const cfg = STATUS_MAP[st]
-                      const StatusIcon = cfg.icon
-                      const td = task.due_date ? daysUntil(task.due_date) : null
-                      const isLate = !task.is_done && td !== null && td < 0
-                      return (
-                        <div key={task.id} className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50/50">
-                          <StatusIcon size={14} className={task.is_done ? 'text-emerald-500' : isLate ? 'text-red-400' : 'text-gray-300'} />
-                          <div className="flex-1 min-w-0">
-                            <Link href={`/cong-viec/${task.id}`}
-                              className={`text-xs font-medium hover:underline ${task.is_done ? 'line-through text-gray-400' : 'text-gray-800 hover:text-accent-600'}`}>
-                              {task.title}
-                            </Link>
-                            {task.opportunity && (
-                              <Link href={`/don-hang/${task.opportunity.id}`}
-                                className="flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-accent-500 mt-0.5 truncate w-fit">
-                                <ShoppingBag size={8} />{task.opportunity.title}
-                              </Link>
-                            )}
-                          </div>
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${cfg.bg} ${cfg.color}`}>
-                            {cfg.label}
-                          </span>
-                          {task.due_date && (
-                            <span className={`text-[10px] font-medium flex-shrink-0 w-20 text-right ${isLate ? 'text-red-500' : td !== null && td <= 3 ? 'text-amber-500' : 'text-gray-400'}`}>
-                              {isLate ? `Trễ ${Math.abs(td!)}N` : formatDate(task.due_date)}
-                            </span>
-                          )}
-                        </div>
-                      )
-                    })}
+                  <div className="border-t border-gray-100 overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-100">
+                          <th className="px-5 py-2 text-left font-semibold text-gray-400 w-44">Đơn hàng</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-400">Nội dung công việc</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-400 w-36">Tình trạng</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-400 w-60">Kế hoạch ngày mai</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {tasks.map(task => {
+                          const st = getStatus(task)
+                          const cfg = STATUS_MAP[st]
+                          const td = task.due_date ? daysUntil(task.due_date) : null
+                          const isLate = !task.is_done && td !== null && td < 0
+                          return (
+                            <tr key={task.id} className="hover:bg-gray-50/60">
+                              <td className="px-5 py-2.5">
+                                {task.opportunity ? (
+                                  <Link href={`/don-hang/${task.opportunity.id}`}
+                                    className="flex items-center gap-1 text-gray-500 hover:text-accent-600 truncate max-w-[160px]">
+                                    <ShoppingBag size={9} className="flex-shrink-0" />
+                                    <span className="truncate">{task.opportunity.title}</span>
+                                  </Link>
+                                ) : (
+                                  <span className="text-gray-300">—</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <Link href={`/cong-viec/${task.id}`}
+                                  className={`font-medium hover:underline ${task.is_done ? 'line-through text-gray-400' : 'text-gray-800 hover:text-accent-600'}`}>
+                                  {task.title}
+                                </Link>
+                                {task.due_date && (
+                                  <div className={`text-[10px] mt-0.5 ${isLate ? 'text-red-500' : td !== null && td <= 3 ? 'text-amber-500' : 'text-gray-400'}`}>
+                                    {isLate ? `Trễ ${Math.abs(td!)} ngày` : `Hạn ${formatDate(task.due_date)}`}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <span className={`inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>
+                                  {task.is_done
+                                    ? <CheckCircle2 size={9} />
+                                    : isLate ? <AlertCircle size={9} /> : <Clock size={9} />}
+                                  {cfg.label}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2">
+                                <input
+                                  type="text"
+                                  value={tomorrowPlan[task.id] ?? ''}
+                                  onChange={e => setTomorrowPlan(prev => ({ ...prev, [task.id]: e.target.value }))}
+                                  placeholder="Nhập kế hoạch..."
+                                  className="w-full text-xs text-gray-700 placeholder-gray-300 bg-transparent border-b border-dashed border-gray-200 focus:border-brand-400 focus:outline-none py-0.5 transition-colors"
+                                />
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
