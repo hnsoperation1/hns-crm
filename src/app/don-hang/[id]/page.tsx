@@ -1511,15 +1511,15 @@ export default function OppDetailPage() {
               }))
               const parentTasks = allTasksCombined.filter(t => !t.parent_id)
               const subTasksOf = (pid: string) => allTasksCombined.filter(t => t.parent_id === pid)
-              const doneCount = allTasksCombined.filter(t => t.is_done).length
-              const pct = allTasksCombined.length > 0 ? Math.round((doneCount / allTasksCombined.length) * 100) : 0
+              const doneCount = parentTasks.filter(t => t.is_done).length
+              const pct = parentTasks.length > 0 ? Math.round((doneCount / parentTasks.length) * 100) : 0
 
               return (
                 <div className="space-y-4">
                   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <span className="text-sm font-bold text-gray-900">{doneCount}/{allTasksCombined.length} nhiệm vụ hoàn thành</span>
+                        <span className="text-sm font-bold text-gray-900">{doneCount}/{parentTasks.length} nhiệm vụ hoàn thành</span>
                         <span className="text-xs text-gray-400 ml-2">({pct}%)</span>
                       </div>
                       <button onClick={() => setShowNewTask(true)}
@@ -1629,6 +1629,19 @@ export default function OppDetailPage() {
                                       · Hạn {formatDate(task.due_date)}
                                     </span>
                                   )}
+                                  {subs.length > 0 && (() => {
+                                    const subDoneCount = subs.filter(s => taskDone[s.id] !== undefined ? taskDone[s.id] : s.is_done).length
+                                    const subPct = Math.round(subDoneCount / subs.length * 100)
+                                    return (
+                                      <div className="flex items-center gap-2 mt-1.5">
+                                        <div className="flex-1 max-w-[120px] h-1 bg-gray-100 rounded-full overflow-hidden">
+                                          <div className="h-1 rounded-full transition-all duration-300"
+                                            style={{ width: `${subPct}%`, background: subPct === 100 ? '#10b981' : '#3b82f6' }} />
+                                        </div>
+                                        <span className="text-[10px] text-gray-400 font-medium">{subDoneCount}/{subs.length} việc con</span>
+                                      </div>
+                                    )
+                                  })()}
                                 </div>
                               </div>
                               <div className="ml-9 flex items-center gap-2 mb-1.5">

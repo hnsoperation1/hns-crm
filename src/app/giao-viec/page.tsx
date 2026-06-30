@@ -20,7 +20,7 @@ export default function GiaoViecPage() {
   const [opps, setOpps] = useState<{ id: string; title: string }[]>([])
   const [tasks, setTasks] = useState<{
     id: string; title: string; due_date: string | null; is_done: boolean
-    assigned_to: string | null; opportunity_id: string | null; created_at: string
+    assigned_to: string | null; opportunity_id: string | null; created_at: string; parent_id: string | null
   }[]>([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ title: '', opportunity_id: '', due_date: '', assigned_to: '', note: '' })
@@ -35,7 +35,7 @@ export default function GiaoViecPage() {
     const [usersRes, oppsRes, tasksRes] = await Promise.all([
       supabase.from('users').select('id,full_name,role').eq('is_active', true).order('full_name'),
       supabase.from('opportunities').select('id,title').is('deleted_at', null).order('created_at', { ascending: false }).limit(200),
-      supabase.from('tasks').select('id,title,due_date,is_done,assigned_to,opportunity_id,created_at').order('created_at', { ascending: false }).limit(100),
+      supabase.from('tasks').select('id,title,due_date,is_done,assigned_to,opportunity_id,created_at,parent_id').order('created_at', { ascending: false }).limit(100),
     ])
     setUsers(usersRes.data ?? [])
     setOpps(oppsRes.data ?? [])
@@ -240,7 +240,8 @@ export default function GiaoViecPage() {
               </div>
             ) : (
               <div className="space-y-2.5">
-                {tasks.map(task => {
+                {tasks.filter(t => !t.parent_id).map(task => {
+                  const subs = tasks.filter(t => t.parent_id === task.id)
                   const assigneeName = getUserName(task.assigned_to)
                   const oppTitle = getOppTitle(task.opportunity_id)
                   return (
@@ -291,6 +292,27 @@ export default function GiaoViecPage() {
                           </span>
                         )}
                       </div>
+                      {subs.length > 0 && (
+                        <div className="border-t border-gray-100 px-4 py-2 space-y-1.5 bg-gray-50/60 rounded-b-2xl">
+                          {subs.map(sub => (
+                            <div key={sub.id} className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${sub.is_done ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300'}`}>
+                                {sub.is_done && <Check size={7} className="text-white" strokeWidth={3} />}
+                              </div>
+                              <span className={`text-xs flex-1 ${sub.is_done ? 'line-through text-gray-400' : 'text-gray-600'}`}>{sub.title}</span>
+                              {sub.due_date && <span className="text-[10px] text-amber-500 flex-shrink-0">{formatDate(sub.due_date)}</span>}
+                              {sub.assigned_to && (() => {
+                                const name = getUserName(sub.assigned_to)
+                                return name ? (
+                                  <div className="w-4 h-4 rounded-full bg-brand-500 flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" title={name}>
+                                    {getInitials(name)}
+                                  </div>
+                                ) : null
+                              })()}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )
                 })}
