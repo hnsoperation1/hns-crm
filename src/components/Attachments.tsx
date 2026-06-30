@@ -48,7 +48,7 @@ export default function Attachments({ taskId, opportunityId }: Props) {
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [preview, setPreview] = useState<{ url: string; mime: string; name: string } | null>(null)
+  const [preview, setPreview] = useState<{ url: string; mime: string; name: string; docViewer?: boolean } | null>(null)
 
   const isManager = ['boss', 'admin', 'sale_admin'].includes(user?.role ?? '')
 
@@ -120,10 +120,9 @@ export default function Attachments({ taskId, opportunityId }: Props) {
     const mime = att.mime_type ?? ''
     if (mime.startsWith('image/')) {
       setPreview({ url, mime, name: att.file_name })
-    } else if (mime === 'application/pdf') {
-      window.open(url, '_blank')
     } else {
-      window.open(url, '_blank')
+      // PDF, Word, Excel, ... dùng Google Docs Viewer
+      setPreview({ url, mime, name: att.file_name, docViewer: true })
     }
   }
 
@@ -141,18 +140,39 @@ export default function Attachments({ taskId, opportunityId }: Props) {
   return (
     <div className="space-y-4">
 
-      {/* Lightbox preview */}
+      {/* Preview modal */}
       {preview && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
           onClick={() => setPreview(null)}>
-          <div className="relative max-w-4xl max-h-full" onClick={e => e.stopPropagation()}>
-            <button onClick={() => setPreview(null)}
-              className="absolute -top-10 right-0 text-white/70 hover:text-white">
-              <X size={24} />
-            </button>
-            <p className="text-white/60 text-xs mb-2 truncate">{preview.name}</p>
-            <img src={preview.url} alt={preview.name}
-              className="max-w-full max-h-[80vh] rounded-xl object-contain shadow-2xl" />
+          <div className="relative w-full max-w-5xl flex flex-col" style={{ height: '90vh' }}
+            onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-2 px-1">
+              <p className="text-white/70 text-xs truncate flex-1 mr-4">{preview.name}</p>
+              <div className="flex items-center gap-2">
+                <a href={preview.url} download={preview.name}
+                  className="flex items-center gap-1 text-xs text-white/60 hover:text-white px-2 py-1 rounded-lg hover:bg-white/10 transition-colors">
+                  <Download size={12} /> Tải về
+                </a>
+                <button onClick={() => setPreview(null)}
+                  className="text-white/60 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            {/* Content */}
+            {preview.docViewer ? (
+              <iframe
+                src={`https://docs.google.com/viewer?url=${encodeURIComponent(preview.url)}&embedded=true`}
+                className="flex-1 w-full rounded-xl bg-white"
+                title={preview.name}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <img src={preview.url} alt={preview.name}
+                  className="max-w-full max-h-full rounded-xl object-contain shadow-2xl" />
+              </div>
+            )}
           </div>
         </div>
       )}
