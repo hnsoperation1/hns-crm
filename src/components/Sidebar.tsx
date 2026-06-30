@@ -7,12 +7,6 @@ import clsx from 'clsx'
 import { useAuth } from '@/contexts/auth'
 import { getInitials } from '@/lib/utils'
 
-const navItems = [
-  { href: '/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-  { href: '/khach-hang', label: 'Khách hàng', icon: Users },
-  { href: '/nhan-vien', label: 'Nhân viên', icon: UserCheck },
-]
-
 const adminItems = [
   { href: '/admin/users', label: 'Người dùng', icon: UserCog },
   { href: '/admin/phong-ban', label: 'Phòng ban', icon: Building },
@@ -90,20 +84,9 @@ export default function Sidebar() {
           <NavLink href="/cong-viec" label="Công việc" icon={ClipboardList} />
           {!user?.is_sale_tv && <NavLink href="/giao-viec" label="Giao việc" icon={UserPlus} />}
           {['boss', 'admin', 'sale_admin'].includes(user?.role ?? '') && (
-            <NavLink href="/bao-cao/cong-viec" label="Báo cáo" icon={BarChart2} />
+            <NavLink href="/bao-cao/cong-viec" label="Báo cáo CV" icon={BarChart2} />
           )}
         </div>
-
-        {/* Khách hàng & Nhân viên */}
-        {!(user?.role === 'cskh') && (
-          <>
-            <NavLink href="/khach-hang" label="Khách hàng" icon={Users} />
-            <NavLink href="/nhan-vien" label="Nhân viên" icon={UserCheck} />
-          </>
-        )}
-        {user?.role === 'cskh' && (
-          <NavLink href="/khach-hang" label="Khách hàng" icon={Users} />
-        )}
 
         {/* Đơn hàng section */}
         <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(18,127,175,0.2)' }}>
@@ -125,6 +108,24 @@ export default function Sidebar() {
             <NavLink href="/cskh" label="Issues" icon={Headphones} />
             <NavLink href="/danh-gia" label="Đánh giá của KH" icon={Star} />
             <NavLink href="/the-cham-soc" label="Thẻ CSKH" icon={Heart} />
+          </div>
+        )}
+
+        {/* Khách hàng section */}
+        <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(18,127,175,0.2)' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1.5" style={{ color: '#4a8fa8' }}>
+            Khách hàng
+          </p>
+          <NavLink href="/khach-hang" label="Khách hàng" icon={Users} />
+        </div>
+
+        {/* Nhân viên section — ẩn với cskh */}
+        {user?.role !== 'cskh' && (
+          <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(18,127,175,0.2)' }}>
+            <p className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1.5" style={{ color: '#4a8fa8' }}>
+              Nhân viên
+            </p>
+            <NavLink href="/nhan-vien" label="Nhân viên" icon={UserCheck} />
           </div>
         )}
 
