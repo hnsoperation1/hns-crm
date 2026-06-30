@@ -99,6 +99,14 @@ export default function Sidebar() {
           <NavLink href="/don-hang" label="Tất cả đơn hàng" icon={BookUser} />
         </div>
 
+        {/* Khách hàng section */}
+        <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(18,127,175,0.2)' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1.5" style={{ color: '#4a8fa8' }}>
+            Khách hàng
+          </p>
+          <NavLink href="/khach-hang" label="Khách hàng" icon={Users} />
+        </div>
+
         {/* CSKH section — chỉ hiện với cskh / admin / boss */}
         {(user?.role === 'cskh' || user?.role === 'admin' || user?.role === 'boss' || user?.is_super_admin) && (
           <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(18,127,175,0.2)' }}>
@@ -110,14 +118,6 @@ export default function Sidebar() {
             <NavLink href="/the-cham-soc" label="Thẻ CSKH" icon={Heart} />
           </div>
         )}
-
-        {/* Khách hàng section */}
-        <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(18,127,175,0.2)' }}>
-          <p className="text-[10px] font-bold uppercase tracking-widest px-3 mb-1.5" style={{ color: '#4a8fa8' }}>
-            Khách hàng
-          </p>
-          <NavLink href="/khach-hang" label="Khách hàng" icon={Users} />
-        </div>
 
         {/* Nhân viên section — ẩn với cskh */}
         {user?.role !== 'cskh' && (
