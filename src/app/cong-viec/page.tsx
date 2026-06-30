@@ -228,9 +228,9 @@ export default function CongViecPage() {
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-5 h-11 flex items-center gap-4">
         <div className="flex items-center gap-0.5 bg-gray-100 rounded-xl p-1">
           {([
-            { k: 'kanban' as ViewMode, icon: LayoutGrid, label: 'Kanban' },
-            { k: 'table'  as ViewMode, icon: List,       label: 'Bảng' },
-            { k: 'calendar' as ViewMode, icon: Calendar, label: 'Lịch' },
+            { k: 'table'    as ViewMode, icon: List,       label: 'Bảng' },
+            { k: 'kanban'   as ViewMode, icon: LayoutGrid, label: 'Kanban' },
+            { k: 'calendar' as ViewMode, icon: Calendar,   label: 'Lịch' },
           ]).map(({ k, icon: Icon, label }) => (
             <button key={k} onClick={() => setView(k)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${view === k ? 'bg-white shadow-sm text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
