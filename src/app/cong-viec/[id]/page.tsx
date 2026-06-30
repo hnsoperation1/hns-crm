@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import {
-  CheckCircle2, Circle, CalendarDays, User, Link2,
+  CheckCircle2, Circle, CalendarDays, User, ShoppingBag,
   Clock, Pencil, Check, X, Loader2, ChevronLeft, Plus, Square,
   MessageSquare, Send, ArrowRight, ListTodo,
 } from 'lucide-react'
@@ -549,10 +549,10 @@ export default function CongViecDetailPage() {
 
           {/* Đơn hàng */}
           <div className="px-4 py-3">
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5 flex items-center gap-1"><Link2 size={10} /> Đơn hàng</div>
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5 flex items-center gap-1"><ShoppingBag size={10} /> Đơn hàng</div>
             {task.opportunity_id && oppTitle ? (
               <Link href={`/don-hang/${task.opportunity_id}`} className="text-xs text-accent-600 hover:text-accent-700 font-medium flex items-center gap-1 hover:underline truncate">
-                <Link2 size={10} /> {oppTitle}
+                <ShoppingBag size={10} /> {oppTitle}
               </Link>
             ) : <span className="text-xs text-gray-400">—</span>}
           </div>
