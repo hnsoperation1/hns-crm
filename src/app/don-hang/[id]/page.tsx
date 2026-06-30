@@ -20,6 +20,11 @@ import {
 import type { OppStage, LogType, Opportunity, Contact, ActivityLog } from '@/types'
 import { useAuth } from '@/contexts/auth'
 
+const ROLE_LABELS: Record<string, string> = {
+  boss: 'Giám đốc', super_admin: 'Quản trị viên', admin: 'Quản trị viên',
+  sale_admin: 'Sale Admin', sale_tv: 'Sale TV', cskh: 'Chăm sóc KH', dieu_hanh: 'Điều hành',
+}
+
 // ─── Feedback type ───────────────────────────────────────────────────────────
 
 type FeedbackRow = {
@@ -1882,7 +1887,7 @@ export default function OppDetailPage() {
                     <AField label="Sale TV (assigned_to)">
                       <select value={adminForm.assigned_to} onChange={e => setAdminForm(f => f ? {...f, assigned_to: e.target.value} : f)} className={aCls}>
                         <option value="">— Chưa giao —</option>
-                        {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                        {saleUsers.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? 'Sale TV'} - {u.full_name}</option>)}
                       </select>
                     </AField>
                     <AField label="Người tạo (created_by)">
