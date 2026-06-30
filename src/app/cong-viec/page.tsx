@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   ChevronLeft, ChevronRight, CalendarDays, Clock,
   CheckCircle2, Square, CheckSquare, ClipboardList,
-  Link2, LayoutGrid, List, Calendar, Loader2, GripVertical, User, Plus, X, Search, Filter,
+  ShoppingBag, LayoutGrid, List, Calendar, Loader2, GripVertical, User, Plus, X, Search, Filter,
 } from 'lucide-react'
 import DateInput from '@/components/DateInput'
 import { createClient } from '@/lib/supabase/client'
@@ -348,7 +348,7 @@ export default function CongViecPage() {
                                       <span className="text-[9px] text-gray-400 w-12 flex-shrink-0">Đơn hàng</span>
                                       <Link href={`/don-hang/${task.opportunity.id}`} onClick={e => e.stopPropagation()}
                                         className="flex items-center gap-0.5 text-[10px] text-gray-500 hover:text-accent-500 truncate">
-                                        <Link2 size={8} />{task.opportunity.title}
+                                        <ShoppingBag size={8} />{task.opportunity.title}
                                       </Link>
                                     </div>
                                   )}
@@ -458,7 +458,7 @@ export default function CongViecPage() {
                           <td className="px-4 py-2.5">
                             {task.opportunity
                               ? <Link href={`/don-hang/${task.opportunity.id}`} className="text-xs text-gray-500 hover:text-accent-500 flex items-center gap-1 truncate max-w-[160px]">
-                                  <Link2 size={9} />{task.opportunity.title}
+                                  <ShoppingBag size={9} />{task.opportunity.title}
                                 </Link>
                               : <span className="text-xs text-gray-300">—</span>}
                           </td>
