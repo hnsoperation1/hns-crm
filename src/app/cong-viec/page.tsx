@@ -420,124 +420,186 @@ export default function CongViecPage() {
           )}
 
           {/* ══════════ TABLE ══════════ */}
-          {view === 'table' && (
-            <div className="p-5">
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-10">STT</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400">Tên công việc</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Đơn hàng</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Tiến độ</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Tình trạng</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-28">Còn lại</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-32">Hạn hoàn thành</th>
-                      {isManager && <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Người thực hiện</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredTasks.map((task, i) => {
-                      const st = getStatus(task)
-                      const col = COLS.find(c => c.key === st)!
-                      const td = task.due_date ? daysUntil(task.due_date) : null
-                      const assignee = getUserName(task.assigned_to)
-                      return (
-                        <tr key={task.id} className="hover:bg-gray-50/60 group">
-                          <td className="px-4 py-2.5 text-xs text-gray-400 font-mono">{i + 1}</td>
-                          <td className="px-4 py-2.5">
-                            <div className="flex items-center gap-2">
-                              <button onClick={() => updateStatus(task.id, st === 'done' ? 'todo' : 'done')} className="flex-shrink-0">
-                                {task.is_done
-                                  ? <CheckCircle2 size={14} className="text-emerald-500" />
-                                  : <Square size={14} className="text-gray-300 hover:text-brand-400 transition-colors" />}
-                              </button>
-                              <Link href={`/cong-viec/${task.id}`} className={`text-xs font-medium hover:underline ${task.is_done ? 'line-through text-gray-400' : 'text-gray-800 hover:text-accent-600'}`}>{task.title}</Link>
-                            </div>
-                          </td>
-                          <td className="px-4 py-2.5">
-                            {task.opportunity
-                              ? <Link href={`/don-hang/${task.opportunity.id}`} className="text-xs text-gray-500 hover:text-accent-500 flex items-center gap-1 truncate max-w-[160px]">
-                                  <ShoppingBag size={9} />{task.opportunity.title}
-                                </Link>
-                              : <span className="text-xs text-gray-300">—</span>}
-                          </td>
-                          <td className="px-4 py-2.5">
-                            {subSummary[task.id] ? (() => {
-                              const { total, done } = subSummary[task.id]
-                              const pct = Math.round(done / total * 100)
-                              return (
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                    <div className="h-1.5 bg-emerald-400 rounded-full" style={{ width: `${pct}%` }} />
-                                  </div>
-                                  <span className="text-[10px] font-bold text-gray-500 w-8 text-right">{pct}%</span>
-                                </div>
-                              )
-                            })() : <span className="text-gray-200 text-xs">—</span>}
-                          </td>
-                          <td className="px-4 py-2.5">
-                            <select value={st} onChange={e => updateStatus(task.id, e.target.value as TaskStatus)}
-                              className={`text-[11px] font-semibold px-2 py-1 rounded-lg border-0 focus:outline-none cursor-pointer ${col.bg} ${col.text}`}>
-                              {COLS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
-                            </select>
-                          </td>
-                          <td className="px-4 py-2.5">
+          {view === 'table' && (() => {
+            // Group by employee when manager
+            const groups: { uid: string; name: string; tasks: TaskRow[] }[] = []
+            if (isManager) {
+              const map = new Map<string, { uid: string; name: string; tasks: TaskRow[] }>()
+              for (const task of filteredTasks) {
+                const uid = task.assigned_to ?? task.created_by ?? '__none__'
+                if (!map.has(uid)) {
+                  const u = allUsers.find(u => u.id === uid)
+                  map.set(uid, { uid, name: u?.full_name ?? 'Chưa xác định', tasks: [] })
+                }
+                map.get(uid)!.tasks.push(task)
+              }
+              groups.push(...Array.from(map.values()).sort((a, b) => b.tasks.length - a.tasks.length))
+            }
+
+            const COL_COUNT = 7
+
+            function TaskRows({ taskList, startIdx }: { taskList: TaskRow[]; startIdx: number }) {
+              return <>
+                {taskList.map((task, i) => {
+                  const st = getStatus(task)
+                  const col = COLS.find(c => c.key === st)!
+                  const td = task.due_date ? daysUntil(task.due_date) : null
+                  return (
+                    <tr key={task.id} className="hover:bg-gray-50/60 group">
+                      <td className="px-4 py-2.5 text-xs text-gray-400 font-mono">{startIdx + i + 1}</td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => updateStatus(task.id, st === 'done' ? 'todo' : 'done')} className="flex-shrink-0">
                             {task.is_done
-                              ? <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium"><CheckCircle2 size={11} />Hoàn thành</span>
-                              : td !== null
-                                ? <span className={`text-xs font-medium flex items-center gap-1 ${td < 0 ? 'text-red-600' : td <= 7 ? 'text-amber-600' : 'text-gray-500'}`}>
-                                    <Clock size={10} />{td < 0 ? `Quá ${Math.abs(td)}N` : `Còn ${td}N`}
-                                  </span>
-                                : <span className="text-xs text-gray-400">Chưa xong</span>}
-                          </td>
-                          <td className="px-4 py-2.5">
-                            {task.due_date
-                              ? <span className={`text-xs font-medium ${td !== null && td < 0 ? 'text-red-600' : td !== null && td <= 7 ? 'text-amber-600' : 'text-gray-600'}`}>
-                                  {formatDate(task.due_date)}
-                                </span>
-                              : <span className="text-gray-300 text-xs">—</span>}
-                          </td>
-                          {isManager && (
-                            <td className="px-4 py-2.5">
-                              {assignee
-                                ? <span className="flex items-center gap-1.5 text-xs text-gray-700">
-                                    <span className="w-5 h-5 rounded-full bg-brand-100 flex items-center justify-center text-[9px] font-bold text-brand-700 flex-shrink-0">
-                                      {getInitials(assignee)}
-                                    </span>
-                                    {assignee}
-                                  </span>
-                                : <span className="text-xs text-gray-300">—</span>}
-                            </td>
-                          )}
-                        </tr>
-                      )
-                    })}
-                    {filteredTasks.length === 0 && (
-                      <tr><td colSpan={isManager ? 8 : 7} className="px-4 py-16 text-center">
-                        <ClipboardList size={32} className="text-gray-200 mx-auto mb-2" />
-                        <div className="text-sm text-gray-400">
-                          {hasFilter ? 'Không tìm thấy công việc phù hợp' : 'Không có công việc nào'}
+                              ? <CheckCircle2 size={14} className="text-emerald-500" />
+                              : <Square size={14} className="text-gray-300 hover:text-brand-400 transition-colors" />}
+                          </button>
+                          <Link href={`/cong-viec/${task.id}`} className={`text-xs font-medium hover:underline ${task.is_done ? 'line-through text-gray-400' : 'text-gray-800 hover:text-accent-600'}`}>{task.title}</Link>
                         </div>
-                      </td></tr>
-                    )}
-                  </tbody>
-                  {filteredTasks.length > 0 && (
-                    <tfoot>
-                      <tr className="bg-gray-50 border-t-2 border-gray-200">
-                        <td colSpan={2} className="px-4 py-2 text-xs font-bold text-gray-500">
-                          {hasFilter
-                            ? `${filteredTasks.length} kết quả · ${filteredTasks.filter(t => t.is_done).length} xong`
-                            : `Tổng ${tasks.length} · ${done.length} hoàn thành · ${pending.length} chờ`}
-                        </td>
-                        <td colSpan={isManager ? 6 : 5} />
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {task.opportunity
+                          ? <Link href={`/don-hang/${task.opportunity.id}`} className="text-xs text-gray-500 hover:text-accent-500 flex items-center gap-1 truncate max-w-[160px]">
+                              <ShoppingBag size={9} />{task.opportunity.title}
+                            </Link>
+                          : <span className="text-xs text-gray-300">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {subSummary[task.id] ? (() => {
+                          const { total, done: d } = subSummary[task.id]
+                          const pct = Math.round(d / total * 100)
+                          return (
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="h-1.5 bg-emerald-400 rounded-full" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="text-[10px] font-bold text-gray-500 w-8 text-right">{pct}%</span>
+                            </div>
+                          )
+                        })() : <span className="text-gray-200 text-xs">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <select value={st} onChange={e => updateStatus(task.id, e.target.value as TaskStatus)}
+                          className={`text-[11px] font-semibold px-2 py-1 rounded-lg border-0 focus:outline-none cursor-pointer ${col.bg} ${col.text}`}>
+                          {COLS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {task.is_done
+                          ? <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium"><CheckCircle2 size={11} />Hoàn thành</span>
+                          : td !== null
+                            ? <span className={`text-xs font-medium flex items-center gap-1 ${td < 0 ? 'text-red-600' : td <= 7 ? 'text-amber-600' : 'text-gray-500'}`}>
+                                <Clock size={10} />{td < 0 ? `Quá ${Math.abs(td)}N` : `Còn ${td}N`}
+                              </span>
+                            : <span className="text-xs text-gray-400">Chưa xong</span>}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {task.due_date
+                          ? <span className={`text-xs font-medium ${td !== null && td < 0 ? 'text-red-600' : td !== null && td <= 7 ? 'text-amber-600' : 'text-gray-600'}`}>
+                              {formatDate(task.due_date)}
+                            </span>
+                          : <span className="text-gray-300 text-xs">—</span>}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </>
+            }
+
+            return (
+              <div className="p-5 space-y-4">
+                {isManager ? (
+                  groups.length === 0 ? (
+                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-16 text-center">
+                      <ClipboardList size={32} className="text-gray-200 mx-auto mb-2" />
+                      <div className="text-sm text-gray-400">{hasFilter ? 'Không tìm thấy công việc phù hợp' : 'Không có công việc nào'}</div>
+                    </div>
+                  ) : (
+                    groups.map(group => {
+                      const doneCount = group.tasks.filter(t => t.is_done).length
+                      const pct = group.tasks.length ? Math.round(doneCount / group.tasks.length * 100) : 0
+                      const startIdx = groups.slice(0, groups.indexOf(group)).reduce((s, g) => s + g.tasks.length, 0)
+                      return (
+                        <div key={group.uid} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                          {/* Employee header */}
+                          <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-200">
+                            <div className="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                              {getInitials(group.name)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm font-bold text-gray-800">{group.name}</span>
+                                <span className="text-xs text-gray-400">{group.tasks.length} công việc</span>
+                                <span className="text-xs text-emerald-600 font-medium ml-1">{doneCount} xong</span>
+                                {group.tasks.length - doneCount > 0 && <span className="text-xs text-amber-600 font-medium">{group.tasks.length - doneCount} chờ</span>}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-40 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                  <div className="h-1.5 bg-emerald-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-[10px] font-bold text-gray-500">{pct}%</span>
+                              </div>
+                            </div>
+                          </div>
+                          {/* Task table */}
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-gray-100">
+                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-10">STT</th>
+                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300">Tên công việc</th>
+                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-44">Đơn hàng</th>
+                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-36">Tiến độ</th>
+                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-36">Tình trạng</th>
+                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-28">Còn lại</th>
+                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-32">Hạn hoàn thành</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              <TaskRows taskList={group.tasks} startIdx={startIdx} />
+                            </tbody>
+                          </table>
+                        </div>
+                      )
+                    })
+                  )
+                ) : (
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-10">STT</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400">Tên công việc</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Đơn hàng</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Tiến độ</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Tình trạng</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-28">Còn lại</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-32">Hạn hoàn thành</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredTasks.length === 0
+                          ? <tr><td colSpan={COL_COUNT} className="px-4 py-16 text-center">
+                              <ClipboardList size={32} className="text-gray-200 mx-auto mb-2" />
+                              <div className="text-sm text-gray-400">{hasFilter ? 'Không tìm thấy công việc phù hợp' : 'Không có công việc nào'}</div>
+                            </td></tr>
+                          : <TaskRows taskList={filteredTasks} startIdx={0} />}
+                      </tbody>
+                      {filteredTasks.length > 0 && (
+                        <tfoot>
+                          <tr className="bg-gray-50 border-t-2 border-gray-200">
+                            <td colSpan={2} className="px-4 py-2 text-xs font-bold text-gray-500">
+                              {hasFilter ? `${filteredTasks.length} kết quả · ${filteredTasks.filter(t => t.is_done).length} xong` : `Tổng ${tasks.length} · ${done.length} hoàn thành · ${pending.length} chờ`}
+                            </td>
+                            <td colSpan={5} />
+                          </tr>
+                        </tfoot>
+                      )}
+                    </table>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )
+          })()}
 
           {/* ══════════ CALENDAR ══════════ */}
           {view === 'calendar' && (
