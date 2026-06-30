@@ -63,6 +63,9 @@ export default function BaoCaoCongViecPage() {
   const [filterEmployee, setFilterEmployee] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [tomorrowPlan, setTomorrowPlan] = useState<Record<string, string>>({})
+  const [statusNote, setStatusNote] = useState<Record<string, string>>({})
+  const [expandedNote, setExpandedNote] = useState<Record<string, boolean>>({})
+  const [editingNote, setEditingNote] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<ReportTask | null>(null)
 
   const isManager = ['boss', 'admin', 'sale_admin'].includes(currentUser?.role ?? '')
@@ -241,10 +244,11 @@ export default function BaoCaoCongViecPage() {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="bg-gray-50 border-b border-gray-100">
-                          <th className="px-5 py-2 text-left font-semibold text-gray-400 w-44">Đơn hàng</th>
-                          <th className="px-4 py-2 text-left font-semibold text-gray-400">Nội dung công việc</th>
-                          <th className="px-4 py-2 text-left font-semibold text-gray-400 w-36">Tình trạng</th>
-                          <th className="px-4 py-2 text-left font-semibold text-gray-400 w-56">Kế hoạch ngày mai</th>
+                          <th className="px-5 py-2 text-left font-semibold text-gray-400 w-40">Đơn hàng</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-400 w-48">Nội dung công việc</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-400 w-32">Tình trạng</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-400">Mô tả tình trạng</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-400 w-48">Kế hoạch ngày mai</th>
                           <th className="px-4 py-2 w-14"></th>
                         </tr>
                       </thead>
@@ -286,7 +290,39 @@ export default function BaoCaoCongViecPage() {
                                   {cfg.label}
                                 </span>
                               </td>
-                              <td className="px-4 py-2">
+                              {/* Mô tả tình trạng */}
+                              <td className="px-4 py-2 align-top">
+                                {editingNote === task.id ? (
+                                  <textarea
+                                    autoFocus
+                                    value={statusNote[task.id] ?? ''}
+                                    onChange={e => setStatusNote(prev => ({ ...prev, [task.id]: e.target.value }))}
+                                    onBlur={() => setEditingNote(null)}
+                                    rows={3}
+                                    placeholder="Nhập mô tả tình trạng..."
+                                    className="w-full text-xs text-gray-700 placeholder-gray-300 border border-brand-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none"
+                                  />
+                                ) : statusNote[task.id] ? (
+                                  <div className="cursor-pointer" onClick={() => setEditingNote(task.id)}>
+                                    <p className={`text-xs text-gray-700 whitespace-pre-wrap break-words ${expandedNote[task.id] ? '' : 'line-clamp-2'}`}>
+                                      {statusNote[task.id]}
+                                    </p>
+                                    {statusNote[task.id].split('\n').length > 2 || statusNote[task.id].length > 80 ? (
+                                      <button
+                                        onClick={e => { e.stopPropagation(); setExpandedNote(prev => ({ ...prev, [task.id]: !prev[task.id] })) }}
+                                        className="text-[10px] text-brand-500 hover:underline mt-0.5">
+                                        {expandedNote[task.id] ? 'Thu gọn' : '... xem thêm'}
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                ) : (
+                                  <button onClick={() => setEditingNote(task.id)}
+                                    className="text-xs text-gray-300 hover:text-gray-500 transition-colors">
+                                    Nhập mô tả...
+                                  </button>
+                                )}
+                              </td>
+                              <td className="px-4 py-2 align-top">
                                 <input
                                   type="text"
                                   value={tomorrowPlan[task.id] ?? ''}
