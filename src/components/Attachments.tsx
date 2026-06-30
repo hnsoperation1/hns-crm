@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { Paperclip, Upload, Trash2, Download, FileText, FileImage, File, Loader2, X, ZoomIn } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Paperclip, Upload, Trash2, Download, FileText, FileImage, File, Loader2, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadFile, getFileUrl, deleteFile, formatFileSize, getFileIcon, ALLOWED_MIME_TYPES, MAX_FILE_SIZE } from '@/lib/storage'
 import { useAuth } from '@/contexts/auth'
@@ -49,6 +49,11 @@ export default function Attachments({ taskId, opportunityId }: Props) {
   const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<{ url: string; mime: string; name: string; docViewer?: boolean } | null>(null)
+  const [zoom, setZoom] = useState(1)
+
+  const changeZoom = useCallback((delta: number) => {
+    setZoom(z => Math.min(5, Math.max(0.2, +(z + delta).toFixed(1))))
+  }, [])
 
   const isManager = ['boss', 'admin', 'sale_admin'].includes(user?.role ?? '')
 
@@ -118,10 +123,10 @@ export default function Attachments({ taskId, opportunityId }: Props) {
   async function handlePreview(att: Attachment) {
     const url = await getFileUrl(att.file_path)
     const mime = att.mime_type ?? ''
+    setZoom(1)
     if (mime.startsWith('image/')) {
       setPreview({ url, mime, name: att.file_name })
     } else {
-      // PDF, Word, Excel, ... dùng Google Docs Viewer
       setPreview({ url, mime, name: att.file_name, docViewer: true })
     }
   }
@@ -168,9 +173,35 @@ export default function Attachments({ taskId, opportunityId }: Props) {
                 title={preview.name}
               />
             ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <img src={preview.url} alt={preview.name}
-                  className="max-w-full max-h-full rounded-xl object-contain shadow-2xl" />
+              <div
+                className="flex-1 flex items-center justify-center overflow-auto cursor-zoom-in"
+                onWheel={e => { e.preventDefault(); changeZoom(e.deltaY < 0 ? 0.1 : -0.1) }}
+              >
+                <img
+                  src={preview.url} alt={preview.name}
+                  style={{ transform: `scale(${zoom})`, transformOrigin: 'center', transition: 'transform 0.15s' }}
+                  className="rounded-xl object-contain shadow-2xl max-w-full max-h-full"
+                  draggable={false}
+                />
+              </div>
+            )}
+
+            {/* Zoom controls — chỉ hiện cho ảnh */}
+            {!preview.docViewer && (
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <button onClick={() => changeZoom(-0.2)}
+                  className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                  <ZoomOut size={15} />
+                </button>
+                <span className="text-white/60 text-xs w-12 text-center">{Math.round(zoom * 100)}%</span>
+                <button onClick={() => changeZoom(0.2)}
+                  className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors">
+                  <ZoomIn size={15} />
+                </button>
+                <button onClick={() => setZoom(1)}
+                  className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors ml-1" title="Reset">
+                  <RotateCcw size={13} />
+                </button>
               </div>
             )}
           </div>
