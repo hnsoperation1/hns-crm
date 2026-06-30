@@ -83,9 +83,7 @@ export default function Sidebar() {
           </p>
           <NavLink href="/cong-viec" label="Công việc" icon={ClipboardList} />
           {!user?.is_sale_tv && <NavLink href="/giao-viec" label="Giao việc" icon={UserPlus} />}
-          {['boss', 'admin', 'sale_admin'].includes(user?.role ?? '') && (
-            <NavLink href="/bao-cao/cong-viec" label="Báo cáo CV" icon={BarChart2} />
-          )}
+          <NavLink href="/bao-cao-cong-viec" label="Báo cáo CV" icon={BarChart2} />
         </div>
 
         {/* Đơn hàng section */}

@@ -5,6 +5,7 @@ import { Paperclip, Upload, Trash2, Download, FileText, FileImage, File, Loader2
 import { createClient } from '@/lib/supabase/client'
 import { uploadFile, getFileUrl, deleteFile, formatFileSize, getFileIcon, ALLOWED_MIME_TYPES, MAX_FILE_SIZE } from '@/lib/storage'
 import { useAuth } from '@/contexts/auth'
+import { getInitials } from '@/lib/utils'
 
 type Attachment = {
   id: string
@@ -37,6 +38,12 @@ function timeAgo(iso: string): string {
   if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`
   if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`
   return `${Math.floor(diff / 86400)} ngày trước`
+}
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 export default function Attachments({ taskId, opportunityId }: Props) {
@@ -253,10 +260,10 @@ export default function Attachments({ taskId, opportunityId }: Props) {
         <div className="space-y-2">
           {attachments.map(att => (
             <div key={att.id}
-              className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group">
+              className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group">
 
               {/* Thumbnail hoặc icon */}
-              <div className="w-10 h-10 flex-shrink-0 rounded-lg overflow-hidden bg-white border border-gray-200 flex items-center justify-center cursor-pointer"
+              <div className="w-10 h-10 flex-shrink-0 rounded-lg overflow-hidden bg-white border border-gray-200 flex items-center justify-center cursor-pointer mt-0.5"
                 onClick={() => handlePreview(att)}>
                 {isImage(att.mime_type) ? (
                   <ImageThumb path={att.file_path} name={att.file_name} />
@@ -268,15 +275,30 @@ export default function Attachments({ taskId, opportunityId }: Props) {
               {/* Info */}
               <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handlePreview(att)}>
                 <p className="text-xs font-medium text-gray-800 truncate hover:text-brand-600">{att.file_name}</p>
-                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                <div className="flex items-center gap-1.5 mt-0.5">
                   {att.file_size && <span className="text-[10px] text-gray-400">{formatFileSize(att.file_size)}</span>}
-                  {att.uploader && <span className="text-[10px] text-gray-400">· {att.uploader.full_name}</span>}
-                  <span className="text-[10px] text-gray-400">· {timeAgo(att.created_at)}</span>
+                </div>
+                {/* Người đính kèm + thời gian */}
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  {att.uploader ? (
+                    <>
+                      <div className="w-4 h-4 rounded-full bg-brand-500 flex items-center justify-center text-[7px] font-bold text-white flex-shrink-0">
+                        {getInitials(att.uploader.full_name)}
+                      </div>
+                      <span className="text-[10px] text-gray-600 font-medium">{att.uploader.full_name}</span>
+                      <span className="text-[10px] text-gray-300">·</span>
+                    </>
+                  ) : null}
+                  <span className="text-[10px] text-gray-400" title={formatDateTime(att.created_at)}>
+                    {timeAgo(att.created_at)}
+                  </span>
+                  <span className="text-[10px] text-gray-300">·</span>
+                  <span className="text-[10px] text-gray-400">{formatDateTime(att.created_at)}</span>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5">
                 {isImage(att.mime_type) && (
                   <button onClick={() => handlePreview(att)}
                     className="p-1.5 rounded-lg hover:bg-white text-gray-400 hover:text-brand-600 transition-colors"

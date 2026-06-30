@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import {
   CheckCircle2, Clock, AlertCircle, User, ShoppingBag,
-  ChevronDown, ChevronRight, Loader2, ClipboardList, X,
+  ChevronDown, ChevronRight, Loader2, ClipboardList, X, Eye, ExternalLink, CalendarDays,
 } from 'lucide-react'
 import DateInput from '@/components/DateInput'
 import { createClient } from '@/lib/supabase/client'
@@ -38,8 +38,8 @@ type EmployeeGroup = {
 }
 
 const STATUS_MAP: Record<TaskStatus, { label: string; color: string; bg: string; icon: React.ElementType }> = {
-  todo:        { label: 'Cần thực hiện', color: 'text-blue-700',   bg: 'bg-blue-50',   icon: Clock },
-  in_progress: { label: 'Đang thực hiện', color: 'text-amber-700', bg: 'bg-amber-50',  icon: Clock },
+  todo:        { label: 'Cần thực hiện', color: 'text-blue-700',    bg: 'bg-blue-50',    icon: Clock },
+  in_progress: { label: 'Đang thực hiện', color: 'text-amber-700', bg: 'bg-amber-50',   icon: Clock },
   done:        { label: 'Hoàn thành',    color: 'text-emerald-700', bg: 'bg-emerald-50', icon: CheckCircle2 },
 }
 
@@ -63,6 +63,7 @@ export default function BaoCaoCongViecPage() {
   const [filterEmployee, setFilterEmployee] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [tomorrowPlan, setTomorrowPlan] = useState<Record<string, string>>({})
+  const [selectedTask, setSelectedTask] = useState<ReportTask | null>(null)
 
   const isManager = ['boss', 'admin', 'sale_admin'].includes(currentUser?.role ?? '')
 
@@ -81,19 +82,15 @@ export default function BaoCaoCongViecPage() {
         .select('id,title,status,is_done,done_at,due_date,assigned_to,created_by,opportunity:opportunities!left(id,title)')
         .is('parent_id', null)
         .or(`due_date.eq.${selectedDate},and(is_done.eq.true,done_at.gte.${selectedDate}T00:00:00,done_at.lte.${selectedDate}T23:59:59)`),
-      isManager
-        ? supabase.from('users').select('id,full_name,role').eq('is_active', true).order('full_name')
-        : Promise.resolve({ data: null }),
+      supabase.from('users').select('id,full_name,role').eq('is_active', true).order('full_name'),
     ])
 
     const tasks = (tasksRes.data ?? []) as unknown as ReportTask[]
     const users = (usersRes.data ?? []) as Employee[]
-    if (isManager) setAllUsers(users)
+    setAllUsers(users)
 
-    // Build employee groups
     const empMap = new Map<string, EmployeeGroup>()
 
-    // Pre-fill from users list (manager view)
     if (isManager) {
       for (const u of users) {
         empMap.set(u.id, { employee: u, tasks: [] })
@@ -110,7 +107,6 @@ export default function BaoCaoCongViecPage() {
       empMap.get(uid)!.tasks.push(task)
     }
 
-    // Only keep groups with tasks (unless manager and filtering)
     const result = Array.from(empMap.values()).filter(g => g.tasks.length > 0)
     result.sort((a, b) => b.tasks.length - a.tasks.length)
     setGroups(result)
@@ -128,10 +124,10 @@ export default function BaoCaoCongViecPage() {
     ? groups.filter(g => g.employee.id === filterEmployee)
     : groups
 
-  const totalTasks = displayGroups.reduce((s, g) => s + g.tasks.length, 0)
-  const doneTasks  = displayGroups.reduce((s, g) => s + g.tasks.filter(t => t.is_done).length, 0)
+  const totalTasks   = displayGroups.reduce((s, g) => s + g.tasks.length, 0)
+  const doneTasks    = displayGroups.reduce((s, g) => s + g.tasks.filter(t => t.is_done).length, 0)
   const pendingTasks = totalTasks - doneTasks
-  const lateTasks  = displayGroups.reduce((s, g) =>
+  const lateTasks    = displayGroups.reduce((s, g) =>
     s + g.tasks.filter(t => !t.is_done && t.due_date && daysUntil(t.due_date)! < 0).length, 0)
 
   function toggleCollapse(id: string) {
@@ -239,7 +235,7 @@ export default function BaoCaoCongViecPage() {
                   {isOpen ? <ChevronDown size={15} className="text-gray-400 flex-shrink-0" /> : <ChevronRight size={15} className="text-gray-400 flex-shrink-0" />}
                 </button>
 
-                {/* Task list */}
+                {/* Task table */}
                 {isOpen && (
                   <div className="border-t border-gray-100 overflow-x-auto">
                     <table className="w-full text-xs">
@@ -248,7 +244,8 @@ export default function BaoCaoCongViecPage() {
                           <th className="px-5 py-2 text-left font-semibold text-gray-400 w-44">Đơn hàng</th>
                           <th className="px-4 py-2 text-left font-semibold text-gray-400">Nội dung công việc</th>
                           <th className="px-4 py-2 text-left font-semibold text-gray-400 w-36">Tình trạng</th>
-                          <th className="px-4 py-2 text-left font-semibold text-gray-400 w-60">Kế hoạch ngày mai</th>
+                          <th className="px-4 py-2 text-left font-semibold text-gray-400 w-56">Kế hoạch ngày mai</th>
+                          <th className="px-4 py-2 w-14"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -298,6 +295,12 @@ export default function BaoCaoCongViecPage() {
                                   className="w-full text-xs text-gray-700 placeholder-gray-300 bg-transparent border-b border-dashed border-gray-200 focus:border-brand-400 focus:outline-none py-0.5 transition-colors"
                                 />
                               </td>
+                              <td className="px-2 py-2.5">
+                                <button onClick={() => setSelectedTask(task)}
+                                  className="flex items-center gap-1 text-[11px] text-brand-600 hover:text-brand-800 font-medium px-2 py-1 rounded-lg hover:bg-brand-50 transition-colors">
+                                  <Eye size={11} /> Xem
+                                </button>
+                              </td>
                             </tr>
                           )
                         })}
@@ -310,6 +313,118 @@ export default function BaoCaoCongViecPage() {
           })}
         </div>
       )}
+
+      {/* ── Slide-over chi tiết công việc ── */}
+      {selectedTask && (() => {
+        const st = getStatus(selectedTask)
+        const cfg = STATUS_MAP[st]
+        const StatusIcon = cfg.icon
+        const td = selectedTask.due_date ? daysUntil(selectedTask.due_date) : null
+        const isLate = !selectedTask.is_done && td !== null && td < 0
+        const assignee = allUsers.find(u => u.id === selectedTask.assigned_to)
+        const creator  = allUsers.find(u => u.id === selectedTask.created_by)
+        return (
+          <div className="fixed inset-0 z-40 flex">
+            <div className="flex-1" onClick={() => setSelectedTask(null)} />
+            <div className="relative w-96 bg-white shadow-2xl flex flex-col h-full border-l border-gray-200">
+              <button onClick={() => setSelectedTask(null)}
+                className="absolute -left-8 top-1/2 -translate-y-1/2 w-8 h-16 bg-white border border-gray-200 rounded-l-xl flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors">
+                <ChevronRight size={15} className="text-gray-400" />
+              </button>
+
+              <div className="p-5 border-b border-gray-100 flex-shrink-0">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <h2 className="text-sm font-bold text-gray-900 leading-snug">{selectedTask.title}</h2>
+                  <button onClick={() => setSelectedTask(null)} className="text-gray-400 hover:text-gray-600 flex-shrink-0 mt-0.5">
+                    <X size={16} />
+                  </button>
+                </div>
+                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${cfg.bg} ${cfg.color}`}>
+                  <StatusIcon size={11} /> {cfg.label}
+                </span>
+              </div>
+
+              <div className="flex-1 overflow-auto p-5 space-y-4">
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Đơn hàng</p>
+                  {selectedTask.opportunity ? (
+                    <Link href={`/don-hang/${selectedTask.opportunity.id}`}
+                      className="flex items-center gap-1.5 text-sm text-accent-600 hover:underline font-medium">
+                      <ShoppingBag size={13} /> {selectedTask.opportunity.title}
+                    </Link>
+                  ) : <span className="text-sm text-gray-400">—</span>}
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Người thực hiện</p>
+                  {assignee ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-brand-500 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
+                        {getInitials(assignee.full_name)}
+                      </div>
+                      <span className="text-sm font-medium text-gray-800">{assignee.full_name}</span>
+                    </div>
+                  ) : <span className="text-sm text-gray-400">Chưa giao</span>}
+                </div>
+
+                {creator && (
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Người tạo</p>
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
+                        {getInitials(creator.full_name)}
+                      </div>
+                      <span className="text-sm font-medium text-gray-800">{creator.full_name}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Hạn hoàn thành</p>
+                  {selectedTask.due_date ? (
+                    <div className="flex items-center gap-2">
+                      <CalendarDays size={13} className={isLate ? 'text-red-500' : 'text-amber-500'} />
+                      <span className={`text-sm font-medium ${isLate ? 'text-red-600' : 'text-gray-800'}`}>
+                        {formatDate(selectedTask.due_date)}
+                      </span>
+                      {isLate && <span className="text-xs text-red-500 font-medium">· Trễ {Math.abs(td!)} ngày</span>}
+                      {!isLate && td !== null && <span className="text-xs text-gray-400">· Còn {td} ngày</span>}
+                    </div>
+                  ) : <span className="text-sm text-gray-400">—</span>}
+                </div>
+
+                {selectedTask.is_done && selectedTask.done_at && (
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Hoàn thành lúc</p>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={13} className="text-emerald-500" />
+                      <span className="text-sm text-emerald-700 font-medium">{formatDate(selectedTask.done_at)}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Kế hoạch ngày mai</p>
+                  <textarea
+                    value={tomorrowPlan[selectedTask.id] ?? ''}
+                    onChange={e => setTomorrowPlan(prev => ({ ...prev, [selectedTask.id]: e.target.value }))}
+                    placeholder="Nhập kế hoạch ngày mai..."
+                    rows={3}
+                    className="w-full text-xs text-gray-700 placeholder-gray-300 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-gray-100 flex-shrink-0">
+                <Link href={`/cong-viec/${selectedTask.id}`}
+                  className="flex items-center justify-center gap-2 w-full bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
+                  <ExternalLink size={13} /> Xem chi tiết đầy đủ
+                </Link>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
