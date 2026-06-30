@@ -8,6 +8,7 @@ import {
   MessageSquare, Plus, CheckSquare, Square,
   Clock, CalendarDays, DollarSign, User, Pencil, CheckCircle2, X,
   ClipboardList, UserPlus, Loader2, FileText, Save, Eye, Printer, Trash2, Star, Paperclip,
+  ChevronDown, ChevronUp,
 } from 'lucide-react'
 import Attachments from '@/components/Attachments'
 import { createClient } from '@/lib/supabase/client'
@@ -89,6 +90,7 @@ export default function OppDetailPage() {
   const [reassignSuccess, setReassignSuccess] = useState(false)
   const [taskAssignees, setTaskAssignees] = useState<Record<string, string>>({})
   const [openTaskAssign, setOpenTaskAssign] = useState<string | null>(null)
+  const [expandedSubs, setExpandedSubs] = useState<Record<string, boolean>>({})
   const [taskAssignSelect, setTaskAssignSelect] = useState<string>('')
   const [mainTab, setMainTab] = useState<'activity' | 'tasks' | 'intake' | 'requirements' | 'services' | 'feedback' | 'files' | 'admin'>('tasks')
   const [feedbacks, setFeedbacks] = useState<FeedbackRow[]>([])
@@ -1699,35 +1701,77 @@ export default function OppDetailPage() {
 
                             {/* Subtasks */}
                             {subs.length > 0 && (
-                              <div className="border-t border-gray-100 px-4 py-2 space-y-1.5 bg-gray-50/60 rounded-b-2xl">
+                              <div className="border-t border-gray-100 bg-gray-50/60 rounded-b-2xl divide-y divide-gray-100">
                                 {subs.map(sub => {
                                   const subDone = taskDone[sub.id] !== undefined ? taskDone[sub.id] : sub.is_done
+                                  const subAssignee = allUsers.find(u => u.id === (taskAssignees[sub.id] ?? sub.assigned_to))
+                                  const subCreator = allUsers.find(u => u.id === sub.created_by)
+                                  const isExpanded = !!expandedSubs[sub.id]
                                   return (
-                                    <div key={sub.id} className="flex items-center gap-2.5 py-1">
-                                      <button onClick={async () => {
-                                        const newDone = !subDone
-                                        setTaskDone(prev => ({ ...prev, [sub.id]: newDone }))
-                                        setTasks(prev => prev.map(t => t.id === sub.id ? { ...t, is_done: newDone } : t))
-                                        await supabase.from('tasks').update({ is_done: newDone, done_at: newDone ? new Date().toISOString() : null }).eq('id', sub.id)
-                                      }} className="flex-shrink-0">
-                                        {subDone
-                                          ? <CheckSquare size={14} className="text-emerald-500" />
-                                          : <Square size={14} className="text-gray-300 hover:text-brand-400" />}
-                                      </button>
-                                      <span className={`text-xs flex-1 ${subDone ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                                        {sub.title}
-                                      </span>
-                                      {sub.due_date && (
-                                        <span className="text-[10px] text-amber-500 flex-shrink-0">{formatDate(sub.due_date)}</span>
-                                      )}
-                                      {sub.assigned_to && (() => {
-                                        const u = allUsers.find(u => u.id === (taskAssignees[sub.id] ?? sub.assigned_to))
-                                        return u ? (
-                                          <div className="w-4 h-4 rounded-full bg-brand-500 flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" title={u.full_name}>
-                                            {getInitials(u.full_name)}
+                                    <div key={sub.id}>
+                                      {/* Row tóm tắt */}
+                                      <div className="flex items-center gap-2.5 px-4 py-2">
+                                        <button onClick={async () => {
+                                          const newDone = !subDone
+                                          setTaskDone(prev => ({ ...prev, [sub.id]: newDone }))
+                                          setTasks(prev => prev.map(t => t.id === sub.id ? { ...t, is_done: newDone } : t))
+                                          await supabase.from('tasks').update({ is_done: newDone, done_at: newDone ? new Date().toISOString() : null }).eq('id', sub.id)
+                                        }} className="flex-shrink-0">
+                                          {subDone
+                                            ? <CheckSquare size={14} className="text-emerald-500" />
+                                            : <Square size={14} className="text-gray-300 hover:text-brand-400" />}
+                                        </button>
+                                        <span className={`text-xs flex-1 ${subDone ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                                          {sub.title}
+                                        </span>
+                                        {sub.due_date && (
+                                          <span className="text-[10px] text-amber-500 flex-shrink-0">{formatDate(sub.due_date)}</span>
+                                        )}
+                                        {subAssignee && (
+                                          <div className="w-4 h-4 rounded-full bg-brand-500 flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" title={subAssignee.full_name}>
+                                            {getInitials(subAssignee.full_name)}
                                           </div>
-                                        ) : null
-                                      })()}
+                                        )}
+                                        <button onClick={() => setExpandedSubs(prev => ({ ...prev, [sub.id]: !prev[sub.id] }))}
+                                          className="flex-shrink-0 p-0.5 rounded text-gray-400 hover:text-brand-500 hover:bg-brand-50 transition-colors">
+                                          {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                        </button>
+                                      </div>
+                                      {/* Chi tiết mở rộng */}
+                                      {isExpanded && (
+                                        <div className="px-10 pb-3 space-y-1.5">
+                                          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                                            <span className="text-gray-400 w-20">Người tạo:</span>
+                                            {subCreator ? (
+                                              <span className="flex items-center gap-1">
+                                                <div className="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center text-[7px] font-bold text-white">{getInitials(subCreator.full_name)}</div>
+                                                {subCreator.full_name}
+                                              </span>
+                                            ) : <span className="text-gray-300">—</span>}
+                                          </div>
+                                          <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                                            <span className="text-gray-400 w-20">Thực hiện:</span>
+                                            {subAssignee ? (
+                                              <span className="flex items-center gap-1">
+                                                <div className="w-4 h-4 rounded-full bg-brand-500 flex items-center justify-center text-[7px] font-bold text-white">{getInitials(subAssignee.full_name)}</div>
+                                                {subAssignee.full_name}
+                                              </span>
+                                            ) : <span className="text-gray-300">Chưa giao</span>}
+                                          </div>
+                                          {sub.due_date && (
+                                            <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                                              <span className="text-gray-400 w-20">Hạn:</span>
+                                              <span className="text-amber-600">{formatDate(sub.due_date)}</span>
+                                            </div>
+                                          )}
+                                          <div className="pt-1">
+                                            <Link href={`/cong-viec/${sub.id}`}
+                                              className="inline-flex items-center gap-1 text-[11px] text-brand-600 hover:underline font-medium">
+                                              Xem chi tiết →
+                                            </Link>
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
                                   )
                                 })}
