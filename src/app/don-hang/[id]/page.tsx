@@ -97,6 +97,7 @@ export default function OppDetailPage() {
   const [tasks, setTasks] = useState<{ id: string; title: string; due_date?: string | null; assigned_to?: string | null; created_by?: string | null; is_done: boolean; stage: number; done_at?: string | null; parent_id?: string | null; review_status?: 'approved' | 'rejected' | null; review_note?: string | null }[]>([])
   const [saleUsers, setSaleUsers] = useState<UserMin[]>([])
   const [allUsers, setAllUsers] = useState<UserMin[]>([])
+  const [saleChinhOpts, setSaleChinhOpts] = useState<{ id: string; name: string; type: string }[]>([])
   const [loading, setLoading] = useState(true)
 
   const [logFilter, setLogFilter] = useState<LogFilter>('all')
@@ -115,7 +116,8 @@ export default function OppDetailPage() {
     stage_updated_at: string; lost_reason: string
     estimated_value: string; actual_value: string
     tour_date: string; tour_end_date: string; deadline: string
-    assigned_to: string; created_by: string; contact_id: string
+    assigned_to: string; operator_id: string; created_by: string; contact_id: string
+    sale_chinh_id: string
   }
   const [adminForm, setAdminForm] = useState<AdminForm | null>(null)
   const [savingAdmin, setSavingAdmin] = useState(false)
@@ -230,7 +232,7 @@ export default function OppDetailPage() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: oppData }, { data: logsData }, { data: tasksData }, { data: usersData }, { data: fbData }] = await Promise.all([
+      const [{ data: oppData }, { data: logsData }, { data: tasksData }, { data: usersData }, { data: fbData }, { data: scData }] = await Promise.all([
         supabase.from('opportunities')
           .select('*, contact:contacts(id,name,phone,email,company,tax_code,organization_ids,source,lead_score,created_by,created_at), assigned_user:users!assigned_to(id,full_name), creator:users!created_by(id,full_name), operator:users!operator_id(id,full_name), sale_chinh:sale_chinh!sale_chinh_id(id,name,type)')
           .eq('id', id)
@@ -250,6 +252,7 @@ export default function OppDetailPage() {
           .select('id, respondent_name, phone, group_name, submitted_at, overall_comment, is_satisfied, will_return, next_destination, rating_guide_attitude, rating_guide_skill, rating_hotel, rating_transport_quality, rating_staff_attitude, rating_restaurant_food')
           .eq('opportunity_id', id)
           .order('submitted_at', { ascending: false }),
+        supabase.from('sale_chinh').select('id, name, type').eq('is_active', true).order('name'),
       ])
       const oppObj = oppData as OppDetail | null
       setOpp(oppObj)
@@ -259,6 +262,7 @@ export default function OppDetailPage() {
       setAllUsers(users)
       setSaleUsers(users.filter(u => u.role === 'sale'))
       setFeedbacks((fbData ?? []) as FeedbackRow[])
+      setSaleChinhOpts((scData ?? []) as { id: string; name: string; type: string }[])
       if (oppObj) {
         setAdminForm({
           title: oppObj.title ?? '',
@@ -273,8 +277,10 @@ export default function OppDetailPage() {
           tour_end_date: oppObj.tour_end_date ?? '',
           deadline: oppObj.deadline ?? '',
           assigned_to: oppObj.assigned_to ?? '',
+          operator_id: oppObj.operator_id ?? '',
           created_by: oppObj.created_by ?? '',
           contact_id: oppObj.contact_id ?? '',
+          sale_chinh_id: oppObj.sale_chinh_id ?? '',
         })
       }
       setLoading(false)
@@ -634,6 +640,8 @@ export default function OppDetailPage() {
       tour_end_date: adminForm.tour_end_date || null,
       deadline: adminForm.deadline || null,
       assigned_to: adminForm.assigned_to || null,
+      operator_id: adminForm.operator_id || null,
+      sale_chinh_id: adminForm.sale_chinh_id || null,
       created_by: adminForm.created_by || null,
       contact_id: adminForm.contact_id || null,
     }
@@ -642,7 +650,9 @@ export default function OppDetailPage() {
     if (error) { alert('Lỗi: ' + error.message); return }
     setAdminSaved(true)
     setTimeout(() => setAdminSaved(false), 2500)
-    setOpp(o => o ? { ...o, ...payload, stage: payload.stage as OppStage } : o)
+    const updatedOperator = allUsers.find(u => u.id === adminForm.operator_id) ?? null
+    const updatedSaleChinh = saleChinhOpts.find(s => s.id === adminForm.sale_chinh_id) ?? null
+    setOpp(o => o ? { ...o, ...payload, stage: payload.stage as OppStage, operator: updatedOperator, sale_chinh: updatedSaleChinh } : o)
   }
 
   if (loading) {
@@ -1923,6 +1933,20 @@ export default function OppDetailPage() {
                       <select value={adminForm.assigned_to} onChange={e => setAdminForm(f => f ? {...f, assigned_to: e.target.value} : f)} className={aCls}>
                         <option value="">— Chưa giao —</option>
                         {saleUsers.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? 'Sale TV'} - {u.full_name}</option>)}
+                      </select>
+                    </AField>
+                    <AField label="Điều hành (operator_id)">
+                      <select value={adminForm.operator_id} onChange={e => setAdminForm(f => f ? {...f, operator_id: e.target.value} : f)} className={aCls}>
+                        <option value="">— Chưa giao —</option>
+                        {allUsers.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
+                      </select>
+                    </AField>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <AField label="Sale chính">
+                      <select value={adminForm.sale_chinh_id} onChange={e => setAdminForm(f => f ? {...f, sale_chinh_id: e.target.value} : f)} className={aCls}>
+                        <option value="">— Không có —</option>
+                        {saleChinhOpts.map(s => <option key={s.id} value={s.id}>{getSCLabel(s.type)} - {s.name}</option>)}
                       </select>
                     </AField>
                     <AField label="Người tạo (created_by)">
