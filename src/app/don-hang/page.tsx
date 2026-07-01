@@ -97,7 +97,7 @@ export default function DonHangCuaToiPage() {
 
   const hasFilter = filterStage !== 'all' || filterSource || filterSaleTV || filterCreator || search
 
-  const cols = ['Đơn hàng', 'Giai đoạn', 'Nguồn', 'Điểm đến', 'Ngày đi', 'Ngày về', 'Còn lại', 'Giá trị']
+  const cols = ['Đơn hàng', 'Nhân sự', 'Giai đoạn', 'Nguồn', 'Điểm đến', 'Ngày đi', 'Ngày về', 'Còn lại', 'Giá trị']
 
   return (
     <div className="flex flex-col h-full">
@@ -175,13 +175,13 @@ export default function DonHangCuaToiPage() {
             {loading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <tr key={i} className="animate-pulse">
-                  {[38, 14, 12, 18, 12, 12, 10, 12].map((w, j) => (
+                  {[28, 22, 14, 12, 18, 12, 12, 10, 12].map((w, j) => (
                     <td key={j} className="px-5 py-4"><div className="h-3 bg-gray-100 rounded" style={{ width: `${w + (i % 3) * 4}%` }} /></td>
                   ))}
                 </tr>
               ))
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={8} className="px-5 py-16 text-center text-gray-400">Không có đơn nào</td></tr>
+              <tr><td colSpan={9} className="px-5 py-16 text-center text-gray-400">Không có đơn nào</td></tr>
             ) : filtered.map(r => {
               const sc = STAGE_COLORS[r.stage]
               const daysLeft = r.tour_date ? daysUntil(r.tour_date) : null
@@ -191,34 +191,27 @@ export default function DonHangCuaToiPage() {
               return (
                 <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/don-hang/${r.id}`)}>
                   <td className="px-5 py-3.5">
-                    <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors mb-1">{r.title}</div>
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <span className="text-[10px] font-semibold text-gray-400 w-20 flex-shrink-0">Khách hàng</span>
-                        <span className="truncate">{r.contact?.company ?? r.contact?.name ?? '—'}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <span className="text-[10px] font-semibold text-gray-400 w-20 flex-shrink-0">Sale tư vấn</span>
+                    <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{r.title}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{r.contact?.company ?? r.contact?.name ?? '—'}</div>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                        <span className="text-[10px] font-semibold text-gray-400 w-16 flex-shrink-0">Sale TV</span>
                         {r.assigned_user
                           ? <span className="flex items-center gap-1">
                               <span className="w-4 h-4 bg-brand-100 rounded-full inline-flex items-center justify-center text-[9px] font-bold text-brand-600 flex-shrink-0">{getInitials(r.assigned_user.full_name)}</span>
-                              {r.assigned_user.full_name}
+                              <span className="whitespace-nowrap">{r.assigned_user.full_name}</span>
                             </span>
                           : <span className="text-gray-300">—</span>}
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <span className="text-[10px] font-semibold text-gray-400 w-20 flex-shrink-0">Điều hành</span>
+                      <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                        <span className="text-[10px] font-semibold text-gray-400 w-16 flex-shrink-0">Điều hành</span>
                         {r.operator
                           ? <span className="flex items-center gap-1">
                               <span className="w-4 h-4 bg-slate-200 rounded-full inline-flex items-center justify-center text-[9px] font-bold text-slate-600 flex-shrink-0">{getInitials(r.operator.full_name)}</span>
-                              {r.operator.full_name}
+                              <span className="whitespace-nowrap">{r.operator.full_name}</span>
                             </span>
-                          : <span className="text-gray-300">—</span>}
-                      </div>
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                        <span className="text-[10px] font-semibold text-gray-400 w-20 flex-shrink-0">Sale chính</span>
-                        {r.sale_chinh
-                          ? <span>{r.sale_chinh.name}</span>
                           : <span className="text-gray-300">—</span>}
                       </div>
                     </div>
@@ -227,11 +220,19 @@ export default function DonHangCuaToiPage() {
                     <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${sc.bg} ${sc.text}`}>{STAGE_LABELS[r.stage]}</span>
                   </td>
                   <td className="px-5 py-3.5">
-                    {r.source ? (
-                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${SOURCE_COLORS[r.source] ?? 'bg-gray-100 text-gray-500'}`}>
-                        {SOURCE_LABELS[r.source] ?? r.source}
-                      </span>
-                    ) : <span className="text-gray-300">—</span>}
+                    <div className="space-y-1.5">
+                      {r.source ? (
+                        <span className={`inline-flex text-[11px] font-semibold px-2 py-0.5 rounded-full ${SOURCE_COLORS[r.source] ?? 'bg-gray-100 text-gray-500'}`}>
+                          {SOURCE_LABELS[r.source] ?? r.source}
+                        </span>
+                      ) : <span className="text-gray-300 text-xs">—</span>}
+                      {r.sale_chinh && (
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          <span className="text-[10px] font-semibold text-gray-400">SC</span>
+                          {r.sale_chinh.name}
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-5 py-3.5 text-gray-600">{r.description || <span className="text-gray-300">—</span>}</td>
                   <td className="px-5 py-3.5 whitespace-nowrap text-gray-700">{formatDate(r.tour_date)}</td>
