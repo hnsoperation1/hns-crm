@@ -196,21 +196,21 @@ export default function DonHangCuaToiPage() {
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="space-y-1.5">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                        <span className="text-[10px] font-semibold text-gray-400 w-16 flex-shrink-0">Sale TV</span>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="text-[10px] font-medium text-orange-400 w-20 flex-shrink-0">Sale tư vấn:</span>
                         {r.assigned_user
                           ? <span className="flex items-center gap-1">
-                              <span className="w-4 h-4 bg-brand-100 rounded-full inline-flex items-center justify-center text-[9px] font-bold text-brand-600 flex-shrink-0">{getInitials(r.assigned_user.full_name)}</span>
-                              <span className="whitespace-nowrap">{r.assigned_user.full_name}</span>
+                              <span className="w-4 h-4 bg-orange-100 rounded-full inline-flex items-center justify-center text-[9px] font-bold text-orange-600 flex-shrink-0">{getInitials(r.assigned_user.full_name)}</span>
+                              <span className="whitespace-nowrap font-medium text-orange-700">{r.assigned_user.full_name}</span>
                             </span>
                           : <span className="text-gray-300">—</span>}
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                        <span className="text-[10px] font-semibold text-gray-400 w-16 flex-shrink-0">Điều hành</span>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="text-[10px] font-medium text-sky-400 w-20 flex-shrink-0">Điều hành:</span>
                         {r.operator
                           ? <span className="flex items-center gap-1">
-                              <span className="w-4 h-4 bg-slate-200 rounded-full inline-flex items-center justify-center text-[9px] font-bold text-slate-600 flex-shrink-0">{getInitials(r.operator.full_name)}</span>
-                              <span className="whitespace-nowrap">{r.operator.full_name}</span>
+                              <span className="w-4 h-4 bg-sky-100 rounded-full inline-flex items-center justify-center text-[9px] font-bold text-sky-600 flex-shrink-0">{getInitials(r.operator.full_name)}</span>
+                              <span className="whitespace-nowrap font-medium text-sky-700">{r.operator.full_name}</span>
                             </span>
                           : <span className="text-gray-300">—</span>}
                       </div>
