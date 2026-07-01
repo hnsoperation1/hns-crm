@@ -466,7 +466,7 @@ export default function CongViecPage() {
               groups.push(...Array.from(map.values()).sort((a, b) => b.tasks.length - a.tasks.length))
             }
 
-            const COL_COUNT = 8
+            const COL_COUNT = 6
 
             function ReviewCell({ task }: { task: TaskRow }) {
               if (task.review_status === 'approved') {
@@ -519,6 +519,7 @@ export default function CongViecPage() {
                   return (
                     <tr key={task.id} className="hover:bg-gray-50/60 group">
                       <td className="px-4 py-2.5 text-xs text-gray-400 font-mono">{startIdx + i + 1}</td>
+                      {/* Tên công việc */}
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
                           {!isManager && (
@@ -531,6 +532,7 @@ export default function CongViecPage() {
                           <Link href={`/cong-viec/${task.id}`} className={`text-xs font-medium hover:underline ${task.is_done ? 'line-through text-gray-400' : 'text-gray-800 hover:text-accent-600'}`}>{task.title}</Link>
                         </div>
                       </td>
+                      {/* Đơn hàng */}
                       <td className="px-4 py-2.5">
                         {task.opportunity
                           ? <Link href={`/don-hang/${task.opportunity.id}`} className="text-xs text-gray-500 hover:text-accent-500 flex items-center gap-1 truncate max-w-[160px]">
@@ -538,45 +540,47 @@ export default function CongViecPage() {
                             </Link>
                           : <span className="text-xs text-gray-300">—</span>}
                       </td>
+                      {/* Báo cáo = tình trạng + tiến độ subtask */}
                       <td className="px-4 py-2.5">
-                        {subSummary[task.id] ? (() => {
-                          const { total, done: d } = subSummary[task.id]
-                          const pct = Math.round(d / total * 100)
-                          return (
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div className="h-1.5 bg-emerald-400 rounded-full" style={{ width: `${pct}%` }} />
+                        <div className="space-y-1.5">
+                          <select value={st} onChange={e => updateStatus(task.id, e.target.value as TaskStatus)}
+                            disabled={isManager}
+                            className={`text-[11px] font-semibold px-2 py-1 rounded-lg border-0 focus:outline-none cursor-pointer disabled:cursor-default ${col.bg} ${col.text}`}>
+                            {COLS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+                          </select>
+                          {subSummary[task.id] && (() => {
+                            const { total, done: d } = subSummary[task.id]
+                            const pct = Math.round(d / total * 100)
+                            return (
+                              <div className="flex items-center gap-1.5">
+                                <div className="flex-1 max-w-[80px] h-1 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-1 bg-emerald-400 rounded-full" style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-[10px] text-gray-400">{d}/{total}</span>
                               </div>
-                              <span className="text-[10px] font-bold text-gray-500 w-8 text-right">{pct}%</span>
-                            </div>
-                          )
-                        })() : <span className="text-gray-200 text-xs">—</span>}
+                            )
+                          })()}
+                        </div>
                       </td>
-                      <td className="px-4 py-2.5">
-                        <select value={st} onChange={e => updateStatus(task.id, e.target.value as TaskStatus)}
-                          disabled={isManager}
-                          className={`text-[11px] font-semibold px-2 py-1 rounded-lg border-0 focus:outline-none cursor-pointer disabled:cursor-default ${col.bg} ${col.text}`}>
-                          {COLS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
-                        </select>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        {task.is_done
-                          ? <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium"><CheckCircle2 size={11} />Hoàn thành</span>
-                          : td !== null
-                            ? <span className={`text-xs font-medium flex items-center gap-1 ${td < 0 ? 'text-red-600' : td <= 7 ? 'text-amber-600' : 'text-gray-500'}`}>
-                                <Clock size={10} />{td < 0 ? `Quá ${Math.abs(td)}N` : `Còn ${td}N`}
-                              </span>
-                            : <span className="text-xs text-gray-400">Chưa xong</span>}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        {task.due_date
-                          ? <span className={`text-xs font-medium ${td !== null && td < 0 ? 'text-red-600' : td !== null && td <= 7 ? 'text-amber-600' : 'text-gray-600'}`}>
-                              {formatDate(task.due_date)}
-                            </span>
-                          : <span className="text-gray-300 text-xs">—</span>}
-                      </td>
+                      {/* Quản lí xác nhận */}
                       <td className="px-4 py-2.5">
                         <ReviewCell task={task} />
+                      </td>
+                      {/* Hạn hoàn thành + còn lại */}
+                      <td className="px-4 py-2.5">
+                        {task.due_date ? (
+                          <div>
+                            <span className={`text-xs font-medium block ${td !== null && td < 0 ? 'text-red-600' : td !== null && td <= 7 ? 'text-amber-600' : 'text-gray-600'}`}>
+                              {formatDate(task.due_date)}
+                            </span>
+                            <span className={`text-[10px] flex items-center gap-0.5 mt-0.5 ${task.is_done ? 'text-emerald-500' : td !== null && td < 0 ? 'text-red-500' : td !== null && td <= 7 ? 'text-amber-500' : 'text-gray-400'}`}>
+                              <Clock size={9} />
+                              {task.is_done ? 'Hoàn thành' : td !== null ? (td < 0 ? `Quá ${Math.abs(td)}N` : `Còn ${td}N`) : '—'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-300 text-xs">—</span>
+                        )}
                       </td>
                     </tr>
                   )
@@ -626,11 +630,9 @@ export default function CongViecPage() {
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-10">STT</th>
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300">Tên công việc</th>
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-44">Đơn hàng</th>
-                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-36">Tiến độ</th>
-                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-36">Tình trạng</th>
-                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-28">Còn lại</th>
-                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-32">Hạn hoàn thành</th>
-                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-44">Xác nhận</th>
+                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-44">Báo cáo</th>
+                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-44">Quản lí xác nhận</th>
+                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-36">Hạn hoàn thành</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -649,11 +651,9 @@ export default function CongViecPage() {
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-10">STT</th>
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400">Tên công việc</th>
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Đơn hàng</th>
-                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Tiến độ</th>
-                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Tình trạng</th>
-                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-28">Còn lại</th>
-                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-32">Hạn hoàn thành</th>
-                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Xác nhận</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Báo cáo</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Quản lí xác nhận</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Hạn hoàn thành</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -670,7 +670,7 @@ export default function CongViecPage() {
                             <td colSpan={2} className="px-4 py-2 text-xs font-bold text-gray-500">
                               {hasFilter ? `${filteredTasks.length} kết quả · ${filteredTasks.filter(t => t.is_done).length} xong` : `Tổng ${tasks.length} · ${done.length} hoàn thành · ${pending.length} chờ`}
                             </td>
-                            <td colSpan={5} />
+                            <td colSpan={4} />
                           </tr>
                         </tfoot>
                       )}
