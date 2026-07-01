@@ -408,8 +408,8 @@ export default function DangLayPage() {
                 {errors.title && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertTriangle size={11} /> {errors.title}</p>}
               </div>
 
-              {/* Liên hệ + Sale + Nguồn */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* Liên hệ + Sale TV */}
+              <div className="grid grid-cols-2 gap-3">
                 {/* Liên hệ */}
                 <div>
                   <div className="flex items-center justify-between h-6 mb-1.5">
@@ -473,11 +473,23 @@ export default function DangLayPage() {
                   </select>
                 </div>
 
-                {/* Nguồn */}
+              </div>
+
+              {/* Nguồn + Sale chính */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="flex items-center h-6 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nguồn</label>
                   <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value as LeadSource }))} className={iField}>
                     {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="flex items-center h-6 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale chính</label>
+                  <select value={form.sale_chinh_id} onChange={e => setForm(f => ({ ...f, sale_chinh_id: e.target.value }))} className={iField}>
+                    <option value="">— Chọn Sale chính —</option>
+                    {saleChinhList.map(sc => (
+                      <option key={sc.id} value={sc.id}>{SALE_CHINH_TYPE[sc.type] ?? sc.type} · {sc.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -507,19 +519,6 @@ export default function DangLayPage() {
                   </div>
                 )
               })()}
-
-              {/* Sale chính */}
-              {saleChinhList.length > 0 && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale chính</label>
-                  <select value={form.sale_chinh_id} onChange={e => setForm(f => ({ ...f, sale_chinh_id: e.target.value }))} className={iField}>
-                    <option value="">— Chọn Sale chính —</option>
-                    {saleChinhList.map(sc => (
-                      <option key={sc.id} value={sc.id}>{SALE_CHINH_TYPE[sc.type] ?? sc.type} · {sc.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               {/* Sub-form tạo khách hàng mới — full width */}
               {showNewContact && (
