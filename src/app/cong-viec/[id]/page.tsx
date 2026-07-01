@@ -12,7 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth'
 import { useTopbar } from '@/contexts/topbar'
 import DateInput from '@/components/DateInput'
-import { formatDate, getInitials, daysUntil } from '@/lib/utils'
+import { formatDate, getInitials, daysUntil, ROLE_LABELS } from '@/lib/utils'
 import Attachments from '@/components/Attachments'
 
 type TaskStatus = 'todo' | 'in_progress' | 'done'
@@ -35,7 +35,7 @@ type TaskDetail = {
   created_by: string | null; opportunity_id: string | null; created_at: string; stage: number
 }
 
-type UserMin = { id: string; full_name: string }
+type UserMin = { id: string; full_name: string; role: string }
 type SubTask = { id: string; title: string; is_done: boolean; created_at: string }
 
 type TaskLog = {
@@ -115,7 +115,7 @@ export default function CongViecDetailPage() {
     setLoading(true)
     const [taskRes, usersRes, subsRes] = await Promise.all([
       supabase.from('tasks').select('*').eq('id', id).single(),
-      supabase.from('users').select('id,full_name').eq('is_active', true).order('full_name'),
+      supabase.from('users').select('id,full_name,role').eq('is_active', true).order('full_name'),
       supabase.from('tasks').select('id,title,is_done,created_at').eq('parent_id', id).order('created_at'),
     ])
     const t = taskRes.data as TaskDetail | null
@@ -512,7 +512,7 @@ export default function CongViecDetailPage() {
                 <select defaultValue={task.assigned_to ?? ''} id="assignee-select"
                   className="flex-1 text-xs border border-brand-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-700">
                   <option value="">— Chưa giao —</option>
-                  {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                  {allUsers.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role] ?? u.role} - {u.full_name}</option>)}
                 </select>
                 <button onClick={saveAssignee} className="p-1 rounded bg-emerald-500 text-white hover:bg-emerald-600"><Check size={12} /></button>
                 <button onClick={() => setEditingAssignee(false)} className="p-1 rounded border border-gray-200 text-gray-400"><X size={12} /></button>

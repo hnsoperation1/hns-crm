@@ -14,13 +14,13 @@ import DateInput from '@/components/DateInput'
 import { useAuth } from '@/contexts/auth'
 import {
   STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS,
-  formatVND, formatDate, getInitials, daysSince, daysUntil,
+  formatVND, formatDate, getInitials, daysSince, daysUntil, ROLE_LABELS,
 } from '@/lib/utils'
 import type { OppStage, LogType, Opportunity, Contact, ActivityLog } from '@/types'
 
 // ─── Local types for Supabase joins ──────────────────────────────────────────
 
-type UserMin = { id: string; full_name: string; is_sale_tv?: boolean; is_active?: boolean }
+type UserMin = { id: string; full_name: string; role?: string; is_sale_tv?: boolean; is_active?: boolean }
 
 type OppDetail = Opportunity & {
   contact: (Contact & { id: string }) | null
@@ -185,7 +185,7 @@ export default function OppDetailPage() {
           .eq('opportunity_id', id)
           .order('created_at', { ascending: true }),
         supabase.from('users')
-          .select('id, full_name, is_sale_tv, is_active')
+          .select('id, full_name, role, is_sale_tv, is_active')
           .eq('is_active', true),
       ])
       setOpp(oppData as OppDetail | null)
@@ -1107,7 +1107,7 @@ export default function OppDetailPage() {
                           <select value={newTask.assigned_to} onChange={e => setNewTask(t => ({ ...t, assigned_to: e.target.value }))}
                             className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-700">
                             <option value="">— Chưa giao —</option>
-                            {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                            {allUsers.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
                           </select>
                         </div>
                       </div>
@@ -1198,7 +1198,7 @@ export default function OppDetailPage() {
                                       <select value={taskAssignSelect} onChange={e => setTaskAssignSelect(e.target.value)}
                                         className="flex-1 text-xs border border-brand-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-700">
                                         <option value="">— Chưa giao —</option>
-                                        {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                                        {allUsers.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
                                       </select>
                                       <button onClick={async () => { setTasks(prev => prev.map(t => t.id === task.id ? { ...t, assigned_to: taskAssignSelect || null } : t)); await supabase.from('tasks').update({ assigned_to: taskAssignSelect || null }).eq('id', task.id); setOpenTaskAssign(null) }}
                                         className="flex items-center gap-1 bg-accent-500 hover:bg-accent-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex-shrink-0">
@@ -1362,7 +1362,7 @@ export default function OppDetailPage() {
                       onChange={e => setPersonnelForm(f => ({ ...f, assigned_to: e.target.value }))}
                       className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-400 bg-white text-gray-700">
                       <option value="">— Chưa chọn —</option>
-                      {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                      {allUsers.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
                     </select>
                   ) : (
                     <div className="flex items-center gap-2">
@@ -1385,7 +1385,7 @@ export default function OppDetailPage() {
                       onChange={e => setPersonnelForm(f => ({ ...f, operator_id: e.target.value }))}
                       className="w-full text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-400 bg-white text-gray-700">
                       <option value="">— Chưa có —</option>
-                      {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                      {allUsers.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
                     </select>
                   ) : (
                     <div className="flex items-center gap-2">

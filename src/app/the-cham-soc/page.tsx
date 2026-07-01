@@ -40,14 +40,14 @@ export default function TheChamsocPage() {
   const [submittingLog, setSubmittingLog] = useState<string | null>(null)
   const [togglingDone, setTogglingDone] = useState<string | null>(null)
 
+  const isManager = ['boss', 'admin', 'sale_admin'].includes(user?.role ?? '')
+
   const loadCards = useCallback(async () => {
     if (!user) return
     setLoading(true)
-    const { data } = await supabase
-      .from('care_cards')
-      .select('*')
-      .is('deleted_at', null)
-      .eq('assigned_to', user.id)
+    let q = supabase.from('care_cards').select('*').is('deleted_at', null)
+    if (!isManager) q = q.eq('assigned_to', user.id)
+    const { data } = await q
       .order('is_done', { ascending: true })
       .order('created_at', { ascending: false })
     setCards((data ?? []) as CareCard[])

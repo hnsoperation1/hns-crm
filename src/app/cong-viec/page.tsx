@@ -11,7 +11,7 @@ import DateInput from '@/components/DateInput'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth'
 import { useTopbar } from '@/contexts/topbar'
-import { formatDate, getInitials, daysUntil } from '@/lib/utils'
+import { formatDate, getInitials, daysUntil, ROLE_LABELS } from '@/lib/utils'
 
 type TaskStatus = 'todo' | 'in_progress' | 'done'
 type ViewMode = 'kanban' | 'table' | 'calendar'
@@ -301,7 +301,7 @@ export default function CongViecPage() {
             <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-400 text-gray-600">
               <option value="">Tất cả người thực hiện</option>
-              {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+              {allUsers.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role] ?? u.role} - {u.full_name}</option>)}
             </select>
           )}
           {hasFilter && (
@@ -986,7 +986,7 @@ export default function CongViecPage() {
                 <select value={createAssignee} onChange={e => setCreateAssignee(e.target.value)}
                   className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-700">
                   <option value="">— Chưa giao —</option>
-                  {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                  {allUsers.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role] ?? u.role} - {u.full_name}</option>)}
                 </select>
               </div>
             )}

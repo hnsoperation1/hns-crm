@@ -18,6 +18,12 @@ export function formatDate(d: string | null | undefined): string {
   return `${day}/${m}/${y}`
 }
 
+export const ROLE_LABELS: Record<string, string> = {
+  boss: 'Giám đốc', super_admin: 'Quản trị viên', admin: 'Quản trị viên',
+  sale_admin: 'Sale Admin', sale: 'Sale TV', sale_tv: 'Sale TV',
+  sale_op: 'Điều hành', dieu_hanh: 'Điều hành', cskh: 'Chăm sóc KH', mkt: 'Marketing',
+}
+
 export function daysUntil(dateStr: string): number {
   const today = new Date(); today.setHours(0, 0, 0, 0)
   return Math.floor((new Date(dateStr).getTime() - today.getTime()) / 86400000)

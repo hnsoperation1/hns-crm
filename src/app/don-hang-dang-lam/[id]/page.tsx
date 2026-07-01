@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import DateInput from '@/components/DateInput'
 import {
   STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS,
-  formatVND, formatDate, getInitials, daysSince, daysUntil,
+  formatVND, formatDate, getInitials, daysSince, daysUntil, ROLE_LABELS,
 } from '@/lib/utils'
 import type { OppStage, LogType, Opportunity, Contact, ActivityLog } from '@/types'
 import { useAuth } from '@/contexts/auth'
@@ -39,7 +39,7 @@ const RATING_CLS: Record<string, string> = {
 
 // ─── Local types for Supabase joins ──────────────────────────────────────────
 
-type UserMin = { id: string; full_name: string; is_sale_tv?: boolean; is_active?: boolean }
+type UserMin = { id: string; full_name: string; role?: string; is_sale_tv?: boolean; is_active?: boolean }
 
 type OppDetail = Opportunity & {
   contact: (Contact & { id: string }) | null
@@ -226,7 +226,7 @@ export default function OppDetailPage() {
           .eq('opportunity_id', id)
           .order('created_at', { ascending: true }),
         supabase.from('users')
-          .select('id, full_name, is_sale_tv, is_active')
+          .select('id, full_name, role, is_sale_tv, is_active')
           .eq('is_active', true),
         supabase.from('feedback')
           .select('id, respondent_name, phone, group_name, submitted_at, overall_comment, is_satisfied, will_return, next_destination, rating_guide_attitude, rating_guide_skill, rating_hotel, rating_transport_quality, rating_staff_attitude, rating_restaurant_food')
@@ -1531,7 +1531,7 @@ export default function OppDetailPage() {
                           <select value={newTask.assigned_to} onChange={e => setNewTask(t => ({ ...t, assigned_to: e.target.value }))}
                             className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-700">
                             <option value="">— Chưa giao —</option>
-                            {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                            {allUsers.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
                           </select>
                         </div>
                       </div>
@@ -1625,7 +1625,7 @@ export default function OppDetailPage() {
                                       <select value={taskAssignSelect} onChange={e => setTaskAssignSelect(e.target.value)}
                                         className="flex-1 text-xs border border-brand-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white text-gray-700">
                                         <option value="">— Chưa giao —</option>
-                                        {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                                        {allUsers.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
                                       </select>
                                       <button onClick={async () => {
                                         setTaskAssignees(prev => ({ ...prev, [task.id]: taskAssignSelect }))
@@ -1763,13 +1763,13 @@ export default function OppDetailPage() {
                     <AField label="Sale TV (assigned_to)">
                       <select value={adminForm.assigned_to} onChange={e => setAdminForm(f => f ? {...f, assigned_to: e.target.value} : f)} className={aCls}>
                         <option value="">— Chưa giao —</option>
-                        {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                        {allUsers.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
                       </select>
                     </AField>
                     <AField label="Người tạo (created_by)">
                       <select value={adminForm.created_by} onChange={e => setAdminForm(f => f ? {...f, created_by: e.target.value} : f)} className={aCls}>
                         <option value="">— Chưa xác định —</option>
-                        {allUsers.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                        {allUsers.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
                       </select>
                     </AField>
                   </div>

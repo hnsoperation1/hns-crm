@@ -5,7 +5,7 @@ import { Plus, X, Search, Loader2, CheckCircle2, Circle, Clock, AlertCircle } fr
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth'
 import { useTopbar } from '@/contexts/topbar'
-import { formatDate, getInitials } from '@/lib/utils'
+import { formatDate, getInitials, ROLE_LABELS } from '@/lib/utils'
 import type { Issue, IssueStatus, User, Opportunity } from '@/types'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@ export default function CSKHPage() {
 
   const [issues, setIssues] = useState<IssueRow[]>([])
   const [opps, setOpps] = useState<Pick<Opportunity, 'id' | 'title'>[]>([])
-  const [users, setUsers] = useState<Pick<User, 'id' | 'full_name'>[]>([])
+  const [users, setUsers] = useState<Pick<User, 'id' | 'full_name' | 'role'>[]>([])
   const [loading, setLoading] = useState(true)
   const [showPanel, setShowPanel] = useState(false)
   const [form, setForm] = useState({ ...EMPTY_FORM })
@@ -83,11 +83,11 @@ export default function CSKHPage() {
         .select('*, opportunity:opportunities(id,title), assigned_user:users!assigned_to(id,full_name), creator:users!created_by(id,full_name)')
         .order('created_at', { ascending: false }),
       supabase.from('opportunities').select('id, title').is('deleted_at', null).order('created_at', { ascending: false }),
-      supabase.from('users').select('id, full_name').eq('is_active', true).order('full_name'),
+      supabase.from('users').select('id, full_name, role').eq('is_active', true).order('full_name'),
     ])
     setIssues((i ?? []) as IssueRow[])
     setOpps((o ?? []) as Pick<Opportunity, 'id' | 'title'>[])
-    setUsers((u ?? []) as Pick<User, 'id' | 'full_name'>[])
+    setUsers((u ?? []) as Pick<User, 'id' | 'full_name' | 'role'>[])
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -334,7 +334,7 @@ export default function CSKHPage() {
                 >
                   <option value="">— Chưa giao —</option>
                   {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.full_name}</option>
+                    <option key={u.id} value={u.id}>{ROLE_LABELS[u.role] ?? u.role} - {u.full_name}</option>
                   ))}
                 </select>
               </div>

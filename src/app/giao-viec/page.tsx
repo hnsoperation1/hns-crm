@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/auth'
 import { useTopbar } from '@/contexts/topbar'
 import DateInput from '@/components/DateInput'
-import { formatDate, getInitials } from '@/lib/utils'
+import { formatDate, getInitials, ROLE_LABELS } from '@/lib/utils'
 
 export default function GiaoViecPage() {
   const supabase = createClient()
@@ -201,7 +201,7 @@ export default function GiaoViecPage() {
                   >
                     <option value="">— Chưa giao —</option>
                     {users.map(u => (
-                      <option key={u.id} value={u.id}>{u.full_name}</option>
+                      <option key={u.id} value={u.id}>{ROLE_LABELS[u.role] ?? u.role} - {u.full_name}</option>
                     ))}
                   </select>
                 </div>

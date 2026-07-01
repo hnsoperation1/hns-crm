@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useTopbar } from '@/contexts/topbar'
-import { SOURCE_LABELS, SOURCE_COLORS, formatDate, formatVND, getInitials } from '@/lib/utils'
+import { SOURCE_LABELS, SOURCE_COLORS, formatDate, formatVND, getInitials, ROLE_LABELS } from '@/lib/utils'
 import type { LeadSource } from '@/types'
 
 type Row = {
@@ -21,7 +21,7 @@ type Row = {
   creator: { id: string; full_name: string } | null
 }
 
-type UserOpt = { id: string; full_name: string }
+type UserOpt = { id: string; full_name: string; role: string }
 
 const SOURCES = Object.entries(SOURCE_LABELS) as [LeadSource, string][]
 
@@ -46,7 +46,7 @@ export default function DaXongPage() {
         .is('deleted_at', null)
         .eq('stage', 'stage_5')
         .order('tour_date', { ascending: false }),
-      supabase.from('users').select('id, full_name').eq('is_active', true).order('full_name'),
+      supabase.from('users').select('id, full_name, role').eq('is_active', true).order('full_name'),
     ])
     setRows((data ?? []) as unknown as Row[])
     setUsers((userData ?? []) as UserOpt[])
@@ -87,12 +87,12 @@ export default function DaXongPage() {
         <select value={filterSaleTV} onChange={e => setFilterSaleTV(e.target.value)}
           className="text-xs border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-400 min-w-[150px]">
           <option value="">Tất cả Sale TV</option>
-          {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+          {users.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role] ?? u.role} - {u.full_name}</option>)}
         </select>
         <select value={filterCreator} onChange={e => setFilterCreator(e.target.value)}
           className="text-xs border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-400 min-w-[150px]">
           <option value="">Tất cả người tạo</option>
-          {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+          {users.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role] ?? u.role} - {u.full_name}</option>)}
         </select>
         {hasFilter && (
           <button onClick={() => { setFilterSource(''); setFilterSaleTV(''); setFilterCreator('') }}
