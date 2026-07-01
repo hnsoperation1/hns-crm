@@ -69,6 +69,12 @@ export default function DangLayPage() {
   const [newContact, setNewContact] = useState({ name: '', phone: '', company: '' })
   const [newContactErrors, setNewContactErrors] = useState<{ name?: string; phone?: string }>({})
   const [savingContact, setSavingContact] = useState(false)
+  const [saleChinhSearch, setSaleChinhSearch] = useState('')
+  const [saleChinhDropOpen, setSaleChinhDropOpen] = useState(false)
+  const [showNewSaleChinh, setShowNewSaleChinh] = useState(false)
+  const [newSaleChinh, setNewSaleChinh] = useState({ name: '', type: 'ctv', phone: '' })
+  const [newSaleChinhErrors, setNewSaleChinhErrors] = useState<{ name?: string }>({})
+  const [savingNewSaleChinh, setSavingNewSaleChinh] = useState(false)
 
   // Slide-over xem/sửa
   const [showEditModal, setShowEditModal] = useState(false)
@@ -106,6 +112,8 @@ export default function DangLayPage() {
     setForm({ ...EMPTY_FORM })
     setErrors({})
     setContactSearch('')
+    setSaleChinhSearch('')
+    setShowNewSaleChinh(false)
     const [{ data: c }, { data: u }, { data: st }, { data: sc }] = await Promise.all([
       supabase.from('contacts').select('id, name, phone, company').is('deleted_at', null).order('name').limit(200),
       supabase.from('users').select('id, full_name, role').eq('is_active', true).order('full_name'),
@@ -113,9 +121,12 @@ export default function DangLayPage() {
       supabase.from('sale_chinh').select('id, name, type').eq('is_active', true).order('name'),
     ])
     setContacts((c ?? []) as ContactOpt[])
-    setUsers(((u ?? []) as UserOpt[]).filter(u => u.role === 'sale'))
+    const allUsers = (u ?? []) as UserOpt[]
+    setUsers(allUsers.filter(u => u.role === 'sale'))
     setServiceTypes((st ?? []) as { id: string; name: string; parent_id: string | null }[])
-    setSaleChinhList((sc ?? []) as { id: string; name: string; type: string }[])
+    const usersForSC = allUsers.map(u => ({ id: u.id, name: u.full_name, type: u.role ?? '' }))
+    const externalSC = (sc ?? []) as { id: string; name: string; type: string }[]
+    setSaleChinhList([...usersForSC, ...externalSC].sort((a, b) => a.name.localeCompare(b.name)))
   }
 
   async function handleSave() {
@@ -188,6 +199,26 @@ export default function DangLayPage() {
     }
   }
 
+  async function handleSaveNewSaleChinh() {
+    if (!newSaleChinh.name.trim()) { setNewSaleChinhErrors({ name: 'Bắt buộc' }); return }
+    setSavingNewSaleChinh(true)
+    const { data, error } = await supabase.from('sale_chinh').insert({
+      name: newSaleChinh.name.trim(),
+      type: newSaleChinh.type,
+      phone: newSaleChinh.phone.trim() || null,
+      created_by: user!.id,
+    }).select('id, name, type').single()
+    setSavingNewSaleChinh(false)
+    if (!error && data) {
+      const sc = data as { id: string; name: string; type: string }
+      setSaleChinhList(prev => [...prev, sc].sort((a, b) => a.name.localeCompare(b.name)))
+      setForm(f => ({ ...f, sale_chinh_id: sc.id }))
+      setSaleChinhSearch(sc.name)
+      setShowNewSaleChinh(false)
+      setNewSaleChinh({ name: '', type: 'ctv', phone: '' })
+    }
+  }
+
   async function openSlideOver(r: Row, e: React.MouseEvent) {
     e.stopPropagation()
     setViewRow(r)
@@ -204,8 +235,11 @@ export default function DangLayPage() {
         supabase.from('sale_chinh').select('id, name, type').eq('is_active', true).order('name'),
       ])
       setContacts((c ?? []) as ContactOpt[])
-      setUsers(((u ?? []) as UserOpt[]).filter(u => u.role === 'sale'))
-      setSaleChinhList((sc ?? []) as { id: string; name: string; type: string }[])
+      const allUsers = (u ?? []) as UserOpt[]
+      setUsers(allUsers.filter(u => u.role === 'sale'))
+      const usersForSC = allUsers.map(u => ({ id: u.id, name: u.full_name, type: u.role ?? '' }))
+      const externalSC = (sc ?? []) as { id: string; name: string; type: string }[]
+      setSaleChinhList([...usersForSC, ...externalSC].sort((a, b) => a.name.localeCompare(b.name)))
     }
     const r = viewRow
     setEditId(r.id)
@@ -269,6 +303,14 @@ export default function DangLayPage() {
   const filteredContacts = contacts.filter(c =>
     `${c.name} ${c.phone ?? ''} ${c.company ?? ''}`.toLowerCase().includes(contactSearch.toLowerCase())
   )
+
+  const filteredSaleChinhList = saleChinhList.filter(sc =>
+    sc.name.toLowerCase().includes(saleChinhSearch.toLowerCase())
+  )
+
+  function getSCLabel(type: string) {
+    return SALE_CHINH_TYPE[type] ?? ROLE_LABELS[type] ?? type
+  }
 
   const iField = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400'
 
@@ -484,15 +526,81 @@ export default function DangLayPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="flex items-center h-6 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale chính</label>
-                  <select value={form.sale_chinh_id} onChange={e => setForm(f => ({ ...f, sale_chinh_id: e.target.value }))} className={iField}>
-                    <option value="">— Chọn Sale chính —</option>
-                    {saleChinhList.map(sc => (
-                      <option key={sc.id} value={sc.id}>{SALE_CHINH_TYPE[sc.type] ?? sc.type} · {sc.name}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between h-6 mb-1.5">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Sale chính</label>
+                    <button type="button" onClick={() => { setShowNewSaleChinh(v => !v); setNewSaleChinh({ name: saleChinhSearch, type: 'ctv', phone: '' }) }}
+                      className={`flex items-center gap-1 text-xs font-semibold px-1.5 rounded-lg transition-colors ${showNewSaleChinh ? 'bg-brand-100 text-brand-700' : 'text-brand-600 hover:bg-brand-50'}`}>
+                      <Plus size={12} strokeWidth={2.5} /> Tạo mới
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      value={saleChinhSearch}
+                      onChange={e => { setSaleChinhSearch(e.target.value); setForm(f => ({ ...f, sale_chinh_id: '' })); setSaleChinhDropOpen(true) }}
+                      onFocus={() => setSaleChinhDropOpen(true)}
+                      onBlur={() => setTimeout(() => setSaleChinhDropOpen(false), 150)}
+                      placeholder="Tìm tên nhân viên..."
+                      className={iField}
+                    />
+                    {form.sale_chinh_id && !saleChinhDropOpen && (
+                      <div className="mt-1.5 flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 font-medium">
+                        <span className="text-[10px] font-semibold bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full flex-shrink-0">
+                          {getSCLabel(saleChinhList.find(sc => sc.id === form.sale_chinh_id)?.type ?? '')}
+                        </span>
+                        <span className="truncate">{saleChinhList.find(sc => sc.id === form.sale_chinh_id)?.name}</span>
+                        <button type="button" onClick={() => { setForm(f => ({ ...f, sale_chinh_id: '' })); setSaleChinhSearch('') }} className="ml-auto flex-shrink-0 text-slate-400 hover:text-slate-600"><X size={13} /></button>
+                      </div>
+                    )}
+                    {saleChinhDropOpen && (
+                      <div className="absolute left-0 right-0 top-full mt-1 border border-gray-200 rounded-xl bg-white shadow-lg z-20 overflow-hidden max-h-44 overflow-y-auto">
+                        {filteredSaleChinhList.slice(0, 30).map(sc => (
+                          <div key={sc.id} onMouseDown={() => { setForm(f => ({ ...f, sale_chinh_id: sc.id })); setSaleChinhSearch(sc.name); setSaleChinhDropOpen(false) }}
+                            className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm transition-colors ${form.sale_chinh_id === sc.id ? 'bg-slate-50 text-slate-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 bg-slate-100 text-slate-600 whitespace-nowrap">{getSCLabel(sc.type)}</span>
+                            <span className="font-medium truncate">{sc.name}</span>
+                          </div>
+                        ))}
+                        {filteredSaleChinhList.length === 0 && (
+                          <div className="px-3 py-4 text-sm text-gray-400 text-center">
+                            Không tìm thấy —{' '}
+                            <button type="button" onMouseDown={() => { setShowNewSaleChinh(true); setNewSaleChinh({ name: saleChinhSearch, type: 'ctv', phone: '' }); setSaleChinhDropOpen(false) }}
+                              className="text-brand-600 font-semibold hover:underline">tạo mới</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* Tạo Sale chính mới (ngoài công ty) */}
+              {showNewSaleChinh && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <p className="text-xs font-semibold text-slate-600 mb-2">Sale chính ngoài công ty</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input value={newSaleChinh.name} onChange={e => { setNewSaleChinh(v => ({ ...v, name: e.target.value })); setNewSaleChinhErrors({}) }}
+                      placeholder="Tên *" autoFocus
+                      className={`${iField} text-sm py-2 ${newSaleChinhErrors.name ? 'border-red-300 bg-red-50' : ''}`} />
+                    <select value={newSaleChinh.type} onChange={e => setNewSaleChinh(v => ({ ...v, type: e.target.value }))}
+                      className={`${iField} text-sm py-2`}>
+                      {Object.entries(SALE_CHINH_TYPE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                    <input value={newSaleChinh.phone} onChange={e => setNewSaleChinh(v => ({ ...v, phone: e.target.value }))}
+                      placeholder="SĐT" className={`${iField} text-sm py-2`} />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={handleSaveNewSaleChinh} disabled={savingNewSaleChinh}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-600 hover:bg-slate-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors">
+                      {savingNewSaleChinh ? <Loader2 size={11} className="animate-spin" /> : null}
+                      Lưu & chọn
+                    </button>
+                    <button type="button" onClick={() => { setShowNewSaleChinh(false); setNewSaleChinhErrors({}) }}
+                      className="px-3 py-1.5 text-xs text-gray-500 hover:bg-white rounded-lg transition-colors font-medium">
+                      Huỷ
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Loại dịch vụ */}
               {serviceTypes.length > 0 && (() => {
@@ -604,7 +712,7 @@ export default function DangLayPage() {
                 {[
                   { label: 'Liên hệ', value: viewRow.contact?.name ?? '—' },
                   { label: 'Nguồn', value: SOURCE_LABELS[viewRow.source as keyof typeof SOURCE_LABELS] ?? viewRow.source },
-                  { label: 'Sale chính', value: viewRow.sale_chinh ? `${SALE_CHINH_TYPE[viewRow.sale_chinh.type] ?? viewRow.sale_chinh.type} · ${viewRow.sale_chinh.name}` : <span className="text-gray-300">—</span> },
+                  { label: 'Sale chính', value: viewRow.sale_chinh ? `${getSCLabel(viewRow.sale_chinh.type)} · ${viewRow.sale_chinh.name}` : <span className="text-gray-300">—</span> },
                   { label: 'Sale phụ trách', value: viewRow.assigned_user?.full_name ?? <span className="text-amber-600 font-semibold text-xs bg-amber-50 px-2 py-0.5 rounded-full">Chờ phân công</span> },
                   { label: 'Điểm đến / Mô tả', value: viewRow.description || <span className="text-gray-300">—</span> },
                   { label: 'Giá trị ước tính', value: viewRow.estimated_value ? formatVND(viewRow.estimated_value) : <span className="text-gray-300">—</span> },
@@ -671,17 +779,15 @@ export default function DangLayPage() {
                     {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </div>
-                {saleChinhList.length > 0 && (
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale chính</label>
-                    <select value={editForm.sale_chinh_id} onChange={e => setEditForm(f => ({ ...f, sale_chinh_id: e.target.value }))} className={iField}>
-                      <option value="">— Chọn Sale chính —</option>
-                      {saleChinhList.map(sc => (
-                        <option key={sc.id} value={sc.id}>{SALE_CHINH_TYPE[sc.type] ?? sc.type} · {sc.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale chính</label>
+                  <select value={editForm.sale_chinh_id} onChange={e => setEditForm(f => ({ ...f, sale_chinh_id: e.target.value }))} className={iField}>
+                    <option value="">— Chọn Sale chính —</option>
+                    {saleChinhList.map(sc => (
+                      <option key={sc.id} value={sc.id}>{getSCLabel(sc.type)} · {sc.name}</option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Điểm đến / Mô tả</label>
                   <textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
