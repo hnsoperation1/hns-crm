@@ -504,6 +504,14 @@ export default function CongViecPage() {
                   return (
                     <tr key={task.id} className="hover:bg-gray-50/60 group">
                       <td className="px-4 py-2.5 text-xs text-gray-400 font-mono">{startIdx + i + 1}</td>
+                      {/* Đơn hàng */}
+                      <td className="px-4 py-2.5">
+                        {task.opportunity
+                          ? <Link href={`/don-hang/${task.opportunity.id}`} className="text-xs text-gray-500 hover:text-accent-500 flex items-center gap-1 truncate max-w-[160px]">
+                              <ShoppingBag size={9} />{task.opportunity.title}
+                            </Link>
+                          : <span className="text-xs text-gray-300">—</span>}
+                      </td>
                       {/* Tên công việc */}
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
@@ -516,14 +524,6 @@ export default function CongViecPage() {
                           )}
                           <Link href={`/cong-viec/${task.id}`} className={`text-xs font-medium hover:underline ${task.is_done ? 'line-through text-gray-400' : 'text-gray-800 hover:text-accent-600'}`}>{task.title}</Link>
                         </div>
-                      </td>
-                      {/* Đơn hàng */}
-                      <td className="px-4 py-2.5">
-                        {task.opportunity
-                          ? <Link href={`/don-hang/${task.opportunity.id}`} className="text-xs text-gray-500 hover:text-accent-500 flex items-center gap-1 truncate max-w-[160px]">
-                              <ShoppingBag size={9} />{task.opportunity.title}
-                            </Link>
-                          : <span className="text-xs text-gray-300">—</span>}
                       </td>
                       {/* Báo cáo = tình trạng + tiến độ subtask */}
                       <td className="px-4 py-2.5">
@@ -613,8 +613,8 @@ export default function CongViecPage() {
                             <thead>
                               <tr className="border-b border-gray-100">
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-10">STT</th>
-                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300">Tên công việc</th>
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-44">Đơn hàng</th>
+                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300">Tên công việc</th>
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-44">NV báo cáo</th>
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-44">Quản lí xác nhận</th>
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-36">Hạn hoàn thành</th>
@@ -634,8 +634,8 @@ export default function CongViecPage() {
                       <thead>
                         <tr className="bg-gray-50 border-b border-gray-200">
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-10">STT</th>
-                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400">Tên công việc</th>
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Đơn hàng</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400">Tên công việc</th>
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">NV báo cáo</th>
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Quản lí xác nhận</th>
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Hạn hoàn thành</th>

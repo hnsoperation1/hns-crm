@@ -18,14 +18,14 @@ export function formatDate(d: string | null | undefined): string {
   return `${day}/${m}/${y}`
 }
 
-const NOW = new Date('2026-06-08')
-
 export function daysUntil(dateStr: string): number {
-  return Math.floor((new Date(dateStr).getTime() - NOW.getTime()) / 86400000)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  return Math.floor((new Date(dateStr).getTime() - today.getTime()) / 86400000)
 }
 
 export function daysSince(dateStr: string): number {
-  return Math.floor((NOW.getTime() - new Date(dateStr).getTime()) / 86400000)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  return Math.floor((today.getTime() - new Date(dateStr).getTime()) / 86400000)
 }
 
 export const STAGE_LABELS: Record<OppStage, string> = {
