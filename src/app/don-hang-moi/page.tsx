@@ -395,12 +395,12 @@ export default function DangLayPage() {
               <div className="grid grid-cols-3 gap-3">
                 {/* Liên hệ */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center justify-between h-6 mb-1.5">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Liên hệ <span className="text-red-500">*</span>
                     </label>
                     <button type="button" onClick={() => { setShowNewContact(v => !v); setNewContact({ name: contactSearch, phone: '', company: '' }) }}
-                      className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${showNewContact ? 'bg-brand-100 text-brand-700' : 'text-brand-600 hover:bg-brand-50'}`}>
+                      className={`flex items-center gap-1 text-xs font-semibold px-1.5 rounded-lg transition-colors ${showNewContact ? 'bg-brand-100 text-brand-700' : 'text-brand-600 hover:bg-brand-50'}`}>
                       <Plus size={12} strokeWidth={2.5} /> Tạo mới
                     </button>
                   </div>
@@ -449,7 +449,7 @@ export default function DangLayPage() {
 
                 {/* Sale TV */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale phụ trách</label>
+                  <label className="flex items-center h-6 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale phụ trách</label>
                   <select value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))} className={iField}>
                     <option value="">— Chọn Sale TV —</option>
                     {users.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
@@ -458,7 +458,7 @@ export default function DangLayPage() {
 
                 {/* Nguồn */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nguồn</label>
+                  <label className="flex items-center h-6 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nguồn</label>
                   <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value as LeadSource }))} className={iField}>
                     {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
