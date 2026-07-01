@@ -54,7 +54,7 @@ export default function DangLayPage() {
   const [showModal, setShowModal] = useState(false)
   const [contacts, setContacts] = useState<ContactOpt[]>([])
   const [users, setUsers] = useState<UserOpt[]>([])
-  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string }[]>([])
+  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; parent_id: string | null }[]>([])
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [errors, setErrors] = useState<Partial<typeof EMPTY_FORM>>({})
   const [saving, setSaving] = useState(false)
@@ -104,11 +104,11 @@ export default function DangLayPage() {
     const [{ data: c }, { data: u }, { data: st }] = await Promise.all([
       supabase.from('contacts').select('id, name, phone, company').is('deleted_at', null).order('name').limit(200),
       supabase.from('users').select('id, full_name, role').eq('is_active', true).order('full_name'),
-      supabase.from('service_types').select('id, name').order('sort_order').order('name'),
+      supabase.from('service_types').select('id, name, parent_id').order('sort_order').order('name'),
     ])
     setContacts((c ?? []) as ContactOpt[])
     setUsers(((u ?? []) as UserOpt[]).filter(u => u.role === 'sale'))
-    setServiceTypes((st ?? []) as { id: string; name: string }[])
+    setServiceTypes((st ?? []) as { id: string; name: string; parent_id: string | null }[])
   }
 
   async function handleSave() {
@@ -467,15 +467,30 @@ export default function DangLayPage() {
               </div>
 
               {/* Loại dịch vụ */}
-              {serviceTypes.length > 0 && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Loại dịch vụ</label>
-                  <select value={form.service_type_id} onChange={e => setForm(f => ({ ...f, service_type_id: e.target.value }))} className={iField}>
-                    <option value="">— Chọn loại dịch vụ —</option>
-                    {serviceTypes.map(st => <option key={st.id} value={st.id}>{st.name}</option>)}
-                  </select>
-                </div>
-              )}
+              {serviceTypes.length > 0 && (() => {
+                const parents  = serviceTypes.filter(s => !s.parent_id)
+                const children = serviceTypes.filter(s =>  s.parent_id)
+                const hasTree  = parents.length > 0 && children.length > 0
+                return (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Loại dịch vụ</label>
+                    <select value={form.service_type_id} onChange={e => setForm(f => ({ ...f, service_type_id: e.target.value }))} className={iField}>
+                      <option value="">— Chọn loại dịch vụ —</option>
+                      {hasTree
+                        ? parents.map(p => {
+                            const kids = children.filter(c => c.parent_id === p.id)
+                            return kids.length > 0
+                              ? <optgroup key={p.id} label={p.name}>
+                                  {kids.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </optgroup>
+                              : <option key={p.id} value={p.id}>{p.name}</option>
+                          })
+                        : serviceTypes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)
+                      }
+                    </select>
+                  </div>
+                )
+              })()}
 
               {/* Sub-form tạo khách hàng mới — full width */}
               {showNewContact && (
