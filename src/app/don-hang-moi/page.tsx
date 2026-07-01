@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useTopbar } from '@/contexts/topbar'
 import { useAuth } from '@/contexts/auth'
@@ -42,7 +42,6 @@ const EMPTY_FORM = {
 }
 
 export default function DangLayPage() {
-  const router = useRouter()
   const { setOnRefresh, setBreadcrumb } = useTopbar()
   const { user } = useAuth()
   const supabase = createClient()
@@ -332,7 +331,7 @@ export default function DangLayPage() {
             ) : filtered.map(r => {
               const sc = STAGE_COLORS[r.stage]
               return (
-                <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/don-hang-moi/${r.id}`)}>
+                <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => { setViewRow(r); setEditMode(false); setShowEditModal(true) }}>
                   <td className="px-5 py-3.5">
                     <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{r.title}</div>
                     <div className="text-xs text-gray-400 mt-0.5">{r.contact?.company ?? r.contact?.name}</div>
@@ -659,10 +658,10 @@ export default function DangLayPage() {
             <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
               {!editMode ? (
                 <>
-                  <button onClick={() => router.push(`/don-hang-moi/${viewRow.id}`)}
+                  <Link href={`/don-hang/${viewRow.id}`}
                     className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-brand-600 font-medium transition-colors">
-                    <Eye size={14} /> Mở trang chi tiết
-                  </button>
+                    <Eye size={14} /> Xem chi tiết đầy đủ
+                  </Link>
                   <button onClick={enterEditMode}
                     className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-accent-500 hover:bg-accent-600 text-white text-sm font-semibold transition-colors">
                     <Pencil size={13} /> Sửa

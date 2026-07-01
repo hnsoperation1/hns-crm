@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { ChevronRight, X, Eye } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useTopbar } from '@/contexts/topbar'
 import { STAGE_LABELS, STAGE_COLORS, SOURCE_LABELS, SOURCE_COLORS, formatDate, formatVND, getInitials, daysUntil, ROLE_LABELS } from '@/lib/utils'
@@ -27,7 +28,6 @@ type UserOpt = { id: string; full_name: string; role: string }
 const SOURCES = Object.entries(SOURCE_LABELS) as [LeadSource, string][]
 
 export default function DangThucHienPage() {
-  const router = useRouter()
   const { setOnRefresh, setBreadcrumb } = useTopbar()
   const supabase = createClient()
 
@@ -37,6 +37,7 @@ export default function DangThucHienPage() {
   const [filterSource, setFilterSource] = useState('')
   const [filterSaleTV, setFilterSaleTV] = useState('')
   const [filterCreator, setFilterCreator] = useState('')
+  const [slideRow, setSlideRow] = useState<Row | null>(null)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -74,6 +75,7 @@ export default function DangThucHienPage() {
   const cols = ['Đơn hàng', 'Giai đoạn', 'Nguồn', 'Sale TV', 'Điểm đến', 'Ngày đi', 'Ngày về', 'Còn lại', 'Giá trị']
 
   return (
+    <>
     <div className="flex flex-col h-full">
       {/* Filter bar */}
       <div className="flex-shrink-0 px-5 py-3 border-b border-gray-100 bg-white flex items-center gap-2 flex-wrap">
@@ -129,7 +131,7 @@ export default function DangThucHienPage() {
               const isPast = daysLeft !== null && daysLeft < 0
               const isUrgent = daysLeft !== null && daysLeft > 0 && daysLeft <= 3
               return (
-                <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/don-hang-dang-lam/${r.id}`)}>
+                <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => setSlideRow(r)}>
                   <td className="px-5 py-3.5">
                     <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{r.title}</div>
                     <div className="text-xs text-gray-400 mt-0.5">{r.contact?.company ?? r.contact?.name}</div>
@@ -170,5 +172,51 @@ export default function DangThucHienPage() {
         </table>
       </div>
     </div>
+
+    {slideRow && (
+      <>
+        <div className="fixed inset-0 bg-black/30 z-40" onClick={() => setSlideRow(null)} />
+        <div className="fixed top-0 right-0 h-full w-[480px] bg-white shadow-2xl z-50 flex flex-col">
+          <button onClick={() => setSlideRow(null)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full bg-white border border-gray-200 border-r-0 rounded-l-xl px-1.5 py-3 text-gray-400 hover:text-gray-700 hover:bg-gray-50 shadow-sm transition-colors">
+            <ChevronRight size={16} />
+          </button>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-gray-900 truncate">{slideRow.title}</h2>
+                {(() => { const sc = STAGE_COLORS[slideRow.stage]; return <span className={`flex-shrink-0 inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${sc.bg} ${sc.text}`}>{STAGE_LABELS[slideRow.stage]}</span> })()}
+              </div>
+              <p className="text-xs text-gray-400 mt-0.5">{slideRow.contact?.company ?? slideRow.contact?.name ?? '—'}</p>
+            </div>
+            <button onClick={() => setSlideRow(null)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 flex-shrink-0 ml-2"><X size={18} /></button>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+            {[
+              { label: 'Liên hệ', value: slideRow.contact?.name ?? '—' },
+              { label: 'Nguồn', value: slideRow.source ? (SOURCE_LABELS[slideRow.source] ?? slideRow.source) : '—' },
+              { label: 'Sale phụ trách', value: slideRow.assigned_user?.full_name ?? 'Chờ phân công' },
+              { label: 'Điểm đến / Mô tả', value: slideRow.description ?? '—' },
+              { label: 'Ngày đi', value: formatDate(slideRow.tour_date) || '—' },
+              { label: 'Ngày về', value: formatDate(slideRow.tour_end_date) || '—' },
+              { label: 'Giá trị ước tính', value: slideRow.estimated_value ? formatVND(slideRow.estimated_value) : '—' },
+              { label: 'Người tạo', value: slideRow.creator?.full_name ?? '—' },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex gap-3">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider w-36 flex-shrink-0 pt-0.5">{label}</span>
+                <span className="text-sm text-gray-800">{value}</span>
+              </div>
+            ))}
+          </div>
+          <div className="px-6 py-4 border-t border-gray-200 flex-shrink-0">
+            <Link href={`/don-hang/${slideRow.id}`}
+              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-brand-600 font-medium transition-colors">
+              <Eye size={14} /> Xem chi tiết đầy đủ
+            </Link>
+          </div>
+        </div>
+      </>
+    )}
+    </>
   )
 }
