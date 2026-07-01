@@ -101,6 +101,7 @@ export default function CongViecPage() {
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [rejectNote, setRejectNote] = useState('')
   const [slideTask, setSlideTask] = useState<TaskRow | null>(null)
+  const [slideSubtasks, setSlideSubtasks] = useState<{ id: string; title: string; is_done: boolean }[]>([])
 
   // Quick create modal
   const [createDraft, setCreateDraft] = useState<{ status: TaskStatus; due_date: string } | null>(null)
@@ -193,6 +194,13 @@ export default function CongViecPage() {
   function getUserName(uid: string | null | undefined) {
     if (!uid) return null
     return allUsers.find(u => u.id === uid)?.full_name ?? null
+  }
+
+  async function openTaskSlide(task: TaskRow) {
+    setSlideTask(task)
+    setSlideSubtasks([])
+    const { data } = await supabase.from('tasks').select('id, title, is_done').eq('parent_id', task.id).order('created_at')
+    setSlideSubtasks((data ?? []) as { id: string; title: string; is_done: boolean }[])
   }
 
   function openCreate(status: TaskStatus, due_date = '') {
@@ -525,7 +533,7 @@ export default function CongViecPage() {
                             </button>
                           )}
                           <span className={`text-xs font-medium ${task.is_done ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.title}</span>
-                          <button onClick={() => setSlideTask(task)}
+                          <button onClick={() => openTaskSlide(task)}
                             className="flex-shrink-0 flex items-center gap-1 text-[11px] text-brand-600 hover:text-brand-800 font-medium px-1.5 py-0.5 rounded-lg hover:bg-brand-50 transition-colors opacity-0 group-hover:opacity-100">
                             <Eye size={11} /> Xem
                           </button>
@@ -967,18 +975,32 @@ export default function CongViecPage() {
                   </div>
                 )}
 
-                {/* Tiến độ subtask */}
-                {sub && (
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Tiến độ nhiệm vụ</p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-2 bg-emerald-400 rounded-full transition-all" style={{ width: `${Math.round(sub.done / sub.total * 100)}%` }} />
+                {/* Tasks con */}
+                {slideSubtasks.length > 0 && (() => {
+                  const doneCount = slideSubtasks.filter(s => s.is_done).length
+                  const pct = Math.round(doneCount / slideSubtasks.length * 100)
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Nhiệm vụ con</p>
+                        <span className="text-[10px] font-bold text-gray-500">{doneCount}/{slideSubtasks.length} · {pct}%</span>
                       </div>
-                      <span className="text-xs font-bold text-gray-500">{sub.done}/{sub.total}</span>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
+                        <div className="h-1.5 bg-emerald-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="space-y-2">
+                        {slideSubtasks.map(s => (
+                          <div key={s.id} className="flex items-start gap-2">
+                            {s.is_done
+                              ? <CheckCircle2 size={13} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                              : <Square size={13} className="text-gray-300 flex-shrink-0 mt-0.5" />}
+                            <span className={`text-xs leading-snug ${s.is_done ? 'line-through text-gray-400' : 'text-gray-700'}`}>{s.title}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
 
                 {/* Quản lí xác nhận */}
                 <div>
