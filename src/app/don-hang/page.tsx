@@ -97,7 +97,7 @@ export default function DonHangCuaToiPage() {
 
   const hasFilter = filterStage !== 'all' || filterSource || filterSaleTV || filterCreator || search
 
-  const cols = ['Đơn hàng', 'Nhân sự', 'Giai đoạn', 'Nguồn', 'Điểm đến', 'Ngày đi', 'Ngày về', 'Còn lại', 'Giá trị']
+  const cols = ['Đơn hàng', 'Nhân sự', 'Giai đoạn', 'Nguồn', 'Điểm đến', 'Ngày tour', 'Còn lại', 'Giá trị']
 
   return (
     <div className="flex flex-col h-full">
@@ -175,13 +175,13 @@ export default function DonHangCuaToiPage() {
             {loading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <tr key={i} className="animate-pulse">
-                  {[28, 22, 14, 12, 18, 12, 12, 10, 12].map((w, j) => (
+                  {[28, 22, 14, 12, 18, 14, 10, 12].map((w, j) => (
                     <td key={j} className="px-5 py-4"><div className="h-3 bg-gray-100 rounded" style={{ width: `${w + (i % 3) * 4}%` }} /></td>
                   ))}
                 </tr>
               ))
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={9} className="px-5 py-16 text-center text-gray-400">Không có đơn nào</td></tr>
+              <tr><td colSpan={8} className="px-5 py-16 text-center text-gray-400">Không có đơn nào</td></tr>
             ) : filtered.map(r => {
               const sc = STAGE_COLORS[r.stage]
               const daysLeft = r.tour_date ? daysUntil(r.tour_date) : null
@@ -235,8 +235,12 @@ export default function DonHangCuaToiPage() {
                     </div>
                   </td>
                   <td className="px-5 py-3.5 text-gray-600">{r.description || <span className="text-gray-300">—</span>}</td>
-                  <td className="px-5 py-3.5 whitespace-nowrap text-gray-700">{formatDate(r.tour_date)}</td>
-                  <td className="px-5 py-3.5 whitespace-nowrap text-gray-700">{formatDate(r.tour_end_date)}</td>
+                  <td className="px-5 py-3.5">
+                    <div className="text-xs text-gray-600 space-y-0.5 whitespace-nowrap">
+                      <div><span className="text-[10px] font-semibold text-gray-400 inline-block w-5">Đi</span>{formatDate(r.tour_date) || <span className="text-gray-300">—</span>}</div>
+                      <div><span className="text-[10px] font-semibold text-gray-400 inline-block w-5">Về</span>{formatDate(r.tour_end_date) || <span className="text-gray-300">—</span>}</div>
+                    </div>
+                  </td>
                   <td className="px-5 py-3.5 whitespace-nowrap">
                     {daysLeft === null ? <span className="text-gray-300">—</span>
                       : isToday ? <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Hôm nay</span>
