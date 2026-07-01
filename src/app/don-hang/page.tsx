@@ -20,7 +20,9 @@ type Row = {
   created_by: string | null
   contact: { name: string; company?: string } | null
   assigned_user: { id: string; full_name: string } | null
+  operator: { id: string; full_name: string } | null
   creator: { id: string; full_name: string } | null
+  sale_chinh: { id: string; name: string } | null
 }
 
 type UserOpt = { id: string; full_name: string; role: string }
@@ -50,7 +52,7 @@ export default function DonHangCuaToiPage() {
     const [{ data: oppData }, { data: userData }] = await Promise.all([
       supabase
         .from('opportunities')
-        .select('id, title, description, stage, source, tour_date, tour_end_date, estimated_value, created_by, contact:contacts(name, company), assigned_user:users!assigned_to(id, full_name), creator:users!created_by(id, full_name)')
+        .select('id, title, description, stage, source, tour_date, tour_end_date, estimated_value, created_by, contact:contacts(name, company), assigned_user:users!assigned_to(id, full_name), operator:users!operator_id(id, full_name), creator:users!created_by(id, full_name), sale_chinh:sale_chinh!sale_chinh_id(id,name)')
         .is('deleted_at', null)
         .not('stage', 'in', '(lost,cancelled)')
         .order('created_at', { ascending: false }),
@@ -189,15 +191,36 @@ export default function DonHangCuaToiPage() {
               return (
                 <tr key={r.id} className="hover:bg-gray-50/70 group transition-colors cursor-pointer" onClick={() => router.push(`/don-hang/${r.id}`)}>
                   <td className="px-5 py-3.5">
-                    <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{r.title}</div>
-                    <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
-                      <span>{r.contact?.company ?? r.contact?.name}</span>
-                      {r.assigned_user && (
-                        <span className="flex items-center gap-1">
-                          <span className="w-4 h-4 bg-slate-200 rounded-full inline-flex items-center justify-center text-[9px] font-bold text-slate-600">{getInitials(r.assigned_user.full_name)}</span>
-                          {r.assigned_user.full_name}
-                        </span>
-                      )}
+                    <div className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors mb-1">{r.title}</div>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span className="text-[10px] font-semibold text-gray-400 w-20 flex-shrink-0">Khách hàng</span>
+                        <span className="truncate">{r.contact?.company ?? r.contact?.name ?? '—'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span className="text-[10px] font-semibold text-gray-400 w-20 flex-shrink-0">Sale tư vấn</span>
+                        {r.assigned_user
+                          ? <span className="flex items-center gap-1">
+                              <span className="w-4 h-4 bg-brand-100 rounded-full inline-flex items-center justify-center text-[9px] font-bold text-brand-600 flex-shrink-0">{getInitials(r.assigned_user.full_name)}</span>
+                              {r.assigned_user.full_name}
+                            </span>
+                          : <span className="text-gray-300">—</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span className="text-[10px] font-semibold text-gray-400 w-20 flex-shrink-0">Điều hành</span>
+                        {r.operator
+                          ? <span className="flex items-center gap-1">
+                              <span className="w-4 h-4 bg-slate-200 rounded-full inline-flex items-center justify-center text-[9px] font-bold text-slate-600 flex-shrink-0">{getInitials(r.operator.full_name)}</span>
+                              {r.operator.full_name}
+                            </span>
+                          : <span className="text-gray-300">—</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <span className="text-[10px] font-semibold text-gray-400 w-20 flex-shrink-0">Sale chính</span>
+                        {r.sale_chinh
+                          ? <span>{r.sale_chinh.name}</span>
+                          : <span className="text-gray-300">—</span>}
+                      </div>
                     </div>
                   </td>
                   <td className="px-5 py-3.5">

@@ -20,6 +20,7 @@ type Row = {
   contact: { name: string; company?: string } | null
   assigned_user: { id: string; full_name: string } | null
   creator: { id: string; full_name: string } | null
+  sale_chinh: { id: string; name: string; type: string } | null
 }
 
 type ContactOpt = { id: string; name: string; phone?: string | null; company?: string | null }
@@ -38,7 +39,11 @@ const SOURCES: { value: LeadSource; label: string }[] = [
 ]
 
 const EMPTY_FORM = {
-  title: '', description: '', contact_id: '', source: 'mkt' as LeadSource, assigned_to: '', service_type_id: '',
+  title: '', description: '', contact_id: '', source: 'mkt' as LeadSource, assigned_to: '', service_type_id: '', sale_chinh_id: '',
+}
+
+const SALE_CHINH_TYPE: Record<string, string> = {
+  nhan_vien: 'Nhân viên', ctv: 'CTV', doi_tac: 'Đối tác', khac: 'Khác',
 }
 
 export default function DangLayPage() {
@@ -54,6 +59,7 @@ export default function DangLayPage() {
   const [contacts, setContacts] = useState<ContactOpt[]>([])
   const [users, setUsers] = useState<UserOpt[]>([])
   const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; parent_id: string | null }[]>([])
+  const [saleChinhList, setSaleChinhList] = useState<{ id: string; name: string; type: string }[]>([])
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [errors, setErrors] = useState<Partial<typeof EMPTY_FORM>>({})
   const [saving, setSaving] = useState(false)
@@ -69,7 +75,7 @@ export default function DangLayPage() {
   const [editMode, setEditMode] = useState(false)
   const [viewRow, setViewRow] = useState<Row | null>(null)
   const [editId, setEditId] = useState('')
-  const [editForm, setEditForm] = useState({ title: '', description: '', contact_id: '', source: 'mkt' as LeadSource, assigned_to: '', estimated_value: '' })
+  const [editForm, setEditForm] = useState({ title: '', description: '', contact_id: '', source: 'mkt' as LeadSource, assigned_to: '', estimated_value: '', sale_chinh_id: '' })
   const [editContactSearch, setEditContactSearch] = useState('')
   const [editContactDropOpen, setEditContactDropOpen] = useState(false)
   const [editSaving, setEditSaving] = useState(false)
@@ -79,7 +85,7 @@ export default function DangLayPage() {
     setLoading(true)
     const { data } = await supabase
       .from('opportunities')
-      .select('id, title, description, stage, source, estimated_value, created_at, contact:contacts(name, company), assigned_user:users!assigned_to(id, full_name), creator:users!created_by(id, full_name)')
+      .select('id, title, description, stage, source, estimated_value, created_at, contact:contacts(name, company), assigned_user:users!assigned_to(id, full_name), creator:users!created_by(id, full_name), sale_chinh:sale_chinh!sale_chinh_id(id,name,type)')
       .is('deleted_at', null)
       .in('stage', ['stage_0'])
       .order('created_at', { ascending: false })
@@ -100,14 +106,16 @@ export default function DangLayPage() {
     setForm({ ...EMPTY_FORM })
     setErrors({})
     setContactSearch('')
-    const [{ data: c }, { data: u }, { data: st }] = await Promise.all([
+    const [{ data: c }, { data: u }, { data: st }, { data: sc }] = await Promise.all([
       supabase.from('contacts').select('id, name, phone, company').is('deleted_at', null).order('name').limit(200),
       supabase.from('users').select('id, full_name, role').eq('is_active', true).order('full_name'),
       supabase.from('service_types').select('id, name, parent_id').order('sort_order').order('name'),
+      supabase.from('sale_chinh').select('id, name, type').eq('is_active', true).order('name'),
     ])
     setContacts((c ?? []) as ContactOpt[])
     setUsers(((u ?? []) as UserOpt[]).filter(u => u.role === 'sale'))
     setServiceTypes((st ?? []) as { id: string; name: string; parent_id: string | null }[])
+    setSaleChinhList((sc ?? []) as { id: string; name: string; type: string }[])
   }
 
   async function handleSave() {
@@ -126,6 +134,7 @@ export default function DangLayPage() {
       source: form.source,
       assigned_to: form.assigned_to || null,
       service_type_id: form.service_type_id || null,
+      sale_chinh_id: form.sale_chinh_id || null,
       stage: 'stage_0' as OppStage,
       stage_updated_at: new Date().toISOString(),
       created_by: user!.id,
@@ -189,12 +198,14 @@ export default function DangLayPage() {
   async function enterEditMode() {
     if (!viewRow) return
     if (contacts.length === 0) {
-      const [{ data: c }, { data: u }] = await Promise.all([
+      const [{ data: c }, { data: u }, { data: sc }] = await Promise.all([
         supabase.from('contacts').select('id, name, phone, company').is('deleted_at', null).order('name').limit(200),
         supabase.from('users').select('id, full_name, role').eq('is_active', true).order('full_name'),
+        supabase.from('sale_chinh').select('id, name, type').eq('is_active', true).order('name'),
       ])
       setContacts((c ?? []) as ContactOpt[])
       setUsers(((u ?? []) as UserOpt[]).filter(u => u.role === 'sale'))
+      setSaleChinhList((sc ?? []) as { id: string; name: string; type: string }[])
     }
     const r = viewRow
     setEditId(r.id)
@@ -206,9 +217,13 @@ export default function DangLayPage() {
       source: r.source as LeadSource,
       assigned_to: r.assigned_user?.id ?? '',
       estimated_value: r.estimated_value ? String(r.estimated_value) : '',
+      sale_chinh_id: r.sale_chinh?.id ?? '',
     })
-    const { data: fullOpp } = await supabase.from('opportunities').select('contact_id').eq('id', r.id).single()
-    if (fullOpp) setEditForm(f => ({ ...f, contact_id: fullOpp.contact_id ?? '' }))
+    const { data: fullOpp } = await supabase.from('opportunities').select('contact_id, sale_chinh_id').eq('id', r.id).single()
+    if (fullOpp) {
+      const opp = fullOpp as unknown as { contact_id: string | null; sale_chinh_id: string | null }
+      setEditForm(f => ({ ...f, contact_id: opp.contact_id ?? '', sale_chinh_id: opp.sale_chinh_id ?? '' }))
+    }
     setEditErrors({})
     setEditMode(true)
   }
@@ -226,12 +241,13 @@ export default function DangLayPage() {
       source: editForm.source,
       assigned_to: editForm.assigned_to || null,
       estimated_value: editForm.estimated_value ? Number(editForm.estimated_value) : null,
+      sale_chinh_id: editForm.sale_chinh_id || null,
       updated_at: new Date().toISOString(),
     }).eq('id', editId)
     setEditSaving(false)
     if (!error) {
-      // Cập nhật viewRow để chế độ xem hiển thị đúng
       const updatedUser = users.find(u => u.id === editForm.assigned_to)
+      const updatedSaleChinh = saleChinhList.find(sc => sc.id === editForm.sale_chinh_id)
       setViewRow(prev => prev ? {
         ...prev,
         title: editForm.title.trim(),
@@ -239,6 +255,7 @@ export default function DangLayPage() {
         source: editForm.source,
         estimated_value: editForm.estimated_value ? Number(editForm.estimated_value) : null,
         assigned_user: updatedUser ? { id: updatedUser.id, full_name: updatedUser.full_name } : null,
+        sale_chinh: updatedSaleChinh ? { id: updatedSaleChinh.id, name: updatedSaleChinh.name, type: updatedSaleChinh.type } : null,
       } : prev)
       setEditMode(false)
       loadData()
@@ -491,6 +508,19 @@ export default function DangLayPage() {
                 )
               })()}
 
+              {/* Sale chính */}
+              {saleChinhList.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale chính</label>
+                  <select value={form.sale_chinh_id} onChange={e => setForm(f => ({ ...f, sale_chinh_id: e.target.value }))} className={iField}>
+                    <option value="">— Chọn Sale chính —</option>
+                    {saleChinhList.map(sc => (
+                      <option key={sc.id} value={sc.id}>{SALE_CHINH_TYPE[sc.type] ?? sc.type} · {sc.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Sub-form tạo khách hàng mới — full width */}
               {showNewContact && (
                 <div className="p-3 bg-brand-50 border border-brand-100 rounded-xl space-y-2">
@@ -575,6 +605,7 @@ export default function DangLayPage() {
                 {[
                   { label: 'Liên hệ', value: viewRow.contact?.name ?? '—' },
                   { label: 'Nguồn', value: SOURCE_LABELS[viewRow.source as keyof typeof SOURCE_LABELS] ?? viewRow.source },
+                  { label: 'Sale chính', value: viewRow.sale_chinh ? `${SALE_CHINH_TYPE[viewRow.sale_chinh.type] ?? viewRow.sale_chinh.type} · ${viewRow.sale_chinh.name}` : <span className="text-gray-300">—</span> },
                   { label: 'Sale phụ trách', value: viewRow.assigned_user?.full_name ?? <span className="text-amber-600 font-semibold text-xs bg-amber-50 px-2 py-0.5 rounded-full">Chờ phân công</span> },
                   { label: 'Điểm đến / Mô tả', value: viewRow.description || <span className="text-gray-300">—</span> },
                   { label: 'Giá trị ước tính', value: viewRow.estimated_value ? formatVND(viewRow.estimated_value) : <span className="text-gray-300">—</span> },
@@ -641,6 +672,17 @@ export default function DangLayPage() {
                     {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </div>
+                {saleChinhList.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale chính</label>
+                    <select value={editForm.sale_chinh_id} onChange={e => setEditForm(f => ({ ...f, sale_chinh_id: e.target.value }))} className={iField}>
+                      <option value="">— Chọn Sale chính —</option>
+                      {saleChinhList.map(sc => (
+                        <option key={sc.id} value={sc.id}>{SALE_CHINH_TYPE[sc.type] ?? sc.type} · {sc.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Điểm đến / Mô tả</label>
                   <textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
