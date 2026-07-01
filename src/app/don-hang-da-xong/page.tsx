@@ -205,7 +205,7 @@ export default function DaXongPage() {
             {[
               { label: 'Liên hệ', value: slideRow.contact?.name ?? '—' },
               { label: 'Nguồn', value: slideRow.source ? (SOURCE_LABELS[slideRow.source] ?? slideRow.source) : '—' },
-              { label: 'Sale phụ trách', value: slideRow.assigned_user?.full_name ?? '—' },
+              { label: 'Sale tư vấn', value: slideRow.assigned_user?.full_name ?? '—' },
               { label: 'Điểm đến / Mô tả', value: slideRow.description ?? '—' },
               { label: 'Ngày đi', value: formatDate(slideRow.tour_date) || '—' },
               { label: 'Ngày về', value: formatDate(slideRow.tour_end_date) || '—' },

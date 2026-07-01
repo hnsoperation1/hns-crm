@@ -1503,7 +1503,7 @@ export default function OppDetailPage() {
               </div>
               <div className="p-5 space-y-2.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-gray-400 text-xs whitespace-nowrap">Sale phụ trách</span>
+                  <span className="text-gray-400 text-xs whitespace-nowrap">Sale tư vấn</span>
                   {showReassign ? (
                     <div className="flex items-center gap-1.5">
                       <select value={reassignTarget || effectiveAssigneeId}

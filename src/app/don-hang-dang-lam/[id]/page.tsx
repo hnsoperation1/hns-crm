@@ -1946,7 +1946,7 @@ export default function OppDetailPage() {
               {/* Ký tên */}
               <div className="border-t-2 border-gray-800 pt-6 mt-6 grid grid-cols-2 gap-8 text-center text-xs">
                 <div>
-                  <p className="font-semibold mb-12">Sale phụ trách</p>
+                  <p className="font-semibold mb-12">Sale tư vấn</p>
                   <p className="font-semibold">{opp.assigned_user?.full_name ?? '_______________'}</p>
                 </div>
                 <div>

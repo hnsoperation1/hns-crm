@@ -750,21 +750,21 @@ export default function OppDetailPage() {
         {/* Key stats strip */}
         <div className="flex items-center gap-4 mt-4 ml-10 flex-wrap">
           {effectiveAssignedUser && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-500">
-              <User size={12} className="text-gray-400" />
-              <span>Sale TV: <span className="font-semibold text-gray-700">{effectiveAssignedUser.full_name.split(' ').slice(-2).join(' ')}</span></span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-50 border border-orange-200 rounded-full">
+              <span className="text-xs text-orange-400 font-medium">Sale tư vấn:</span>
+              <span className="text-xs font-semibold text-orange-700">{effectiveAssignedUser.full_name}</span>
             </div>
           )}
           {opp.operator && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-500">
-              <User size={12} className="text-gray-400" />
-              <span>Điều hành: <span className="font-semibold text-gray-700">{opp.operator.full_name.split(' ').slice(-2).join(' ')}</span></span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-sky-50 border border-sky-200 rounded-full">
+              <span className="text-xs text-sky-400 font-medium">Điều hành:</span>
+              <span className="text-xs font-semibold text-sky-700">{opp.operator.full_name}</span>
             </div>
           )}
           {opp.sale_chinh && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-500">
-              <span className="text-[10px] font-bold bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">SC</span>
-              <span><span className="text-gray-400">{getSCLabel(opp.sale_chinh.type)} · </span><span className="font-semibold text-gray-700">{opp.sale_chinh.name}</span></span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-violet-50 border border-violet-200 rounded-full">
+              <span className="text-xs text-violet-400 font-medium">Sale chính:</span>
+              <span className="text-xs font-semibold text-violet-700">{opp.sale_chinh.name}</span>
             </div>
           )}
           {opp.estimated_value && (
@@ -2205,7 +2205,7 @@ export default function OppDetailPage() {
               {/* Ký tên */}
               <div className="border-t-2 border-gray-800 pt-6 mt-6 grid grid-cols-2 gap-8 text-center text-xs">
                 <div>
-                  <p className="font-semibold mb-12">Sale phụ trách</p>
+                  <p className="font-semibold mb-12">Sale tư vấn</p>
                   <p className="font-semibold">{opp.assigned_user?.full_name ?? '_______________'}</p>
                 </div>
                 <div>

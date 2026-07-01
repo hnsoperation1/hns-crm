@@ -508,7 +508,7 @@ export default function DangLayPage() {
 
                 {/* Sale TV */}
                 <div>
-                  <label className="flex items-center h-6 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale phụ trách</label>
+                  <label className="flex items-center h-6 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale tư vấn</label>
                   <select value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))} className={iField}>
                     <option value="">— Chọn Sale TV —</option>
                     {users.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
@@ -713,7 +713,7 @@ export default function DangLayPage() {
                   { label: 'Liên hệ', value: viewRow.contact?.name ?? '—' },
                   { label: 'Nguồn', value: SOURCE_LABELS[viewRow.source as keyof typeof SOURCE_LABELS] ?? viewRow.source },
                   { label: 'Sale chính', value: viewRow.sale_chinh ? `${getSCLabel(viewRow.sale_chinh.type)} · ${viewRow.sale_chinh.name}` : <span className="text-gray-300">—</span> },
-                  { label: 'Sale phụ trách', value: viewRow.assigned_user?.full_name ?? <span className="text-amber-600 font-semibold text-xs bg-amber-50 px-2 py-0.5 rounded-full">Chờ phân công</span> },
+                  { label: 'Sale tư vấn', value: viewRow.assigned_user?.full_name ?? <span className="text-amber-600 font-semibold text-xs bg-amber-50 px-2 py-0.5 rounded-full">Chờ phân công</span> },
                   { label: 'Điểm đến / Mô tả', value: viewRow.description || <span className="text-gray-300">—</span> },
                   { label: 'Giá trị ước tính', value: viewRow.estimated_value ? formatVND(viewRow.estimated_value) : <span className="text-gray-300">—</span> },
                   { label: 'Ngày tạo', value: formatDate(viewRow.created_at) },
@@ -767,7 +767,7 @@ export default function DangLayPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale phụ trách</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Sale tư vấn</label>
                   <select value={editForm.assigned_to} onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))} className={iField}>
                     <option value="">— Chọn Sale TV —</option>
                     {users.map(u => <option key={u.id} value={u.id}>{ROLE_LABELS[u.role ?? ''] ?? u.role} - {u.full_name}</option>)}
