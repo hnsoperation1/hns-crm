@@ -84,7 +84,7 @@ export default function OppDetailPage() {
 
   const [opp, setOpp] = useState<OppDetail | null>(null)
   const [allLogs, setAllLogs] = useState<LogDetail[]>([])
-  const [tasks, setTasks] = useState<{ id: string; title: string; due_date?: string | null; assigned_to?: string | null; created_by?: string | null; is_done: boolean; stage: number; done_at?: string | null; parent_id?: string | null }[]>([])
+  const [tasks, setTasks] = useState<{ id: string; title: string; due_date?: string | null; assigned_to?: string | null; created_by?: string | null; is_done: boolean; stage: number; done_at?: string | null; parent_id?: string | null; review_status?: 'approved' | 'rejected' | null; review_note?: string | null }[]>([])
   const [saleUsers, setSaleUsers] = useState<UserMin[]>([])
   const [allUsers, setAllUsers] = useState<UserMin[]>([])
   const [loading, setLoading] = useState(true)
@@ -230,7 +230,7 @@ export default function OppDetailPage() {
           .eq('opportunity_id', id)
           .order('log_date', { ascending: false }),
         supabase.from('tasks')
-          .select('id,title,due_date,assigned_to,created_by,is_done,stage,done_at,parent_id')
+          .select('id,title,due_date,assigned_to,created_by,is_done,stage,done_at,parent_id,review_status,review_note')
           .eq('opportunity_id', id)
           .order('created_at', { ascending: true }),
         supabase.from('users')
@@ -1515,6 +1515,8 @@ export default function OppDetailPage() {
                 created_by: t.created_by ?? null,
                 is_done: taskDone[t.id] !== undefined ? taskDone[t.id] : t.is_done,
                 stage: t.stage, isNew: false, parent_id: t.parent_id ?? null,
+                review_status: t.review_status ?? null,
+                review_note: t.review_note ?? null,
               }))
               const parentTasks = allTasksCombined.filter(t => !t.parent_id)
               const subTasksOf = (pid: string) => allTasksCombined.filter(t => t.parent_id === pid)
@@ -1628,12 +1630,23 @@ export default function OppDetailPage() {
                                     : <Square size={18} className="text-gray-300 hover:text-brand-400" />}
                                 </button>
                                 <div className="flex-1 min-w-0">
-                                  <span className={`text-sm font-semibold ${task.is_done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
-                                    {task.title}
-                                  </span>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`text-sm font-semibold ${task.is_done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+                                      {task.title}
+                                    </span>
+                                    {task.review_status === 'approved' && (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md">✓ Đạt</span>
+                                    )}
+                                    {task.review_status === 'rejected' && (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-700 bg-red-50 px-1.5 py-0.5 rounded-md" title={task.review_note ?? ''}>✕ Bị trả về</span>
+                                    )}
+                                    {task.is_done && !task.review_status && (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md">⏳ Chờ duyệt</span>
+                                    )}
+                                  </div>
                                   {task.due_date && (
-                                    <span className={`ml-2 text-xs font-medium ${task.is_done ? 'text-gray-300' : 'text-amber-500'}`}>
-                                      · Hạn {formatDate(task.due_date)}
+                                    <span className={`text-xs font-medium ${task.is_done ? 'text-gray-300' : 'text-amber-500'}`}>
+                                      Hạn {formatDate(task.due_date)}
                                     </span>
                                   )}
                                   {subs.length > 0 && (() => {

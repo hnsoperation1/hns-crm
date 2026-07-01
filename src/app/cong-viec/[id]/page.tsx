@@ -53,17 +53,20 @@ function timeAgo(iso: string): string {
   return formatDate(iso)
 }
 
-function logText(log: TaskLog): string {
+function logText(log: TaskLog): { text: string; badge?: { label: string; color: string } } {
   const m = log.meta ?? {}
   switch (log.type) {
-    case 'status_change': return `đổi trạng thái: ${STATUS_VI[m.from as string] ?? m.from} → ${STATUS_VI[m.to as string] ?? m.to}`
-    case 'done_toggle': return (m.done as boolean) ? 'đánh dấu hoàn thành' : 'bỏ đánh dấu hoàn thành'
-    case 'assignee_change': return m.to_name ? `giao cho ${m.to_name}` : 'bỏ giao việc'
-    case 'title_change': return `đổi tên → "${m.to}"`
-    case 'due_date_change': return m.to ? `đổi deadline → ${formatDate(m.to as string)}` : 'xóa deadline'
-    case 'subtask_add': return `thêm nhiệm vụ: "${m.title}"`
-    case 'subtask_done': return (m.done as boolean) ? `hoàn thành: "${m.title}"` : `bỏ hoàn thành: "${m.title}"`
-    default: return ''
+    case 'status_change': return { text: `đổi trạng thái: ${STATUS_VI[m.from as string] ?? m.from} → ${STATUS_VI[m.to as string] ?? m.to}` }
+    case 'done_toggle': return { text: (m.done as boolean) ? 'đánh dấu hoàn thành' : 'bỏ đánh dấu hoàn thành' }
+    case 'assignee_change': return { text: m.to_name ? `giao cho ${m.to_name}` : 'bỏ giao việc' }
+    case 'title_change': return { text: `đổi tên → "${m.to}"` }
+    case 'due_date_change': return { text: m.to ? `đổi deadline → ${formatDate(m.to as string)}` : 'xóa deadline' }
+    case 'subtask_add': return { text: `thêm nhiệm vụ: "${m.title}"` }
+    case 'subtask_done': return { text: (m.done as boolean) ? `hoàn thành: "${m.title}"` : `bỏ hoàn thành: "${m.title}"` }
+    case 'submitted': return { text: 'gửi báo cáo hoàn thành', badge: { label: 'Chờ duyệt', color: 'bg-amber-50 text-amber-700' } }
+    case 'approved': return { text: 'xác nhận đạt', badge: { label: '✓ Đạt', color: 'bg-emerald-50 text-emerald-700' } }
+    case 'rejected': return { text: log.content ? `trả về: ${log.content}` : 'trả về công việc', badge: { label: '✕ Chưa đạt', color: 'bg-red-50 text-red-700' } }
+    default: return { text: '' }
   }
 }
 
@@ -447,19 +450,23 @@ export default function CongViecDetailPage() {
                       ?? log.user?.full_name
                       ?? 'Hệ thống'
                     const isComment = log.type === 'comment'
-                    const text = logText(log)
+                    const { text, badge } = logText(log)
+                    const isReview = ['approved', 'rejected', 'submitted'].includes(log.type)
                     return (
                       <div key={log.id} className={`flex gap-3 py-3 ${i < logs.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5 ${isComment ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-500'}`}>
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5 ${isComment ? 'bg-brand-100 text-brand-700' : isReview ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'}`}>
                           {getInitials(userName)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-baseline gap-2 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-xs font-semibold text-gray-700">{userName}</span>
                             {!isComment && (
                               <span className="text-xs text-gray-500 flex items-center gap-1">
                                 <ArrowRight size={10} className="text-gray-300" />{text}
                               </span>
+                            )}
+                            {badge && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.color}`}>{badge.label}</span>
                             )}
                             <span className="text-[10px] text-gray-300 ml-auto">{timeAgo(log.created_at)}</span>
                           </div>

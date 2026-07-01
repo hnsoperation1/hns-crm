@@ -30,6 +30,10 @@ type TaskRow = {
   created_at: string
   stage: number
   opportunity?: { id: string; title: string } | null
+  review_status?: 'approved' | 'rejected' | null
+  review_note?: string | null
+  reviewed_by?: string | null
+  reviewed_at?: string | null
 }
 
 type SubSummary = { total: number; done: number }
@@ -92,6 +96,10 @@ export default function CongViecPage() {
   const [filterStatus, setFilterStatus] = useState<TaskStatus | ''>('')
   const [filterAssignee, setFilterAssignee] = useState('')
 
+  // Review
+  const [reviewingId, setReviewingId] = useState<string | null>(null)
+  const [rejectNote, setRejectNote] = useState('')
+
   // Quick create modal
   const [createDraft, setCreateDraft] = useState<{ status: TaskStatus; due_date: string } | null>(null)
   const [createTitle, setCreateTitle] = useState('')
@@ -112,7 +120,6 @@ export default function CongViecPage() {
       topLevelTasks = (tasksRes.data ?? []) as TaskRow[]
       setAllUsers((usersRes.data ?? []) as UserRow[])
     } else {
-      // Filter ở cả client lẫn server (RLS backup)
       const { data } = await supabase
         .from('tasks').select('*, opportunity:opportunities!left(id,title)')
         .is('parent_id', null)
@@ -156,6 +163,29 @@ export default function CongViecPage() {
       status: newStatus, is_done: isDone,
       done_at: isDone ? new Date().toISOString() : null,
     }).eq('id', taskId)
+  }
+
+  async function approveTask(taskId: string) {
+    const now = new Date().toISOString()
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, review_status: 'approved', reviewed_by: currentUser?.id, reviewed_at: now } : t))
+    await supabase.from('tasks').update({ review_status: 'approved', reviewed_by: currentUser?.id, reviewed_at: now }).eq('id', taskId)
+    await supabase.from('task_logs').insert({ task_id: taskId, type: 'approved', user_id: currentUser?.id, meta: { _user_name: currentUser?.full_name } })
+    setReviewingId(null)
+  }
+
+  async function rejectTask(taskId: string, note: string) {
+    const now = new Date().toISOString()
+    setTasks(prev => prev.map(t => t.id === taskId
+      ? { ...t, review_status: 'rejected', review_note: note, reviewed_by: currentUser?.id, reviewed_at: now, status: 'in_progress', is_done: false, done_at: null }
+      : t))
+    await supabase.from('tasks').update({
+      review_status: 'rejected', review_note: note,
+      reviewed_by: currentUser?.id, reviewed_at: now,
+      status: 'in_progress', is_done: false, done_at: null,
+    }).eq('id', taskId)
+    await supabase.from('task_logs').insert({ task_id: taskId, type: 'rejected', user_id: currentUser?.id, content: note || null, meta: { _user_name: currentUser?.full_name } })
+    setReviewingId(null)
+    setRejectNote('')
   }
 
   function getUserName(uid: string | null | undefined) {
@@ -436,7 +466,49 @@ export default function CongViecPage() {
               groups.push(...Array.from(map.values()).sort((a, b) => b.tasks.length - a.tasks.length))
             }
 
-            const COL_COUNT = 7
+            const COL_COUNT = 8
+
+            function ReviewCell({ task }: { task: TaskRow }) {
+              if (task.review_status === 'approved') {
+                return <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg"><CheckCircle2 size={11} />Đạt</span>
+              }
+              if (task.review_status === 'rejected') {
+                return (
+                  <div>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-lg">✕ Chưa đạt</span>
+                    {task.review_note && <p className="text-[10px] text-red-500 mt-0.5 max-w-[140px] truncate" title={task.review_note}>{task.review_note}</p>}
+                  </div>
+                )
+              }
+              if (!isManager) return <span className="text-xs text-gray-300">—</span>
+              // Manager + task done + chưa review
+              if (task.is_done && !task.review_status) {
+                if (reviewingId === task.id) {
+                  return (
+                    <div className="flex flex-col gap-1 min-w-[160px]">
+                      <input autoFocus value={rejectNote} onChange={e => setRejectNote(e.target.value)}
+                        placeholder="Lí do trả về..." onKeyDown={e => { if (e.key === 'Escape') { setReviewingId(null); setRejectNote('') } }}
+                        className="text-[11px] border border-red-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-red-400 w-full" />
+                      <div className="flex gap-1">
+                        <button onClick={() => rejectTask(task.id, rejectNote)}
+                          className="flex-1 text-[10px] font-semibold bg-red-500 text-white rounded-lg px-2 py-1 hover:bg-red-600">Xác nhận trả về</button>
+                        <button onClick={() => { setReviewingId(null); setRejectNote('') }}
+                          className="text-[10px] text-gray-400 hover:text-gray-600 px-1">Hủy</button>
+                      </div>
+                    </div>
+                  )
+                }
+                return (
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => approveTask(task.id)}
+                      className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-lg transition-colors">✓ Duyệt</button>
+                    <button onClick={() => { setReviewingId(task.id); setRejectNote('') }}
+                      className="text-[11px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded-lg transition-colors">✕ Trả về</button>
+                  </div>
+                )
+              }
+              return <span className="text-xs text-gray-300">—</span>
+            }
 
             function TaskRows({ taskList, startIdx }: { taskList: TaskRow[]; startIdx: number }) {
               return <>
@@ -449,11 +521,13 @@ export default function CongViecPage() {
                       <td className="px-4 py-2.5 text-xs text-gray-400 font-mono">{startIdx + i + 1}</td>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
-                          <button onClick={() => updateStatus(task.id, st === 'done' ? 'todo' : 'done')} className="flex-shrink-0">
-                            {task.is_done
-                              ? <CheckCircle2 size={14} className="text-emerald-500" />
-                              : <Square size={14} className="text-gray-300 hover:text-brand-400 transition-colors" />}
-                          </button>
+                          {!isManager && (
+                            <button onClick={() => updateStatus(task.id, st === 'done' ? 'todo' : 'done')} className="flex-shrink-0">
+                              {task.is_done
+                                ? <CheckCircle2 size={14} className="text-emerald-500" />
+                                : <Square size={14} className="text-gray-300 hover:text-brand-400 transition-colors" />}
+                            </button>
+                          )}
                           <Link href={`/cong-viec/${task.id}`} className={`text-xs font-medium hover:underline ${task.is_done ? 'line-through text-gray-400' : 'text-gray-800 hover:text-accent-600'}`}>{task.title}</Link>
                         </div>
                       </td>
@@ -480,7 +554,8 @@ export default function CongViecPage() {
                       </td>
                       <td className="px-4 py-2.5">
                         <select value={st} onChange={e => updateStatus(task.id, e.target.value as TaskStatus)}
-                          className={`text-[11px] font-semibold px-2 py-1 rounded-lg border-0 focus:outline-none cursor-pointer ${col.bg} ${col.text}`}>
+                          disabled={isManager}
+                          className={`text-[11px] font-semibold px-2 py-1 rounded-lg border-0 focus:outline-none cursor-pointer disabled:cursor-default ${col.bg} ${col.text}`}>
                           {COLS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
                         </select>
                       </td>
@@ -499,6 +574,9 @@ export default function CongViecPage() {
                               {formatDate(task.due_date)}
                             </span>
                           : <span className="text-gray-300 text-xs">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <ReviewCell task={task} />
                       </td>
                     </tr>
                   )
@@ -552,6 +630,7 @@ export default function CongViecPage() {
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-36">Tình trạng</th>
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-28">Còn lại</th>
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-32">Hạn hoàn thành</th>
+                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-44">Xác nhận</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -574,6 +653,7 @@ export default function CongViecPage() {
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Tình trạng</th>
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-28">Còn lại</th>
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-32">Hạn hoàn thành</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Xác nhận</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
