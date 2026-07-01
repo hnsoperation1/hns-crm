@@ -6,6 +6,7 @@ import {
   ChevronLeft, ChevronRight, CalendarDays, Clock,
   CheckCircle2, Square, CheckSquare, ClipboardList,
   ShoppingBag, LayoutGrid, List, Calendar, Loader2, GripVertical, User, Plus, X, Search, Filter,
+  Eye, ExternalLink,
 } from 'lucide-react'
 import DateInput from '@/components/DateInput'
 import { createClient } from '@/lib/supabase/client'
@@ -99,6 +100,7 @@ export default function CongViecPage() {
   // Review
   const [reviewingId, setReviewingId] = useState<string | null>(null)
   const [rejectNote, setRejectNote] = useState('')
+  const [slideTask, setSlideTask] = useState<TaskRow | null>(null)
 
   // Quick create modal
   const [createDraft, setCreateDraft] = useState<{ status: TaskStatus; due_date: string } | null>(null)
@@ -522,7 +524,11 @@ export default function CongViecPage() {
                                 : <Square size={14} className="text-gray-300 hover:text-brand-400 transition-colors" />}
                             </button>
                           )}
-                          <Link href={`/cong-viec/${task.id}`} className={`text-xs font-medium hover:underline ${task.is_done ? 'line-through text-gray-400' : 'text-gray-800 hover:text-accent-600'}`}>{task.title}</Link>
+                          <span className={`text-xs font-medium ${task.is_done ? 'line-through text-gray-400' : 'text-gray-800'}`}>{task.title}</span>
+                          <button onClick={() => setSlideTask(task)}
+                            className="flex-shrink-0 flex items-center gap-1 text-[11px] text-brand-600 hover:text-brand-800 font-medium px-1.5 py-0.5 rounded-lg hover:bg-brand-50 transition-colors opacity-0 group-hover:opacity-100">
+                            <Eye size={11} /> Xem
+                          </button>
                         </div>
                       </td>
                       {/* Báo cáo = tình trạng + tiến độ subtask */}
@@ -907,6 +913,114 @@ export default function CongViecPage() {
 
         </div>
       )}
+
+      {/* ══════════ TASK SLIDE-OVER ══════════ */}
+      {slideTask && (() => {
+        const st = getStatus(slideTask)
+        const col = COLS.find(c => c.key === st)!
+        const td = slideTask.due_date ? daysUntil(slideTask.due_date) : null
+        const sub = subSummary[slideTask.id]
+        const assigneeName = getUserName(slideTask.assigned_to)
+        const creatorName  = getUserName(slideTask.created_by)
+        return (
+          <div className="fixed inset-0 z-40 flex">
+            <div className="flex-1" onClick={() => setSlideTask(null)} />
+            <div className="relative w-96 bg-white shadow-2xl flex flex-col h-full border-l border-gray-200">
+              <button onClick={() => setSlideTask(null)}
+                className="absolute -left-8 top-1/2 -translate-y-1/2 w-8 h-16 bg-white border border-gray-200 rounded-l-xl flex items-center justify-center shadow-md hover:bg-gray-50 transition-colors">
+                <ChevronRight size={15} className="text-gray-400" />
+              </button>
+
+              {/* Header */}
+              <div className="p-5 border-b border-gray-100 flex-shrink-0">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <h2 className="text-sm font-bold text-gray-900 leading-snug">{slideTask.title}</h2>
+                  <button onClick={() => setSlideTask(null)} className="text-gray-400 hover:text-gray-600 flex-shrink-0 mt-0.5">
+                    <X size={16} />
+                  </button>
+                </div>
+                <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${col.bg} ${col.text}`}>
+                  {col.label}
+                </span>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 overflow-auto p-5 space-y-4">
+                {/* Đơn hàng */}
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Đơn hàng</p>
+                  {slideTask.opportunity
+                    ? <Link href={`/don-hang/${slideTask.opportunity.id}`} className="flex items-center gap-1.5 text-sm text-accent-600 hover:underline font-medium">
+                        <ShoppingBag size={13} /> {slideTask.opportunity.title}
+                      </Link>
+                    : <span className="text-sm text-gray-400">—</span>}
+                </div>
+
+                {/* Nhân viên */}
+                {(assigneeName || creatorName) && (
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Thực hiện</p>
+                    {assigneeName && <p className="text-sm text-gray-700 font-medium">{assigneeName}</p>}
+                    {creatorName && assigneeName !== creatorName && (
+                      <p className="text-xs text-gray-400 mt-0.5">Tạo bởi: {creatorName}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Tiến độ subtask */}
+                {sub && (
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Tiến độ nhiệm vụ</p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-2 bg-emerald-400 rounded-full transition-all" style={{ width: `${Math.round(sub.done / sub.total * 100)}%` }} />
+                      </div>
+                      <span className="text-xs font-bold text-gray-500">{sub.done}/{sub.total}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Quản lí xác nhận */}
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Quản lí xác nhận</p>
+                  {slideTask.review_status === 'approved'
+                    ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg"><CheckCircle2 size={12} /> Đạt</span>
+                    : slideTask.review_status === 'rejected'
+                      ? <div>
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-50 px-2.5 py-1 rounded-lg">✕ Chưa đạt</span>
+                          {slideTask.review_note && <p className="text-xs text-red-500 mt-1">{slideTask.review_note}</p>}
+                        </div>
+                      : slideTask.is_done
+                        ? <span className="text-xs text-amber-600 font-medium">⏳ Chờ duyệt</span>
+                        : <span className="text-xs text-gray-400">—</span>}
+                </div>
+
+                {/* Hạn hoàn thành */}
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">Hạn hoàn thành</p>
+                  {slideTask.due_date ? (
+                    <div className="flex items-center gap-2">
+                      <CalendarDays size={13} className={td !== null && td < 0 ? 'text-red-500' : 'text-amber-500'} />
+                      <span className={`text-sm font-medium ${td !== null && td < 0 ? 'text-red-600' : 'text-gray-800'}`}>{formatDate(slideTask.due_date)}</span>
+                      <span className="text-xs text-gray-400">
+                        {slideTask.is_done ? '· Hoàn thành' : td !== null ? (td < 0 ? `· Quá ${Math.abs(td)}N` : `· Còn ${td}N`) : ''}
+                      </span>
+                    </div>
+                  ) : <span className="text-sm text-gray-400">—</span>}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-gray-100 flex-shrink-0">
+                <Link href={`/cong-viec/${slideTask.id}`}
+                  className="flex items-center justify-center gap-2 w-full bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
+                  <ExternalLink size={13} /> Xem chi tiết đầy đủ
+                </Link>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ══════════ REJECT MODAL ══════════ */}
       {reviewingId && (
