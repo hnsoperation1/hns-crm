@@ -25,6 +25,14 @@ const ROLE_LABELS: Record<string, string> = {
   sale_admin: 'Sale Admin', sale: 'Sale TV', sale_tv: 'Sale TV', cskh: 'Chăm sóc KH', dieu_hanh: 'Điều hành', sale_op: 'Điều hành',
 }
 
+const SALE_CHINH_TYPE: Record<string, string> = {
+  nhan_vien: 'Nhân viên', ctv: 'CTV', doi_tac: 'Đối tác', khac: 'Khác',
+}
+
+function getSCLabel(type: string) {
+  return SALE_CHINH_TYPE[type] ?? ROLE_LABELS[type] ?? type
+}
+
 // ─── Feedback type ───────────────────────────────────────────────────────────
 
 type FeedbackRow = {
@@ -52,6 +60,8 @@ type OppDetail = Opportunity & {
   contact: (Contact & { id: string }) | null
   assigned_user: UserMin | null
   creator: UserMin | null
+  operator: UserMin | null
+  sale_chinh: { id: string; name: string; type: string } | null
 }
 
 type LogDetail = ActivityLog & {
@@ -222,7 +232,7 @@ export default function OppDetailPage() {
     async function load() {
       const [{ data: oppData }, { data: logsData }, { data: tasksData }, { data: usersData }, { data: fbData }] = await Promise.all([
         supabase.from('opportunities')
-          .select('*, contact:contacts(id,name,phone,email,company,tax_code,organization_ids,source,lead_score,created_by,created_at), assigned_user:users!assigned_to(id,full_name), creator:users!created_by(id,full_name)')
+          .select('*, contact:contacts(id,name,phone,email,company,tax_code,organization_ids,source,lead_score,created_by,created_at), assigned_user:users!assigned_to(id,full_name), creator:users!created_by(id,full_name), operator:users!operator_id(id,full_name), sale_chinh:sale_chinh!sale_chinh_id(id,name,type)')
           .eq('id', id)
           .single(),
         supabase.from('activity_logs')
@@ -733,6 +743,18 @@ export default function OppDetailPage() {
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <User size={12} className="text-gray-400" />
               <span>Sale TV: <span className="font-semibold text-gray-700">{effectiveAssignedUser.full_name.split(' ').slice(-2).join(' ')}</span></span>
+            </div>
+          )}
+          {opp.operator && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <User size={12} className="text-gray-400" />
+              <span>Điều hành: <span className="font-semibold text-gray-700">{opp.operator.full_name.split(' ').slice(-2).join(' ')}</span></span>
+            </div>
+          )}
+          {opp.sale_chinh && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <span className="text-[10px] font-bold bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">SC</span>
+              <span><span className="text-gray-400">{getSCLabel(opp.sale_chinh.type)} · </span><span className="font-semibold text-gray-700">{opp.sale_chinh.name}</span></span>
             </div>
           )}
           {opp.estimated_value && (
