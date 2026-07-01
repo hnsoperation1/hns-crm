@@ -38,7 +38,7 @@ const SOURCES: { value: LeadSource; label: string }[] = [
 ]
 
 const EMPTY_FORM = {
-  title: '', description: '', contact_id: '', source: 'mkt' as LeadSource, assigned_to: '',
+  title: '', description: '', contact_id: '', source: 'mkt' as LeadSource, assigned_to: '', service_type_id: '',
 }
 
 export default function DangLayPage() {
@@ -54,6 +54,7 @@ export default function DangLayPage() {
   const [showModal, setShowModal] = useState(false)
   const [contacts, setContacts] = useState<ContactOpt[]>([])
   const [users, setUsers] = useState<UserOpt[]>([])
+  const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string }[]>([])
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [errors, setErrors] = useState<Partial<typeof EMPTY_FORM>>({})
   const [saving, setSaving] = useState(false)
@@ -100,12 +101,14 @@ export default function DangLayPage() {
     setForm({ ...EMPTY_FORM })
     setErrors({})
     setContactSearch('')
-    const [{ data: c }, { data: u }] = await Promise.all([
+    const [{ data: c }, { data: u }, { data: st }] = await Promise.all([
       supabase.from('contacts').select('id, name, phone, company').is('deleted_at', null).order('name').limit(200),
       supabase.from('users').select('id, full_name, role').eq('is_active', true).order('full_name'),
+      supabase.from('service_types').select('id, name').order('sort_order').order('name'),
     ])
     setContacts((c ?? []) as ContactOpt[])
     setUsers(((u ?? []) as UserOpt[]).filter(u => u.role === 'sale'))
+    setServiceTypes((st ?? []) as { id: string; name: string }[])
   }
 
   async function handleSave() {
@@ -123,6 +126,7 @@ export default function DangLayPage() {
       contact_id: form.contact_id,
       source: form.source,
       assigned_to: form.assigned_to || null,
+      service_type_id: form.service_type_id || null,
       stage: 'stage_0' as OppStage,
       stage_updated_at: new Date().toISOString(),
       created_by: user!.id,
@@ -461,6 +465,17 @@ export default function DangLayPage() {
                   </select>
                 </div>
               </div>
+
+              {/* Loại dịch vụ */}
+              {serviceTypes.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Loại dịch vụ</label>
+                  <select value={form.service_type_id} onChange={e => setForm(f => ({ ...f, service_type_id: e.target.value }))} className={iField}>
+                    <option value="">— Chọn loại dịch vụ —</option>
+                    {serviceTypes.map(st => <option key={st.id} value={st.id}>{st.name}</option>)}
+                  </select>
+                </div>
+              )}
 
               {/* Sub-form tạo khách hàng mới — full width */}
               {showNewContact && (
