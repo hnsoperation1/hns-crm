@@ -66,6 +66,8 @@ export default function BaoCaoCongViecPage() {
   const [statusNote, setStatusNote] = useState<Record<string, string>>({})
   const [expandedNote, setExpandedNote] = useState<Record<string, boolean>>({})
   const [editingNote, setEditingNote] = useState<string | null>(null)
+  const [editingNext, setEditingNext] = useState<string | null>(null)
+  const [expandedNext, setExpandedNext] = useState<Record<string, boolean>>({})
   const [selectedTask, setSelectedTask] = useState<ReportTask | null>(null)
 
   const isManager = ['boss', 'admin', 'sale_admin'].includes(currentUser?.role ?? '')
@@ -331,13 +333,35 @@ export default function BaoCaoCongViecPage() {
                                 )}
                               </td>
                               <td className="px-4 py-2 align-top">
-                                <input
-                                  type="text"
-                                  value={tomorrowPlan[task.id] ?? ''}
-                                  onChange={e => setTomorrowPlan(prev => ({ ...prev, [task.id]: e.target.value }))}
-                                  placeholder="Bước tiếp theo..."
-                                  className="w-full text-xs text-gray-700 placeholder-gray-300 bg-transparent border-b border-dashed border-gray-200 focus:border-brand-400 focus:outline-none py-0.5 transition-colors"
-                                />
+                                {editingNext === task.id ? (
+                                  <textarea
+                                    autoFocus
+                                    value={tomorrowPlan[task.id] ?? ''}
+                                    onChange={e => setTomorrowPlan(prev => ({ ...prev, [task.id]: e.target.value }))}
+                                    onBlur={() => setEditingNext(null)}
+                                    rows={3}
+                                    placeholder="Nhập bước tiếp theo..."
+                                    className="w-full text-xs text-gray-700 placeholder-gray-300 border border-brand-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none"
+                                  />
+                                ) : tomorrowPlan[task.id] ? (
+                                  <div className="cursor-pointer" onClick={() => setEditingNext(task.id)}>
+                                    <p className={`text-xs text-gray-700 whitespace-pre-wrap break-words ${expandedNext[task.id] ? '' : 'line-clamp-2'}`}>
+                                      {tomorrowPlan[task.id]}
+                                    </p>
+                                    {(tomorrowPlan[task.id].split('\n').length > 2 || tomorrowPlan[task.id].length > 80) ? (
+                                      <button
+                                        onClick={e => { e.stopPropagation(); setExpandedNext(prev => ({ ...prev, [task.id]: !prev[task.id] })) }}
+                                        className="text-[10px] text-brand-500 hover:underline mt-0.5">
+                                        {expandedNext[task.id] ? 'Thu gọn' : '... xem thêm'}
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                ) : (
+                                  <button onClick={() => setEditingNext(task.id)}
+                                    className="text-xs text-gray-300 hover:text-gray-500 transition-colors">
+                                    Nhập bước tiếp theo...
+                                  </button>
+                                )}
                               </td>
                               <td className="px-2 py-2.5">
                                 <button onClick={() => setSelectedTask(task)}

@@ -483,27 +483,12 @@ export default function CongViecPage() {
               if (!isManager) return <span className="text-xs text-gray-300">—</span>
               // Manager + task done + chưa review
               if (task.is_done && !task.review_status) {
-                if (reviewingId === task.id) {
-                  return (
-                    <div className="flex flex-col gap-1 min-w-[160px]">
-                      <input autoFocus value={rejectNote} onChange={e => setRejectNote(e.target.value)}
-                        placeholder="Lí do trả về..." onKeyDown={e => { if (e.key === 'Escape') { setReviewingId(null); setRejectNote('') } }}
-                        className="text-[11px] border border-red-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-red-400 w-full" />
-                      <div className="flex gap-1">
-                        <button onClick={() => rejectTask(task.id, rejectNote)}
-                          className="flex-1 text-[10px] font-semibold bg-red-500 text-white rounded-lg px-2 py-1 hover:bg-red-600">Xác nhận trả về</button>
-                        <button onClick={() => { setReviewingId(null); setRejectNote('') }}
-                          className="text-[10px] text-gray-400 hover:text-gray-600 px-1">Hủy</button>
-                      </div>
-                    </div>
-                  )
-                }
                 return (
                   <div className="flex items-center gap-1">
                     <button onClick={() => approveTask(task.id)}
                       className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-lg transition-colors">✓ Duyệt</button>
                     <button onClick={() => { setReviewingId(task.id); setRejectNote('') }}
-                      className="text-[11px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded-lg transition-colors">✕ Trả về</button>
+                      className="text-[11px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded-lg transition-colors">✕ Chưa đạt</button>
                   </div>
                 )
               }
@@ -630,7 +615,7 @@ export default function CongViecPage() {
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-10">STT</th>
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300">Tên công việc</th>
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-44">Đơn hàng</th>
-                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-44">Báo cáo</th>
+                                <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-44">NV báo cáo</th>
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-44">Quản lí xác nhận</th>
                                 <th className="px-4 py-2 text-left text-xs font-bold text-gray-300 w-36">Hạn hoàn thành</th>
                               </tr>
@@ -651,7 +636,7 @@ export default function CongViecPage() {
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-10">STT</th>
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400">Tên công việc</th>
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Đơn hàng</th>
-                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Báo cáo</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">NV báo cáo</th>
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-44">Quản lí xác nhận</th>
                           <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 w-36">Hạn hoàn thành</th>
                         </tr>
@@ -920,6 +905,41 @@ export default function CongViecPage() {
             </div>
           )}
 
+        </div>
+      )}
+
+      {/* ══════════ REJECT MODAL ══════════ */}
+      {reviewingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => { setReviewingId(null); setRejectNote('') }} />
+          <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-md mx-4 p-6 z-10">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold text-gray-900">Trả về công việc</h2>
+              <button onClick={() => { setReviewingId(null); setRejectNote('') }} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400">
+                <X size={15} />
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">Nhập lí do để nhân viên biết cần chỉnh sửa gì.</p>
+            <textarea
+              autoFocus
+              rows={4}
+              value={rejectNote}
+              onChange={e => setRejectNote(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Escape') { setReviewingId(null); setRejectNote('') } }}
+              placeholder="Lí do chưa đạt..."
+              className="w-full text-sm border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-400 resize-none mb-4"
+            />
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => { setReviewingId(null); setRejectNote('') }}
+                className="px-4 py-2 text-xs font-semibold text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50">
+                Hủy
+              </button>
+              <button onClick={() => rejectTask(reviewingId, rejectNote)}
+                className="px-4 py-2 text-xs font-semibold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors shadow-sm">
+                Xác nhận chưa đạt
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
