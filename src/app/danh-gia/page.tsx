@@ -151,6 +151,7 @@ function CustomerList({ data, onClose, onExpand, expandedId, onCreateCard, careC
                   <p className="font-semibold text-sm text-gray-900">{f.respondent_name ?? '—'}</p>
                   {f.phone && <p className="text-xs text-gray-800 mt-0.5">SĐT: {f.phone}</p>}
                   {f.group_name && <p className="text-xs text-gray-800 mt-0.5 truncate">Đoàn: {f.group_name}</p>}
+                  {f.itinerary && <p className="text-xs text-gray-500 mt-0.5 truncate">Hành trình: <span className="text-gray-700">{f.itinerary}</span></p>}
                   {f.overall_comment && <p className="text-xs text-gray-800 mt-1 italic line-clamp-2">Đánh giá chung: "{f.overall_comment}"</p>}
                 </div>
                 {f.opportunity_id && (
