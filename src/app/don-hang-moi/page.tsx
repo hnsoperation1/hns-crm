@@ -65,6 +65,7 @@ export default function DangLayPage() {
   const [saving, setSaving] = useState(false)
   const [contactSearch, setContactSearch] = useState('')
   const [contactDropOpen, setContactDropOpen] = useState(false)
+  const [contactsLoading, setContactsLoading] = useState(false)
   const [showNewContact, setShowNewContact] = useState(false)
   const [newContact, setNewContact] = useState({ name: '', phone: '', company: '' })
   const [newContactErrors, setNewContactErrors] = useState<{ name?: string; phone?: string }>({})
@@ -124,9 +125,7 @@ export default function DangLayPage() {
     const allUsers = (u ?? []) as UserOpt[]
     setUsers(allUsers.filter(u => u.role === 'sale'))
     setServiceTypes((st ?? []) as { id: string; name: string; parent_id: string | null }[])
-    const usersForSC = allUsers.map(u => ({ id: u.id, name: u.full_name, type: u.role ?? '' }))
-    const externalSC = (sc ?? []) as { id: string; name: string; type: string }[]
-    setSaleChinhList([...usersForSC, ...externalSC].sort((a, b) => a.name.localeCompare(b.name)))
+    setSaleChinhList(((sc ?? []) as { id: string; name: string; type: string }[]).sort((a, b) => a.name.localeCompare(b.name)))
   }
 
   async function handleSave() {
@@ -155,6 +154,13 @@ export default function DangLayPage() {
       setShowModal(false)
       loadData()
     }
+  }
+
+  async function refreshContacts() {
+    setContactsLoading(true)
+    const { data } = await supabase.from('contacts').select('id, name, phone, company').is('deleted_at', null).order('name').limit(500)
+    setContacts((data ?? []) as ContactOpt[])
+    setContactsLoading(false)
   }
 
   async function handleSaveContact() {
@@ -237,9 +243,7 @@ export default function DangLayPage() {
       setContacts((c ?? []) as ContactOpt[])
       const allUsers = (u ?? []) as UserOpt[]
       setUsers(allUsers.filter(u => u.role === 'sale'))
-      const usersForSC = allUsers.map(u => ({ id: u.id, name: u.full_name, type: u.role ?? '' }))
-      const externalSC = (sc ?? []) as { id: string; name: string; type: string }[]
-      setSaleChinhList([...usersForSC, ...externalSC].sort((a, b) => a.name.localeCompare(b.name)))
+      setSaleChinhList(((sc ?? []) as { id: string; name: string; type: string }[]).sort((a, b) => a.name.localeCompare(b.name)))
     }
     const r = viewRow
     setEditId(r.id)
@@ -467,7 +471,7 @@ export default function DangLayPage() {
                     <input
                       value={contactSearch}
                       onChange={e => { setContactSearch(e.target.value); setForm(f => ({ ...f, contact_id: '' })); setContactDropOpen(true) }}
-                      onFocus={() => setContactDropOpen(true)}
+                      onFocus={() => { setContactDropOpen(true); refreshContacts() }}
                       onBlur={() => setTimeout(() => setContactDropOpen(false), 150)}
                       placeholder="Tìm tên, SĐT, công ty..."
                       className={`${iField} ${errors.contact_id ? 'border-red-300 bg-red-50' : ''}`}
@@ -483,6 +487,11 @@ export default function DangLayPage() {
                     )}
                     {contactDropOpen && (
                       <div className="absolute left-0 right-0 top-full mt-1 border border-gray-200 rounded-xl bg-white shadow-lg z-20 overflow-hidden max-h-44 overflow-y-auto">
+                        {contactsLoading && (
+                          <div className="flex items-center gap-2 px-3 py-2.5 text-xs text-gray-400">
+                            <Loader2 size={12} className="animate-spin" /> Đang tải...
+                          </div>
+                        )}
                         {filteredContacts.slice(0, 30).map(c => (
                           <div key={c.id} onMouseDown={() => { setForm(f => ({ ...f, contact_id: c.id })); setContactSearch(c.name); setErrors(er => ({ ...er, contact_id: '' })); setContactDropOpen(false) }}
                             className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm transition-colors ${form.contact_id === c.id ? 'bg-brand-50 text-brand-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
