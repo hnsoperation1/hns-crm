@@ -622,28 +622,61 @@ export default function DangLayPage() {
                         autoFocus={saleChinhDropOpen}
                       />
                     )}
-                    {saleChinhDropOpen && (
-                      <div className="absolute left-0 right-0 top-full mt-1 border border-gray-200 rounded-xl bg-white shadow-lg z-20 overflow-hidden max-h-44 overflow-y-auto">
-                        {filteredSaleChinhList.slice(0, 30).map(sc => (
-                          <div key={sc.id} onMouseDown={() => {
-                              const suggestedSource = SC_TYPE_TO_SOURCE[sc.type]
-                              setForm(f => ({ ...f, sale_chinh_id: sc.id, ...(suggestedSource ? { source: suggestedSource } : {}) }))
-                              setSaleChinhSearch(sc.name); setSaleChinhDropOpen(false)
-                            }}
-                            className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm transition-colors ${form.sale_chinh_id === sc.id ? 'bg-slate-50 text-slate-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
-                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 bg-slate-100 text-slate-600 whitespace-nowrap">{getSCLabel(sc.type)}</span>
-                            <span className="font-medium truncate">{sc.name}</span>
-                          </div>
-                        ))}
-                        {filteredSaleChinhList.length === 0 && (
-                          <div className="px-3 py-4 text-sm text-gray-400 text-center">
-                            Không tìm thấy —{' '}
-                            <button type="button" onMouseDown={() => { setShowNewSaleChinh(true); setNewSaleChinh({ name: saleChinhSearch, type: 'ctv', phone: '' }); setSaleChinhDropOpen(false) }}
-                              className="text-brand-600 font-semibold hover:underline">tạo mới</button>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {saleChinhDropOpen && (() => {
+                      const searchLower = saleChinhSearch.toLowerCase()
+                      const matchSearch = (sc: { name: string }) => !searchLower || sc.name.toLowerCase().includes(searchLower)
+                      const primaryItems = allowedScTypes.length > 0
+                        ? saleChinhList.filter(sc => allowedScTypes.includes(sc.type) && matchSearch(sc))
+                        : []
+                      const otherGroups = Object.keys(SALE_CHINH_TYPE)
+                        .filter(t => !allowedScTypes.includes(t))
+                        .map(typeKey => ({ typeKey, items: saleChinhList.filter(sc => sc.type === typeKey && matchSearch(sc)) }))
+                        .filter(g => g.items.length > 0)
+                      const selectSC = (sc: { id: string; name: string; type: string }) => {
+                        const suggestedSource = SC_TYPE_TO_SOURCE[sc.type]
+                        setForm(f => ({ ...f, sale_chinh_id: sc.id, ...(suggestedSource ? { source: suggestedSource } : {}) }))
+                        setSaleChinhSearch(sc.name); setSaleChinhDropOpen(false)
+                      }
+                      const scItem = (sc: { id: string; name: string; type: string }) => (
+                        <div key={sc.id} onMouseDown={() => selectSC(sc)}
+                          className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm transition-colors ${form.sale_chinh_id === sc.id ? 'bg-slate-50 text-slate-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
+                          <span className="font-medium truncate">{sc.name}</span>
+                        </div>
+                      )
+                      const hasAny = primaryItems.length > 0 || otherGroups.length > 0
+                      return (
+                        <div className="absolute left-0 right-0 top-full mt-1 border border-gray-200 rounded-xl bg-white shadow-lg z-20 overflow-hidden max-h-64 overflow-y-auto">
+                          {/* Nhóm theo nguồn hiện tại */}
+                          {allowedScTypes.length > 0 && (
+                            <>
+                              <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50 sticky top-0">
+                                {SOURCES.find(s => s.value === form.source)?.label}
+                              </div>
+                              {primaryItems.length > 0
+                                ? primaryItems.map(sc => scItem(sc))
+                                : <div className="px-3 py-2 text-sm text-gray-400 italic">Không tìm thấy</div>
+                              }
+                            </>
+                          )}
+                          {/* Các nhóm còn lại */}
+                          {otherGroups.map(({ typeKey, items }) => (
+                            <div key={typeKey}>
+                              <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50 border-t border-gray-100">
+                                {SALE_CHINH_TYPE[typeKey]}
+                              </div>
+                              {items.map(sc => scItem(sc))}
+                            </div>
+                          ))}
+                          {!hasAny && (
+                            <div className="px-3 py-4 text-sm text-gray-400 text-center">
+                              Không tìm thấy —{' '}
+                              <button type="button" onMouseDown={() => { setShowNewSaleChinh(true); setNewSaleChinh({ name: saleChinhSearch, type: 'ctv', phone: '' }); setSaleChinhDropOpen(false) }}
+                                className="text-brand-600 font-semibold hover:underline">tạo mới</button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </div>
                 </div>
               </div>
