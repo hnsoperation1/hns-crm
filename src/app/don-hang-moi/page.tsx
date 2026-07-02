@@ -490,22 +490,25 @@ export default function DangLayPage() {
                     </button>
                   </div>
                   <div className="relative">
-                    <input
-                      value={contactSearch}
-                      onChange={e => { setContactSearch(e.target.value); setForm(f => ({ ...f, contact_id: '' })); setContactDropOpen(true) }}
-                      onFocus={() => { setContactDropOpen(true); refreshContacts() }}
-                      onBlur={() => setTimeout(() => setContactDropOpen(false), 150)}
-                      placeholder="Tìm tên, SĐT, công ty..."
-                      className={`${iField} ${errors.contact_id ? 'border-red-300 bg-red-50' : ''}`}
-                    />
-                    {form.contact_id && !contactDropOpen && (
-                      <div className="mt-1.5 flex items-center gap-2 px-3 py-2 bg-brand-50 border border-brand-100 rounded-xl text-sm text-brand-700 font-medium">
+                    {form.contact_id && !contactDropOpen ? (
+                      <div className={`${iField} flex items-center gap-2 cursor-pointer ${errors.contact_id ? 'border-red-300 bg-red-50' : ''}`}
+                        onClick={() => { setForm(f => ({ ...f, contact_id: '' })); setContactSearch(''); setContactDropOpen(true); refreshContacts() }}>
                         <div className="w-6 h-6 bg-brand-200 rounded-full flex items-center justify-center text-[10px] font-bold text-brand-700 flex-shrink-0">
                           {getInitials(contacts.find(c => c.id === form.contact_id)?.name ?? '')}
                         </div>
-                        <span className="truncate">{contacts.find(c => c.id === form.contact_id)?.name}</span>
-                        <button type="button" onClick={() => { setForm(f => ({ ...f, contact_id: '' })); setContactSearch('') }} className="ml-auto flex-shrink-0 text-brand-400 hover:text-brand-600"><X size={13} /></button>
+                        <span className="flex-1 text-sm text-brand-700 font-medium truncate">{contacts.find(c => c.id === form.contact_id)?.name}</span>
+                        <button type="button" onClick={e => { e.stopPropagation(); setForm(f => ({ ...f, contact_id: '' })); setContactSearch('') }} className="flex-shrink-0 text-brand-400 hover:text-brand-600"><X size={13} /></button>
                       </div>
+                    ) : (
+                      <input
+                        value={contactSearch}
+                        onChange={e => { setContactSearch(e.target.value); setForm(f => ({ ...f, contact_id: '' })); setContactDropOpen(true) }}
+                        onFocus={() => { setContactDropOpen(true); refreshContacts() }}
+                        onBlur={() => setTimeout(() => setContactDropOpen(false), 150)}
+                        placeholder="Tìm tên, SĐT, công ty..."
+                        className={`${iField} ${errors.contact_id ? 'border-red-300 bg-red-50' : ''}`}
+                        autoFocus={contactDropOpen}
+                      />
                     )}
                     {contactDropOpen && (
                       <div className="absolute left-0 right-0 top-full mt-1 border border-gray-200 rounded-xl bg-white shadow-lg z-20 overflow-hidden max-h-44 overflow-y-auto">
