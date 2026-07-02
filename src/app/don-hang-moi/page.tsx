@@ -517,6 +517,34 @@ export default function DangLayPage() {
 
               </div>
 
+              {/* Sub-form tạo khách hàng mới — full width */}
+              {showNewContact && (
+                <div className="p-3 bg-brand-50 border border-brand-100 rounded-xl space-y-2">
+                  <p className="text-xs font-semibold text-brand-700 mb-2">Thông tin khách hàng mới</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input value={newContact.name} onChange={e => { setNewContact(v => ({ ...v, name: e.target.value })); setNewContactErrors(er => ({ ...er, name: '' })) }}
+                      placeholder="Tên khách hàng *" autoFocus
+                      className={`${iField} text-sm py-2 ${newContactErrors.name ? 'border-red-300 bg-red-50' : ''}`} />
+                    <input value={newContact.phone} onChange={e => { setNewContact(v => ({ ...v, phone: e.target.value })); setNewContactErrors(er => ({ ...er, phone: '' })) }}
+                      placeholder="Số điện thoại *"
+                      className={`${iField} text-sm py-2 ${newContactErrors.phone ? 'border-red-300 bg-red-50' : ''}`} />
+                    <input value={newContact.company} onChange={e => setNewContact(v => ({ ...v, company: e.target.value }))}
+                      placeholder="Công ty" className={`${iField} text-sm py-2`} />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={handleSaveContact} disabled={savingContact}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors">
+                      {savingContact ? <Loader2 size={11} className="animate-spin" /> : null}
+                      Lưu & chọn
+                    </button>
+                    <button type="button" onClick={() => { setShowNewContact(false); setNewContactErrors({}) }}
+                      className="px-3 py-1.5 text-xs text-gray-500 hover:bg-white rounded-lg transition-colors font-medium">
+                      Huỷ
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Nguồn + Sale chính */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -627,34 +655,6 @@ export default function DangLayPage() {
                   </div>
                 )
               })()}
-
-              {/* Sub-form tạo khách hàng mới — full width */}
-              {showNewContact && (
-                <div className="p-3 bg-brand-50 border border-brand-100 rounded-xl space-y-2">
-                  <p className="text-xs font-semibold text-brand-700 mb-2">Thông tin khách hàng mới</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <input value={newContact.name} onChange={e => { setNewContact(v => ({ ...v, name: e.target.value })); setNewContactErrors(er => ({ ...er, name: '' })) }}
-                      placeholder="Tên khách hàng *" autoFocus
-                      className={`${iField} text-sm py-2 ${newContactErrors.name ? 'border-red-300 bg-red-50' : ''}`} />
-                    <input value={newContact.phone} onChange={e => { setNewContact(v => ({ ...v, phone: e.target.value })); setNewContactErrors(er => ({ ...er, phone: '' })) }}
-                      placeholder="Số điện thoại *"
-                      className={`${iField} text-sm py-2 ${newContactErrors.phone ? 'border-red-300 bg-red-50' : ''}`} />
-                    <input value={newContact.company} onChange={e => setNewContact(v => ({ ...v, company: e.target.value }))}
-                      placeholder="Công ty" className={`${iField} text-sm py-2`} />
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    <button type="button" onClick={handleSaveContact} disabled={savingContact}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors">
-                      {savingContact ? <Loader2 size={11} className="animate-spin" /> : null}
-                      Lưu & chọn
-                    </button>
-                    <button type="button" onClick={() => { setShowNewContact(false); setNewContactErrors({}) }}
-                      className="px-3 py-1.5 text-xs text-gray-500 hover:bg-white rounded-lg transition-colors font-medium">
-                      Huỷ
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* Mô tả sơ lược */}
               <div>
