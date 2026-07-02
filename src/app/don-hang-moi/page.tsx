@@ -236,7 +236,8 @@ export default function DangLayPage() {
     if (!error && data) {
       const sc = data as { id: string; name: string; type: string }
       setSaleChinhList(prev => [...prev, sc].sort((a, b) => a.name.localeCompare(b.name)))
-      setForm(f => ({ ...f, sale_chinh_id: sc.id }))
+      const suggestedSource = SC_TYPE_TO_SOURCE[sc.type]
+      setForm(f => ({ ...f, sale_chinh_id: sc.id, ...(suggestedSource ? { source: suggestedSource } : {}) }))
       setSaleChinhSearch(sc.name)
       setShowNewSaleChinh(false)
       setNewSaleChinh({ name: '', type: 'ctv', phone: '' })
@@ -601,22 +602,25 @@ export default function DangLayPage() {
                     </button>
                   </div>
                   <div className="relative">
-                    <input
-                      value={saleChinhSearch}
-                      onChange={e => { setSaleChinhSearch(e.target.value); setForm(f => ({ ...f, sale_chinh_id: '' })); setSaleChinhDropOpen(true) }}
-                      onFocus={() => setSaleChinhDropOpen(true)}
-                      onBlur={() => setTimeout(() => setSaleChinhDropOpen(false), 150)}
-                      placeholder="Tìm tên nhân viên..."
-                      className={iField}
-                    />
-                    {form.sale_chinh_id && !saleChinhDropOpen && (
-                      <div className="mt-1.5 flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 font-medium">
-                        <span className="text-[10px] font-semibold bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full flex-shrink-0">
+                    {form.sale_chinh_id && !saleChinhDropOpen ? (
+                      <div className={`${iField} flex items-center gap-2 cursor-pointer`}
+                        onClick={() => { setForm(f => ({ ...f, sale_chinh_id: '' })); setSaleChinhSearch(''); setSaleChinhDropOpen(true) }}>
+                        <span className="text-[10px] font-semibold bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
                           {getSCLabel(saleChinhList.find(sc => sc.id === form.sale_chinh_id)?.type ?? '')}
                         </span>
-                        <span className="truncate">{saleChinhList.find(sc => sc.id === form.sale_chinh_id)?.name}</span>
-                        <button type="button" onClick={() => { setForm(f => ({ ...f, sale_chinh_id: '' })); setSaleChinhSearch('') }} className="ml-auto flex-shrink-0 text-slate-400 hover:text-slate-600"><X size={13} /></button>
+                        <span className="flex-1 text-sm text-slate-700 truncate">{saleChinhList.find(sc => sc.id === form.sale_chinh_id)?.name}</span>
+                        <button type="button" onClick={e => { e.stopPropagation(); setForm(f => ({ ...f, sale_chinh_id: '' })); setSaleChinhSearch('') }} className="flex-shrink-0 text-slate-400 hover:text-slate-600"><X size={13} /></button>
                       </div>
+                    ) : (
+                      <input
+                        value={saleChinhSearch}
+                        onChange={e => { setSaleChinhSearch(e.target.value); setForm(f => ({ ...f, sale_chinh_id: '' })); setSaleChinhDropOpen(true) }}
+                        onFocus={() => setSaleChinhDropOpen(true)}
+                        onBlur={() => setTimeout(() => setSaleChinhDropOpen(false), 150)}
+                        placeholder="Tìm tên nhân viên..."
+                        className={iField}
+                        autoFocus={saleChinhDropOpen}
+                      />
                     )}
                     {saleChinhDropOpen && (
                       <div className="absolute left-0 right-0 top-full mt-1 border border-gray-200 rounded-xl bg-white shadow-lg z-20 overflow-hidden max-h-44 overflow-y-auto">
