@@ -22,6 +22,7 @@ const TYPE_LABELS: Record<string, string> = {
   nhan_vien: 'Nhân viên',
   ctv: 'CTV',
   doi_tac: 'Đối tác',
+  bod: 'BOD',
   khac: 'Khác',
 }
 
@@ -29,6 +30,7 @@ const TYPE_COLORS: Record<string, string> = {
   nhan_vien: 'bg-blue-100 text-blue-700',
   ctv: 'bg-violet-100 text-violet-700',
   doi_tac: 'bg-emerald-100 text-emerald-700',
+  bod: 'bg-amber-100 text-amber-700',
   khac: 'bg-gray-100 text-gray-600',
 }
 

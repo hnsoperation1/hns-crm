@@ -26,7 +26,7 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 const SALE_CHINH_TYPE: Record<string, string> = {
-  nhan_vien: 'Nhân viên', ctv: 'CTV', doi_tac: 'Đối tác', khac: 'Khác',
+  nhan_vien: 'Nhân viên', ctv: 'CTV', doi_tac: 'Đối tác', bod: 'BOD', khac: 'Khác',
 }
 
 function getSCLabel(type: string) {

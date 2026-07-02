@@ -43,7 +43,25 @@ const EMPTY_FORM = {
 }
 
 const SALE_CHINH_TYPE: Record<string, string> = {
-  nhan_vien: 'Nhân viên', ctv: 'CTV', doi_tac: 'Đối tác', khac: 'Khác',
+  nhan_vien: 'Nhân viên', ctv: 'CTV', doi_tac: 'Đối tác', bod: 'BOD', khac: 'Khác',
+}
+
+// Nguồn → các type sale chính phù hợp (rỗng = không lọc)
+const SOURCE_TO_SC_TYPES: Record<string, string[]> = {
+  mkt: ['nhan_vien'],
+  sale: ['nhan_vien', 'ctv'],
+  partner: ['doi_tac'],
+  bod: ['bod'],
+  cskh: ['nhan_vien'],
+  referral: ['ctv'],
+  test: [],
+}
+
+// type sale chính → nguồn gợi ý (chỉ map những loại rõ ràng)
+const SC_TYPE_TO_SOURCE: Partial<Record<string, LeadSource>> = {
+  doi_tac: 'partner',
+  bod: 'bod',
+  ctv: 'referral',
 }
 
 export default function DangLayPage() {
@@ -308,9 +326,12 @@ export default function DangLayPage() {
     `${c.name} ${c.phone ?? ''} ${c.company ?? ''}`.toLowerCase().includes(contactSearch.toLowerCase())
   )
 
-  const filteredSaleChinhList = saleChinhList.filter(sc =>
-    sc.name.toLowerCase().includes(saleChinhSearch.toLowerCase())
-  )
+  const allowedScTypes = SOURCE_TO_SC_TYPES[form.source] ?? []
+  const filteredSaleChinhList = saleChinhList.filter(sc => {
+    const matchSearch = sc.name.toLowerCase().includes(saleChinhSearch.toLowerCase())
+    const matchType = allowedScTypes.length === 0 || allowedScTypes.includes(sc.type)
+    return matchSearch && matchType
+  })
 
   function getSCLabel(type: string) {
     return SALE_CHINH_TYPE[type] ?? ROLE_LABELS[type] ?? type
@@ -558,7 +579,16 @@ export default function DangLayPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="flex items-center h-6 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Nguồn</label>
-                  <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value as LeadSource }))} className={iField}>
+                  <select value={form.source} onChange={e => {
+                    const newSource = e.target.value as LeadSource
+                    const allowed = SOURCE_TO_SC_TYPES[newSource] ?? []
+                    setForm(f => {
+                      const currentSC = saleChinhList.find(sc => sc.id === f.sale_chinh_id)
+                      const stillValid = !currentSC || allowed.length === 0 || allowed.includes(currentSC.type)
+                      if (!stillValid) setSaleChinhSearch('')
+                      return { ...f, source: newSource, sale_chinh_id: stillValid ? f.sale_chinh_id : '' }
+                    })
+                  }} className={iField}>
                     {SOURCES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </div>
@@ -591,7 +621,11 @@ export default function DangLayPage() {
                     {saleChinhDropOpen && (
                       <div className="absolute left-0 right-0 top-full mt-1 border border-gray-200 rounded-xl bg-white shadow-lg z-20 overflow-hidden max-h-44 overflow-y-auto">
                         {filteredSaleChinhList.slice(0, 30).map(sc => (
-                          <div key={sc.id} onMouseDown={() => { setForm(f => ({ ...f, sale_chinh_id: sc.id })); setSaleChinhSearch(sc.name); setSaleChinhDropOpen(false) }}
+                          <div key={sc.id} onMouseDown={() => {
+                              const suggestedSource = SC_TYPE_TO_SOURCE[sc.type]
+                              setForm(f => ({ ...f, sale_chinh_id: sc.id, ...(suggestedSource ? { source: suggestedSource } : {}) }))
+                              setSaleChinhSearch(sc.name); setSaleChinhDropOpen(false)
+                            }}
                             className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm transition-colors ${form.sale_chinh_id === sc.id ? 'bg-slate-50 text-slate-700 font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
                             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 bg-slate-100 text-slate-600 whitespace-nowrap">{getSCLabel(sc.type)}</span>
                             <span className="font-medium truncate">{sc.name}</span>
